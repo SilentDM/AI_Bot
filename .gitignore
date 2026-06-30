@@ -3,6 +3,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+Aliases.txt
+Phaeton.txt
+Key.txt
+
 # C extensions
 *.so
 
