@@ -15,7 +15,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
 
-def gerar_resposta_kobold(prompt, info, persona, exemplos, regras):
+def gerar_resposta_kobold(prompt, extra, info, persona, exemplos, regras):
     url = "http://localhost:5001/api/v1/generate"
     contexto = f"""
     <|im_start|>system
@@ -25,13 +25,18 @@ def gerar_resposta_kobold(prompt, info, persona, exemplos, regras):
     <|im_end|>
     Informations: {info}
     <|im_start|>user
-    User: {prompt}
+    User: {prompt}{extra}
     <|im_end|>
     <|im_start|>assistant:
+    <|im_end|>
     """
     data = {
-        
-
+        "prompt": contexto,       
+        "max_length": 256,
+        "temperature": 0.5,
+        "top_p": 0.9,
+        "rep_pen": 1.1,
+        "stop_sequence": ["User:", "Assistant:", "USER:", "ASSISTANT:"]
     }
     response = requests.post(url, json=data)
     if response.status_code == 200:
@@ -52,7 +57,7 @@ async def on_message(message):
     
     if message.content.lower().startswith("!ao"):
         prompt = message.content.replace("!Ao ", "")
-        prompt = md.normalize_text(prompt)
+        promptfix = md.normalize_text(prompt)
         persona = """[Personalidade]  
         Você é Ao, o sobredeus, criador do universo. 
         Responda com gentileza, mas como um ser imensamente poderoso falando com suas criações: com bondade, proteção — e ainda assim um pouco de arrogância, pois você é o criador do universo. 
@@ -73,9 +78,10 @@ async def on_message(message):
         if not md.kobold_online():
             await message.channel.send("Me desculpe, mortal, no momento estou ocupado com outros afazeres cósmicos!")
             return
-        info = md.gerar_info(prompt)        
-        print(f"Prompt completo: {prompt}\n{info}\n{persona}\n{exemplos}\n{regras}")
-        resposta = gerar_resposta_kobold(prompt, info, persona, exemplos, regras)
+        info = md.gerar_info(promptfix)     
+        extra = md.detectar_intencao(prompt)   
+        print(f"Prompt completo: {prompt}\n\n{extra}\n{persona}\n{exemplos}\n{regras}")
+        resposta = gerar_resposta_kobold(prompt,extra, info, persona, exemplos, regras)
         resposta = md.trim_incomplete_sentences(resposta)
         await message.channel.send(resposta[:1900])
         

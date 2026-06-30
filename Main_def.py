@@ -62,6 +62,20 @@ def carregar_aliases():
             aliases[chave.strip()] = alias_list
     return aliases
 
+def detectar_intencao(pergunta):
+    pergunta = normalize_text(pergunta)
+    if "onde" in pergunta:
+        return "Foque na localização"
+    elif "quando" in pergunta:
+        return "Foque no tempo"
+    elif "quem" in pergunta:
+        return "Foque na entidade ou pessoa"
+    elif "como" in pergunta:
+        return "Foque no método ou processo"
+    elif "por que" in pergunta or "porque" in pergunta:
+        return "Foque na causa"
+    else:
+        return "geral"
 
 def remover_conectores(pergunta):
     conectores_simples = {
