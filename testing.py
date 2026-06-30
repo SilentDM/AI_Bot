@@ -5,6 +5,6 @@ import discord
 import os
 import requests
 
-prompt = "Qual é o nome da região sul, que é quente?"
+prompt = "Cosmologia e Phaeton"
 info = md.gerar_info(prompt)
 print(f"Informações geradas:\n{info}")

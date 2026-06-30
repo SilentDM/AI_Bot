@@ -150,25 +150,25 @@ def rankear_chunks(chunks, pergunta):
 
     for titulo, conteudo in chunks.items():
         score = calcular_score(pergunta, titulo, conteudo)
-        
-        resultados.append((score, titulo, conteudo))
+        tokens = len(conteudo)/4  # estimativa de tokens (1 token ~ 4 caracteres)
+        resultados.append((score, titulo, conteudo, tokens))
 
     # ordenar do maior score para menor
     resultados.sort(key=lambda x: x[0], reverse=True)
     
-    print("\n=== ORDEM FINAL ===")
-    for score, titulo, _ in resultados:
-        print(f"{score} -> {titulo}")
+    #print("\n=== ORDEM FINAL ===")
+    #for score, titulo, _ in resultados:
+    #    print(f"{score} -> {titulo}")
 
     return resultados
 
 
-def montar_info(chunks, pergunta, limite_chars=3000):
+def montar_info(chunks, pergunta, limite_chars=7500):
     ranked = rankear_chunks(chunks, pergunta)
 
     info = ""
 
-    for score, titulo, conteudo in ranked:
+    for score, titulo, conteudo, tokens in ranked:
         if score == 0:
             continue  # ignora irrelevantes
 
