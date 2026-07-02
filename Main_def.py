@@ -67,7 +67,7 @@ def detectar_intencao(pergunta):
     if "onde" in pergunta:
         return "Foque na localização"
     elif "quando" in pergunta:
-        return "Foque no tempo"
+        return "Foque no histórico ou cronologia"
     elif "quem" in pergunta:
         return "Foque na entidade ou pessoa"
     elif "como" in pergunta:
@@ -75,7 +75,7 @@ def detectar_intencao(pergunta):
     elif "por que" in pergunta or "porque" in pergunta:
         return "Foque na causa"
     else:
-        return "geral"
+        return ""
 
 def remover_conectores(pergunta):
     conectores_simples = {

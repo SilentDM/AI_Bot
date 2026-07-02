@@ -6,7 +6,7 @@ __pycache__/
 Aliases.txt
 Phaeton.txt
 Key.txt
-
+memorias_*
 # C extensions
 *.so
 
@@ -133,6 +133,7 @@ celerybeat.pid
 
 # Environments
 .env
+.env.bak
 .venv
 env/
 venv/
