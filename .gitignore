@@ -6,7 +6,8 @@ __pycache__/
 Aliases.txt
 Phaeton.txt
 Key.txt
-memorias_*
+memor*
+*.txt
 # C extensions
 *.so
 
