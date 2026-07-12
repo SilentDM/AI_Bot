@@ -6,10 +6,11 @@ __pycache__/
 Aliases.txt
 Phaeton.txt
 Key.txt
-memor*
+memorias_*
 *.txt
 # C extensions
 *.so
+resposta.json
 
 # Distribution / packaging
 .Python

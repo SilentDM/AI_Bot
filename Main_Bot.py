@@ -1,4 +1,5 @@
 from email.mime import message
+import json
 import unicodedata, re
 from unittest import result
 from distro import info
@@ -9,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 import google.generativeai as genai
 import google.genai 
-
+CHANNEL_ID = 1519013814039871632
 TOKEN = os.getenv("DISCORD_TOKEN")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 genai.configure(api_key=GOOGLE_API_KEY, transport='rest') # transport='rest' ajuda em alguns ambientes
@@ -19,13 +20,13 @@ intents = discord.Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
 
-def gerar_resposta_google(prompt, extra, info, persona, regras, memorias, memoriasalheias):
-    instrucao_sistema = f"{persona}\n{regras}\nMemorias Relevantes: {memorias}\nInformations: {info}\nMemorias Alheias: {memoriasalheias}"
+def gerar_resposta_google(prompt, extra, info, persona, regras, memorias):
+    instrucao_sistema = f"{persona}\n{regras}\nMemorias Relevantes: {memorias}\nInformations: {info}\n"
     corpo_usuario = f"{prompt}\n{extra}"
     generation_config = {
         "temperature": 0.5,
         "top_p": 0.9,
-        "max_output_tokens": 2048 # Equivalente ao seu max_length        
+        "max_output_tokens": 20480 # Equivalente ao seu max_length        
     }
     model = genai.GenerativeModel(
         model_name="gemini-3.5-flash",
@@ -34,6 +35,9 @@ def gerar_resposta_google(prompt, extra, info, persona, regras, memorias, memori
     )
     try:
         response = model.generate_content(corpo_usuario, generation_config=generation_config)
+        with open("resposta.json", "w", encoding="utf-8") as f:
+            json.dump(response.to_dict(), f, ensure_ascii=False, indent=2)
+        
         return response.text
     except Exception as e:
         print("\n--- 🛑 ERRO DETECTADO ---")
@@ -53,7 +57,6 @@ def criar_memorias_user(userid,prompt,resposta):
         with open(arquivo, "r", encoding="utf-8") as f:
             conteudo = f.read()
         tamanho = len(enc.encode(conteudo))
-        print (f"Tamanho da memória do usuário {userid}: {tamanho} tokens")
         if tamanho > 20480: #80 mensagens de 256 tokens
             print(f"Memória do usuário {userid} excedeu tamanho máximo. Criando resumo...")
             resumo = criar_resumo_google(userid,conteudo)
@@ -98,7 +101,10 @@ def criar_resumo_google(userid,memorias):
         print(f"Mensagem:{e}")
 
 def trim_incomplete_sentences(texto):
-    texto = texto.strip()
+    if texto:
+        texto = texto.strip()
+    else:
+        return ""
     if texto.endswith((".", "!", "?")):
         return texto
 
@@ -138,9 +144,12 @@ def detectar_intencao(pergunta):
     else:
         return ""
 
+
 @client.event
 async def on_ready():
     print(f'Logado como {client.user}')
+    #channel = client.get_channel(CHANNEL_ID)
+    #await channel.send(f"\u200b\nTest message from Python!")
 
 @client.event
 async def on_message(message):
@@ -148,21 +157,64 @@ async def on_message(message):
         return
     
     if message.content.lower().startswith("!ao"):
-        prompt = message.content.replace("!Ao ", "")
-        prompt = message.content.replace(",", "",1)
+        match message.content.lower():
+            case "!ao,":
+                prompt = message.content.replace("!ao,", "")    
+            case "!ao ":
+                prompt = message.content.replace("!ao ", "")    
+            case _:
+                prompt = message.content.replace("!ao", "")    
+                
+        print(f"Mensagem recebida! {prompt}")
         userid = message.author.id
         memorias=""
         persona = """[Personalidade]\n- Você é Ao, o criador do universo. Está aqui para responder dúvidas, com gentileza e sabedoria.\n- Sempre se refira a Ao em primeira pessoa.\n- Você pode gerar e criar histórias para aqueles que desejam, mas jamais altere informações já definidas."""
-        regras = """[REGRAS]\n- Não ofereça e não peça por mais informações;\n- Responda de forma clara e concisa;\n- Não faça julgamentos de valor;\n- Pode criar histórias e lugares fictícios, mas não altere informações já definidas;\n- Não faça julgamentos de valor;\n- Não ofereça e não peça por mais informações;\n- Responda de forma clara e concisa;\n- Pode criar histórias e lugares fictícios, mas não altere informações já definidas."""
+        regras = """[REGRAS]\n- Não ofereça e não peça por mais informações;\n- Responda de forma clara e concisa;\n- Não faça julgamentos de valor;\n- Pode criar histórias e lugares fictícios, mas não altere informações já definidas;\n"""
         info = carregar_phaeton()
+        print("Info Carregada!")
         extra = detectar_intencao(prompt)   
+        if extra:
+            print("Intenção definida!")
+        else:
+            print("Nenhuma intenção detectada!")
         memorias = carregarmemorias_userid(userid)
-        memoriasalheias = carregar_outras_memorias()
-        resposta = gerar_resposta_google(prompt,extra, info, persona, regras, memorias, memoriasalheias)
+        if memorias:
+            print("Memória Carregada!")
+        else:
+            print("Usuário sem memória! Vamos criar uma no final!")
         
-        resposta = trim_incomplete_sentences(resposta)
-        await message.channel.send(resposta[:1900]) #discord aceita 2000 caracteres por mensagem, mas vamos deixar 1900 para evitar problemas
-        criar_memorias_user(userid,prompt, resposta)
+        #memoriasalheias = carregar_outras_memorias()
+        resposta = gerar_resposta_google(prompt,extra, info, persona, regras, memorias)
+        if resposta:
+            print("Resposta criada!")
+        finalz=[".","!","?"]
+        if resposta.rstrip()[-1] not in finalz:
+            resposta = trim_incomplete_sentences(resposta)
+        paragraph=[]
+        
+        if len(resposta)>1900:
+            print("Resposta muito grande!")
+            paragraph = [p for p in resposta.split("\n\n") if p.strip()]
+            buffer=""
+            for x,p in enumerate(paragraph):
+                if buffer:
+                    buffer+="\n\n"+ paragraph[x]
+                    print(f"\nBuffer Atual:{buffer}")
+                else:
+                    buffer = paragraph[x]
+                    print(f"\nBuffer Atual:{buffer}")
+                
+                if len(buffer)>1300:
+                    await message.channel.send(buffer)
+                    time.sleep(1) 
+                    buffer="\u200b"
+            if buffer:
+                await message.channel.send(buffer) 
+        else:
+            await message.channel.send(resposta) 
+        print("Mensagem(ns) enviada(s)")
+        criar_memorias_user(userid,prompt,resposta)
+        print("Memorias guardadas!")
         
         
         
