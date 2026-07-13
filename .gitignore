@@ -3,15 +3,20 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+memories/
 Aliases.txt
 Phaeton.txt
 Key.txt
+vision.md
 memorias_*
+memorias
 *.txt
 # C extensions
 *.so
 resposta.json
-
+.\phaeton\
+phaeton\*
+phaeton/
 # Distribution / packaging
 .Python
 build/
