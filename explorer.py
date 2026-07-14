@@ -71,20 +71,21 @@ class PhaetonExplorerFrame(ttk.Frame):
         self.tree.bind("<Button-3>", self.show_context_menu) # Windows/Linux
         self.tree.bind("<Button-2>", self.show_context_menu) # macOS
         
-        # Inicialização do diretório
+        # Sincronização inicial do diretório
         self.refresh_tree()
 
     # --- ATUALIZAÇÃO DA ÁRVORE DE DIRETÓRIOS ---
     def refresh_tree(self):
-        """Reconstrói a árvore com base no diretório 'Phaeton' no caminho do projeto."""
+        """Reconstrói a árvore com base no diretório de conhecimento configurado."""
         for item in self.tree.get_children():
             self.tree.delete(item)
             
-        pasta_phaeton = os.path.join(os.getcwd(), "Phaeton")
+        nome_pasta = os.getenv("KNOWLEDGE_FOLDER", "Phaeton")
+        pasta_phaeton = os.path.join(os.getcwd(), nome_pasta)
         if not os.path.exists(pasta_phaeton):
             os.makedirs(pasta_phaeton, exist_ok=True)
             
-        root_node = self.tree.insert("", "end", text="📁 Phaeton", open=True, values=[pasta_phaeton])
+        root_node = self.tree.insert("", "end", text=f"📁 {nome_pasta}", open=True, values=[pasta_phaeton])
         self.populate_tree(root_node, pasta_phaeton)
         self.log_callback("File explorer tree synchronized.")
 
@@ -310,3 +311,8 @@ class PhaetonExplorerFrame(ttk.Frame):
         for item_raiz in self.tree.get_children():
             if procurar(item_raiz):
                 break
+
+    # --- SUPORTE A REDIMENSIONAMENTO DE FONTE ---
+    def update_editor_font(self, font_size):
+        """Ajusta dinamicamente a fonte do painel de escrita."""
+        self.editor.configure(font=("Consolas", font_size))

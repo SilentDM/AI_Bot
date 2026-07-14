@@ -20,6 +20,9 @@ class AoDesktopApp:
         # Define o plano de fundo da janela mestre para combinar com o Dark Mode
         self.root.configure(bg="#1e1e1e")
         
+        # Seta a fonte padrão inicial de controle
+        self.current_font_size = 11
+        
         # Vincula o evento de fechamento seguro da janela para realizar auto-salvamento
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
         
@@ -33,6 +36,12 @@ class AoDesktopApp:
         # Constrói o layout de 3 colunas principais
         self.setup_ui()
         
+        # Mapeia os atalhos universais de Zoom de teclado (Ctrl + e Ctrl -)
+        self.setup_shortcuts()
+        
+        # Inicializa o tamanho de fonte unificado em toda a interface
+        self.change_font_size(0)
+        
         # Inicializa a sincronização do Discord Bot em segundo plano
         self.start_discord_bot_thread()
 
@@ -41,7 +50,6 @@ class AoDesktopApp:
         self.style = ttk.Style()
         self.style.theme_use('clam')
         
-        # Configuração global de fontes e cores padrão
         self.style.configure('.', 
             background='#1e1e1e', 
             foreground='#e1e1e1', 
@@ -52,17 +60,14 @@ class AoDesktopApp:
             darkcolor='#1e1e1e'
         )
         
-        # Mapeamentos para estados ativos e desabilitados globais
         self.style.map('.', 
             background=[('active', '#3e3e42'), ('disabled', '#1e1e1e')],
             foreground=[('disabled', '#606060')]
         )
         
-        # Painel Divisório (PanedWindow)
         self.style.configure('TPanedwindow', background='#1e1e1e')
         self.style.configure('Sash', background='#3e3e42', bordercolor='#3e3e42', sashthickness=4)
         
-        # Agrupamentos de Controle (LabelFrame)
         self.style.configure('TLabelframe', 
             background='#1e1e1e', 
             bordercolor='#3e3e42',
@@ -70,11 +75,10 @@ class AoDesktopApp:
         )
         self.style.configure('TLabelframe.Label', 
             background='#1e1e1e', 
-            foreground='#569cd6', # Azul suave para cabeçalhos de seções
+            foreground='#569cd6', 
             font=('Segoe UI', 10, 'bold')
         )
         
-        # Botões (TButton)
         self.style.configure('TButton', 
             background='#2d2d2d', 
             foreground='#e1e1e1', 
@@ -88,7 +92,6 @@ class AoDesktopApp:
             foreground=[('active', '#ffffff')]
         )
         
-        # Entradas de Texto / Inputs (TEntry)
         self.style.configure('TEntry', 
             fieldbackground='#2d2d2d', 
             foreground='#e1e1e1',
@@ -97,7 +100,6 @@ class AoDesktopApp:
             darkcolor='#2d2d2d'
         )
         
-        # Árvore do Explorer (Treeview)
         self.style.configure('Treeview', 
             background='#2d2d2d', 
             foreground='#e1e1e1', 
@@ -120,7 +122,6 @@ class AoDesktopApp:
             background=[('active', '#3e3e42')]
         )
         
-        # Barras de Rolagem (Scrollbar)
         self.style.configure('Vertical.TScrollbar', 
             background='#2d2d2d', 
             troughcolor='#1e1e1e', 
@@ -134,7 +135,6 @@ class AoDesktopApp:
         )
 
     def setup_ui(self):
-        # PanedWindow principal responsável pelas divisões redimensionáveis de colunas
         main_paned = ttk.PanedWindow(self.root, orient=tk.HORIZONTAL)
         main_paned.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
@@ -146,7 +146,6 @@ class AoDesktopApp:
         chat_frame = ttk.LabelFrame(main_paned, text=" Chat with Ao (Simulated) ")
         main_paned.add(chat_frame, weight=2)
         
-        # Chat clássico estilizado com cores dark e cursor claro
         self.chat_display = scrolledtext.ScrolledText(
             chat_frame, 
             wrap=tk.WORD, 
@@ -159,11 +158,9 @@ class AoDesktopApp:
             selectforeground="white"
         )
         self.chat_display.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
-        # Cores otimizadas para alto contraste contra fundo escuro
-        self.chat_display.tag_config("You", foreground="#569cd6", font=("Segoe UI", 10, "bold")) # Azul suave
-        self.chat_display.tag_config("Ao", foreground="#4ec9b0", font=("Segoe UI", 10, "bold"))  # Verde/Teal suave
-        self.chat_display.tag_config("System", foreground="#808080", font=("Segoe UI", 9, "italic")) # Cinza médio
+        self.chat_display.tag_config("You", foreground="#007ACC", font=("Segoe UI", 10, "bold"))
+        self.chat_display.tag_config("Ao", foreground="#2C8558", font=("Segoe UI", 10, "bold"))
+        self.chat_display.tag_config("System", foreground="#888888", font=("Segoe UI", 9, "italic"))
         
         input_frame = ttk.Frame(chat_frame)
         input_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
@@ -174,6 +171,7 @@ class AoDesktopApp:
         
         self.send_button = ttk.Button(input_frame, text="Send", command=self.send_chat_message)
         self.send_button.pack(side=tk.RIGHT)
+        
         
         # --- COLUNA 3: Status & Console Logs (Direita) ---
         sidebar_frame = ttk.Frame(main_paned)
@@ -188,18 +186,31 @@ class AoDesktopApp:
         self.lbl_expander = ttk.Label(status_frame, text="Expander status: Idle", font=("Segoe UI", 9))
         self.lbl_expander.pack(anchor=tk.W, padx=10, pady=5)
         
+        # Painel de Ações
         actions_frame = ttk.LabelFrame(sidebar_frame, text=" Tools ")
         actions_frame.pack(fill=tk.X, padx=5, pady=5)
         
         self.btn_expander = ttk.Button(
             actions_frame, text="Run Expander Task", command=self.start_expander_thread
         )
-        self.btn_expander.pack(fill=tk.X, padx=10, pady=10)
+        self.btn_expander.pack(fill=tk.X, padx=10, pady=5)
+        
+        # Adição dos Botões Físicos de Ajuste de Fonte na barra de ferramentas
+        font_control_frame = ttk.Frame(actions_frame)
+        font_control_frame.pack(fill=tk.X, padx=10, pady=(5, 10))
+        
+        lbl_font_title = ttk.Label(font_control_frame, text="Zoom Interface:")
+        lbl_font_title.pack(side=tk.LEFT, padx=(0, 5))
+        
+        btn_font_dec = ttk.Button(font_control_frame, text="A-", width=4, command=lambda: self.change_font_size(-1))
+        btn_font_dec.pack(side=tk.LEFT, padx=2)
+        
+        btn_font_inc = ttk.Button(font_control_frame, text="A+", width=4, command=lambda: self.change_font_size(1))
+        btn_font_inc.pack(side=tk.LEFT, padx=2)
         
         log_frame = ttk.LabelFrame(sidebar_frame, text=" Activity Log ")
         log_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
-        # Log de console clássico estilizado em Dark Mode
         self.log_display = scrolledtext.ScrolledText(
             log_frame, 
             wrap=tk.WORD, 
@@ -215,6 +226,38 @@ class AoDesktopApp:
         self.log_display.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         self.append_to_chat("System", "Multiverse local console connected. You can start typing below.")
+
+    # --- MAPEAMENTO DE ATALHOS DE ZOOM (Ctrl + e Ctrl -) ---
+    def setup_shortcuts(self):
+        """Vincula atalhos físicos do Windows para controle rápido de zoom."""
+        # Combinações para teclados internacionais e teclados numéricos
+        self.root.bind("<Control-KeyPress-equal>", lambda e: self.change_font_size(1))
+        self.root.bind("<Control-KeyPress-plus>", lambda e: self.change_font_size(1))
+        self.root.bind("<Control-KeyPress-minus>", lambda e: self.change_font_size(-1))
+        self.root.bind("<Control-KP_Add>", lambda e: self.change_font_size(1))
+        self.root.bind("<Control-KP_Subtract>", lambda e: self.change_font_size(-1))
+
+    def change_font_size(self, delta):
+        """Processa o zoom da tela recalculando tamanhos e cabeçalhos em negrito."""
+        # Limita o tamanho de fonte entre 8 (mínimo) e 24 (máximo)
+        self.current_font_size = max(8, min(24, self.current_font_size + delta))
+        
+        # 1. Atualiza o texto do Chat
+        self.chat_display.configure(font=("Segoe UI", self.current_font_size))
+        
+        # 2. Atualiza as Tags em negrito ("You" e "Ao") para crescerem proporcionalmente
+        self.chat_display.tag_config("You", foreground="#569cd6", font=("Segoe UI", self.current_font_size, "bold"))
+        self.chat_display.tag_config("Ao", foreground="#4ec9b0", font=("Segoe UI", self.current_font_size, "bold"))
+        self.chat_display.tag_config("System", foreground="#808080", font=("Segoe UI", max(7, self.current_font_size - 1), "italic"))
+        
+        # 3. Atualiza os Logs secundários do console (levemente menores)
+        self.log_display.configure(font=("Consolas", max(7, self.current_font_size - 2)))
+        
+        # 4. Envia o sinal para redimensionar o editor dinâmico no explorer.py
+        self.explorer_pane.update_editor_font(self.current_font_size)
+        
+        if delta != 0:
+            self.log_activity(f"Font size scaled to: {self.current_font_size}")
 
     # --- CHAT CONSOLE SIMULATION ---
     def append_to_chat(self, sender, text):
@@ -257,7 +300,8 @@ class AoDesktopApp:
             
             persona = (
                 "[Personalidade]\n"
-                "- Você é Ao, o criador do universo. Está aqui para responder dúvidas, com gentileza e sabedoria.\n"
+                "- Você é Ao, o criador do universo. Está aqui para responder dúvidas com gentileza e sabedoria.\n"
+                "- Aja como o criador lidando com suas criações, com orgulho e contente em ajudar.\n"
                 "- Sempre se refira a Ao em primeira pessoa.\n"
                 "- Você pode gerar e criar histórias para aqueles que desejam, mas jamais altere informações já definidas."
             )

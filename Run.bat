@@ -1,1 +1,1 @@
-python main.py
+python gui.py
