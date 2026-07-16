@@ -34,7 +34,7 @@ TAG_ALVO = [
 def gerar_resposta_google(prompt, extra, info, persona, regras, memorias):
     instrucao_sistema = f"{persona}\n{regras}\nMemorias Relevantes: {memorias}\nInformations: {info}\n"
     corpo_usuario = f"{prompt}\n{extra}"
-    
+    prompt_final = f"{instrucao_sistema}\n{corpo_usuario}"
     config = types.GenerateContentConfig(
         system_instruction=instrucao_sistema,
         temperature=0.5,
@@ -47,6 +47,7 @@ def gerar_resposta_google(prompt, extra, info, persona, regras, memorias):
         ]
     )
     try:
+        
         response = geminiclient.models.generate_content(
             model=modelo,
             contents=corpo_usuario,
@@ -54,6 +55,8 @@ def gerar_resposta_google(prompt, extra, info, persona, regras, memorias):
         )
         with open("resposta.json", "w", encoding="utf-8") as f:
             f.write(response.model_dump_json(indent=2))
+        with open("ultimoprompt.txt", "w", encoding="utf-8") as f: 
+            f.write(prompt_final)
         
         return response.text
     except Exception as e:

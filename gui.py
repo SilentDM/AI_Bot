@@ -16,6 +16,7 @@ class AoDesktopApp:
         self.root.title("Ao Multiverse Console")
         self.root.geometry("1250x650")
         self.root.minsize(1000, 500)
+        self.root.state("zoomed")  # Windows
         
         # Define o plano de fundo da janela mestre para combinar com o Dark Mode
         self.root.configure(bg="#1e1e1e")
@@ -246,12 +247,12 @@ class AoDesktopApp:
         self.chat_display.configure(font=("Segoe UI", self.current_font_size))
         
         # 2. Atualiza as Tags em negrito ("You" e "Ao") para crescerem proporcionalmente
-        self.chat_display.tag_config("You", foreground="#569cd6", font=("Segoe UI", self.current_font_size, "bold"))
-        self.chat_display.tag_config("Ao", foreground="#4ec9b0", font=("Segoe UI", self.current_font_size, "bold"))
-        self.chat_display.tag_config("System", foreground="#808080", font=("Segoe UI", max(7, self.current_font_size - 1), "italic"))
+        #self.chat_display.tag_config("You", foreground="#569cd6", font=("Segoe UI", self.current_font_size, "bold"))
+        #self.chat_display.tag_config("Ao", foreground="#4ec9b0", font=("Segoe UI", self.current_font_size, "bold"))
+        #self.chat_display.tag_config("System", foreground="#808080", font=("Segoe UI", max(7, self.current_font_size - 1), "italic"))
         
         # 3. Atualiza os Logs secundários do console (levemente menores)
-        self.log_display.configure(font=("Consolas", max(7, self.current_font_size - 2)))
+        #self.log_display.configure(font=("Consolas", max(7, self.current_font_size - 2)))
         
         # 4. Envia o sinal para redimensionar o editor dinâmico no explorer.py
         self.explorer_pane.update_editor_font(self.current_font_size)
@@ -301,8 +302,7 @@ class AoDesktopApp:
             persona = (
                 "[Personalidade]\n"
                 "- Você é Ao, o criador do universo. Está aqui para responder dúvidas com gentileza e sabedoria.\n"
-                "- Aja como o criador lidando com suas criações, com orgulho e contente em ajudar.\n"
-                "- Sempre se refira a Ao em primeira pessoa.\n"
+                "- Aja como o criador lidando com suas criações, contente em ajudar.\n"
                 "- Você pode gerar e criar histórias para aqueles que desejam, mas jamais altere informações já definidas."
             )
             regras = (

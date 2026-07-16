@@ -27,15 +27,17 @@ def obter_arquivos_relacionados(titulo, arquivo_base):
     relacionados = []
     titulo = titulo.lower()
     arquivo_base_name = arquivo_base.name
-
+    ignorelist = ["Templates"]
     for arquivo in Path(PASTA_PHAETON).rglob("*.md"):
+        if any(part in ignorelist for part in arquivo.parts):
+            continue
         with open(arquivo, encoding="utf-8") as f:
             conteudo = f.read()
 
         # Ignora o próprio arquivo e arquivos que ainda possuem pendências de TODO
         if (
             arquivo.name == arquivo_base_name
-            or any(tag in conteudo for tag in TAG_ALVO)
+            or any(tag in conteudo for tag in TAG_ALVO)            
         ):
             continue
 
@@ -132,7 +134,7 @@ def processar_arquivos():
             {conteudo}
 
             TAREFA:
-            No arquivo atual, identifique a linha que começa com uma variação de To-Do (como '{tag_encontrada}') e substitua essa tag/instrução pelo conteúdo criativo expandido, baseando-se estritamente nas instruções fornecidas.
+            Não repita nenhuma instrução ou informação. No arquivo atual, identifique a linha que começa com uma variação de To-Do (como '{tag_encontrada}') e substitua essa tag/instrução pelo conteúdo criativo expandido, baseando-se estritamente nas instruções fornecidas.
             Retorne o texto completo do arquivo original, mantendo a formatação e as partes intocadas, alterando apenas a seção indicada pela tag.
             """
 
