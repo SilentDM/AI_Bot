@@ -27,7 +27,7 @@ def obter_arquivos_relacionados(titulo, arquivo_base):
     relacionados = []
     titulo = titulo.lower()
     arquivo_base_name = arquivo_base.name
-    ignorelist = ["Templates"]
+    ignorelist = ["Templates", "status: rascunho"]
     for arquivo in Path(PASTA_PHAETON).rglob("*.md"):
         if any(part in ignorelist for part in arquivo.parts):
             continue
@@ -37,7 +37,8 @@ def obter_arquivos_relacionados(titulo, arquivo_base):
         # Ignora o próprio arquivo e arquivos que ainda possuem pendências de TODO
         if (
             arquivo.name == arquivo_base_name
-            or any(tag in conteudo for tag in TAG_ALVO)            
+            or any(tag in conteudo for tag in TAG_ALVO)     
+            or any(ignore in conteudo for ignore in ignorelist)
         ):
             continue
 

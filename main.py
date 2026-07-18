@@ -1,4 +1,4 @@
-import os
+import os, time
 import re
 import json
 import asyncio
@@ -7,31 +7,25 @@ from pathlib import Path
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
-
-# Import our custom memory manager
 import memory
-
+from PIL import Image
+from ai_utils import ask_gemini
 load_dotenv()
-
-CHANNEL_ID = 1519013814039871632
 TOKEN = os.getenv("DISCORD_TOKEN")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-modelo = "gemini-2.5-flash"
-
 intents = discord.Intents.default()
 intents.message_content = True
 discordclient = discord.Client(intents=intents)
 geminiclient = genai.Client(api_key=GOOGLE_API_KEY)
-
-# Target variations for identifying pending to-do segments
 TAG_ALVO = [
     "<-- TO DO:", "<-- TO DO", "<-- TODO:", "<-- TODO", "<-- todo",
     "<-- To do:", "<-- to-do:", "<-- to-do", "<-- to do:", "<-- to do",
     "<-- To Do:", "<-- To Do", "<-- To-Do:", "<-- To-Do", "<-- To-do:", 
     "<-- To-do", "<-- Todo:"
 ]
-
-def gerar_resposta_google(prompt, extra, info, persona, regras, memorias):
+img = Image.open("phaeton/Phaeton_Mapa_Mundi.png")
+modelo = ["gemini-2.5-flash","gemini-3.1-flash-lite"]
+def gerar_resposta_google(prompt, extra, info, persona, regras, memorias, modelo):
     instrucao_sistema = f"{persona}\n{regras}\nMemorias Relevantes: {memorias}\nInformations: {info}\n"
     corpo_usuario = f"{prompt}\n{extra}"
     prompt_final = f"{instrucao_sistema}\n{corpo_usuario}"
@@ -39,31 +33,44 @@ def gerar_resposta_google(prompt, extra, info, persona, regras, memorias):
         system_instruction=instrucao_sistema,
         temperature=0.5,
         top_p=0.9,
-        max_output_tokens=20480,
+        max_output_tokens=8192,
         tools=[
             types.Tool(
                 google_search=types.GoogleSearch()
             )
         ]
     )
-    try:
-        
-        response = geminiclient.models.generate_content(
-            model=modelo,
-            contents=corpo_usuario,
-            config=config
-        )
-        with open("resposta.json", "w", encoding="utf-8") as f:
-            f.write(response.model_dump_json(indent=2))
-        with open("ultimoprompt.txt", "w", encoding="utf-8") as f: 
-            f.write(prompt_final)
-        
-        return response.text
-    except Exception as e:
-        print("\n--- 🛑 ERRO NO MODELO ---")
-        print(f"Tipo do Erro: {type(e).__name__}")
-        print(f"Mensagem: {e}")
-        return None
+    for x in modelo:
+        try:
+            response = geminiclient.models.generate_content(
+                model=x,
+                contents=[
+                    img,
+                    f"""
+                    A imagem anexada é o mapa do planeta Phaeton.
+
+                    Considere as posições relativas dos continentes,
+                    reinos, cidades, oceanos e cadeias montanhosas
+                    ao criar novo conteúdo.
+
+                    Tarefa:
+                    {corpo_usuario}
+                    """
+                ],
+                config=config
+            )
+            with open("resposta.json", "w", encoding="utf-8") as f:
+                f.write(response.model_dump_json(indent=2))
+            with open("ultimoprompt.txt", "w", encoding="utf-8") as f: 
+                f.write(prompt_final)
+            return response.text
+        except Exception as e:
+            print("\n--- 🛑 ERRO NO MODELO ---")
+            print(f"Modelo: {x}")
+            print(f"Tipo do Erro: {type(e).__name__}")
+            print(f"Mensagem: {e}")
+            time.sleep(10)
+    return None
 
 def carregar_phaeton():
     """
@@ -72,7 +79,7 @@ def carregar_phaeton():
     2. Excludes any file containing unresolved TODO tags.
     3. Merges the content to form the background knowledge payload.
     """
-    pasta_phaeton = Path(os.getcwd()) / "Phaeton"
+    pasta_phaeton = Path(os.getcwd()) / "phaeton"
     if not pasta_phaeton.exists():
         print(f"⚠️ Alerta: Pasta '{pasta_phaeton}' não encontrada.")
         return ""
@@ -113,7 +120,7 @@ def carregar_phaeton():
         
         # Verify if the file is clean of TODO markers
         if any(tag in content for tag in TAG_ALVO):
-            print(f"ℹ️ Excluindo '{f_path.name}' do conhecimento por possuir tags TODO.")
+            print(f"Excluindo '{f_path.name}' do conhecimento por possuir tags TODO.")
             continue
             
         conteudo_total.append(f"--- INÍCIO DO ARQUIVO: {f_path.name} ---\n{content}\n--- FIM DO ARQUIVO: {f_path.name} ---")
@@ -169,7 +176,7 @@ async def on_message(message):
         persona = (
             "[Personalidade]\n"
             "- Você é Ao, o criador do universo. Está aqui para responder dúvidas, com gentileza e sabedoria.\n"
-            "- Sempre se refira a Ao em primeira pessoa.\n"
+            "- Trate o usuário falando com você como alguém importante e que você esteja orgulhoso do interesse.\n"            
             "- Você pode gerar e criar histórias para aqueles que desejam, mas jamais altere informações já definidas."
         )
         regras = (
@@ -196,7 +203,7 @@ async def on_message(message):
         else:
             print(f"Nenhum histórico encontrado para o usuário neste servidor. Inicializando...")
         
-        resposta = gerar_resposta_google(prompt, extra, info, persona, regras, memorias)
+        resposta = gerar_resposta_google(prompt, extra, info, persona, regras, memorias, modelo)
         
         if resposta:
             print("Resposta criada!")
