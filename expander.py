@@ -1,17 +1,9 @@
-import os
-import re
+import os, re, time
 from pathlib import Path
-import time
 from google import genai  # Utilizando o SDK moderno
-from dotenv import load_dotenv
 from ai_utils import ask_gemini
-
-load_dotenv()
-
-API_KEY = os.getenv("GOOGLE_API_KEY")  
 PASTA_PHAETON = os.path.join(os.getcwd(), "Phaeton")
 ARQUIVO_REGRAS = "vision.md"
-MODELO_IA = 'gemini-2.5-flash'
 
 TAG_ALVO = [
     "<-- TO DO:", "<-- TO DO", "<-- TODO:", "<-- TODO", "<-- todo",
@@ -20,9 +12,6 @@ TAG_ALVO = [
     "<-- To-do", "<-- Todo:"
 ]
 IGNORELIST = ["Templates", "status: rascunho"]
-
-# Inicializa o cliente oficial do SDK moderno
-client = genai.Client(api_key=API_KEY)
 
 def obter_arquivos_relacionados(titulo):
     relacionados = []
@@ -76,9 +65,24 @@ def obter_proximo_nome_versao(caminho_original):
 def nome_base(path):
     return re.sub(r'_v\d+$', '', path.stem.lower())
 
-import re
-import time
-from pathlib import Path
+def remover_markdown_fences(texto: str) -> str:
+    """
+    Remove marcações de bloco de código (```markdown ... ```) 
+    que o Gemini costuma adicionar nas pontas da resposta.
+    """
+    linhas = texto.strip().splitlines()
+    if not linhas:
+        return texto
+
+    # Se a primeira linha começar com as crases, nós a removemos
+    if linhas[0].strip().startswith("```"):
+        linhas.pop(0)
+        
+    # Se a última linha terminar com as crases, nós a removemos
+    if linhas and linhas[-1].strip().startswith("```"):
+        linhas.pop()
+        
+    return "\n".join(linhas).strip()
 
 # Certifique-se de que a função ask_gemini desenvolvida anteriormente está importada ou declarada no escopo deste arquivo.
 
@@ -212,6 +216,7 @@ REGRAS DE RETORNO:
                 )
                 
                 if texto_expandido:
+                    texto_limpo = remover_markdown_fences(texto_expandido)
                     novo_arquivo_path = obter_proximo_nome_versao(arquivo)
                     
                     with open(novo_arquivo_path, 'w', encoding='utf-8') as f:
