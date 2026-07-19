@@ -1,42 +1,28 @@
-import time
+import os,time
 from pathlib import Path
+from typing import Any, Optional, Type
+from pydantic import BaseModel
+from google import genai
 from google.genai import types
-import os
+from dotenv import load_dotenv
 
-from google.genai import types
-import time
+load_dotenv()
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+GEMINICLIENT = genai.Client(api_key=GOOGLE_API_KEY)
 
-def ask_gemini(
-    client,
-    prompt,
-    system_instruction="",
-    extra_contents=None,
-    models_list=None,
-    temperature=0.5,
-    max_output_tokens=20480
-):
+# Adjusted to use standard active Gemini models
+MODELS_LIST = [
+    "gemini-3.1-flash-lite",
+    "gemini-2.5-flash", 
+    "gemini-2.5-pro", 
+    "gemini-1.5-flash", 
+    "gemini-1.5-pro"
+]
 
-    config = types.GenerateContentConfig(
-        system_instruction=system_instruction,
-        temperature=temperature,
-        max_output_tokens=max_output_tokens
-    )
-
-    contents = []
-
-    if extra_contents:
-        contents.extend(extra_contents)
-
-    contents.append(prompt)
-
-    response = generate_content_with_fallback(
-        client=client,
-        contents=contents,
-        config=config,
-        models_list=models_list
-    )
-
-    return response.text
+DEFAULT_SYSTEM_INSTRUCTION = "You are a helpful assistant that explains things and creates what is requested."
+DEFAULT_TEMPERATURE = 0.6  # Changed to a float (the API expects a float, not a string)
+DEFAULT_CONTENTS = "Please repeat: I did not receive a correct prompt, your coding has failed somewhere."
+MAX_TOKENS = 20480
 
 def load_phaeton_images():
     """
@@ -61,48 +47,86 @@ def load_phaeton_images():
                 print(f"⚠️ Error loading image {img_path.name}: {e}")
     return parts
 
-def generate_content_with_fallback(client, contents, config=None, models_list=None):
+def generate_content_with_fallback(
+    contents: Any, 
+    config: types.GenerateContentConfig, 
+    max_attempts: int = 3
+) -> Any:
     """
     Tries to generate content using a list of fallback models.
-    If a model fails, it tries the next one.
-    If all models fail, it waits for 60 seconds and recursively tries again.
+    If all models fail, it waits and retries up to max_attempts times.
     """
-    if models_list is None:
-        # Standard robust fallback list of model tags
-        models_list = ["gemini-2.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-pro", "gemini-1.5-flash", "gemini-1.5-pro"]
-    
-    # Automatically read and load any map or region .png files from Phaeton directory
+    # Prepare contents with images if present
     images = load_phaeton_images()
     if images:
         if isinstance(contents, list):
-            contents = list(contents) + images
+            final_contents = list(contents) + images
         else:
-            contents = [contents] + images
+            final_contents = [contents] + images
+    else:
+        final_contents = contents
 
     attempt = 1
-    while True:
-        for model in models_list:
+    while attempt <= max_attempts:
+        for model in MODELS_LIST:
             try:
-                print(f"🔮 Attempting to generate content using model: {model} (Attempt {attempt})...")
-                if config:
-                    response = client.models.generate_content(
-                        model=model,
-                        contents=contents,
-                        config=config
-                    )
-                else:
-                    response = client.models.generate_content(
-                        model=model,
-                        contents=contents
-                    )
+                print(f"🔮 Attempting to generate content using model: {model} (Attempt {attempt}/{max_attempts})...")
+                
+                response = GEMINICLIENT.models.generate_content(
+                    model=model,
+                    contents=final_contents,
+                    config=config
+                )
+                
                 if response and response.text:
                     print(f"✅ Response successfully obtained using model: {model}!")
                     return response
+                    
             except Exception as e:
                 print(f"⚠️ Error using model {model}: {e}")
                 print("Trying next available model in the fallback chain...")
         
-        print("\n🛑 All configured models in the fallback chain failed due to high load, rate limits, or network errors.")
-        print("⏳ Waiting for 60 seconds before retrying the fallback chain...")
-        time.sleep(60)
+        print("\n🛑 All configured models in the fallback chain failed.")
+        if attempt < max_attempts:
+            print("⏳ Waiting for 60 seconds before retrying the fallback chain...")
+            time.sleep(60)
         attempt += 1
+
+    raise RuntimeError("All models and retry attempts failed to generate content.")
+
+def ask_gemini(
+    contents: Any = None, 
+    system_instruction: Optional[str] = None, 
+    temperature: Optional[float] = None,
+    response_schema: Optional[Type[BaseModel]] = None
+) -> str:
+    """
+    Unified entrypoint for Gemini API requests.
+    Supports structured output if a Pydantic model is provided via response_schema.
+    """
+    # Use default fallbacks if arguments are missing
+    if not system_instruction:
+        system_instruction = DEFAULT_SYSTEM_INSTRUCTION
+    if temperature is None:
+        temperature = DEFAULT_TEMPERATURE
+    if not contents:
+        contents = DEFAULT_CONTENTS
+    
+    # Build configuration arguments
+    config_args = {
+        "system_instruction": system_instruction,
+        "temperature": temperature,
+        "max_output_tokens": MAX_TOKENS
+    }
+
+    # If a schema is specified, configure the response output format
+    if response_schema:
+        config_args["response_mime_type"] = "application/json"
+        config_args["response_schema"] = response_schema
+
+    config = types.GenerateContentConfig(**config_args)
+    
+    response = generate_content_with_fallback(contents, config)
+    return response.text
+
+

@@ -4,6 +4,7 @@ from pathlib import Path
 import time
 from google import genai  # Utilizando o SDK moderno
 from dotenv import load_dotenv
+from ai_utils import ask_gemini
 
 load_dotenv()
 
@@ -12,42 +13,37 @@ PASTA_PHAETON = os.path.join(os.getcwd(), "Phaeton")
 ARQUIVO_REGRAS = "vision.md"
 MODELO_IA = 'gemini-2.5-flash'
 
-# Lista de variações para busca rápida
 TAG_ALVO = [
     "<-- TO DO:", "<-- TO DO", "<-- TODO:", "<-- TODO", "<-- todo",
     "<-- To do:", "<-- to-do:", "<-- to-do", "<-- to do:", "<-- to do",
     "<-- To Do:", "<-- To Do", "<-- To-Do:", "<-- To-Do", "<-- To-do:", 
     "<-- To-do", "<-- Todo:"
 ]
+IGNORELIST = ["Templates", "status: rascunho"]
 
 # Inicializa o cliente oficial do SDK moderno
 client = genai.Client(api_key=API_KEY)
 
-def obter_arquivos_relacionados(titulo, arquivo_base):
+def obter_arquivos_relacionados(titulo):
     relacionados = []
-    titulo = titulo.lower()
-    arquivo_base_name = arquivo_base.name
-    ignorelist = ["Templates", "status: rascunho"]
+    titulo = re.sub(r'_v\d+$', '', titulo.lower())
     for arquivo in Path(PASTA_PHAETON).rglob("*.md"):
-        if any(part in ignorelist for part in arquivo.parts):
+        if any(part in IGNORELIST for part in arquivo.parts):
             continue
         with open(arquivo, encoding="utf-8") as f:
             conteudo = f.read()
 
-        # Ignora o próprio arquivo e arquivos que ainda possuem pendências de TODO
         if (
-            arquivo.name == arquivo_base_name
-            or any(tag in conteudo for tag in TAG_ALVO)     
-            or any(ignore in conteudo for ignore in ignorelist)
+            arquivo.stem.lower() == titulo
+            or any(tag in conteudo for tag in TAG_ALVO)
+            or any(ignore in conteudo for ignore in IGNORELIST)
         ):
+            print(f"Arquivo relacionado ignorado por conter tag ou rascunho: {arquivo}")
             continue
-
         score = conteudo.lower().count(titulo)
-
         if score > 0:
             relacionados.append((arquivo.name, conteudo, score))
 
-    # Correção: Ordenar pelo score (índice 2)
     relacionados.sort(
         key=lambda x: x[2],
         reverse=True
@@ -65,14 +61,6 @@ def obter_arquivos_relacionados(titulo, arquivo_base):
         conteudo for _, conteudo, _ in relacionados
     )
 
-def obter_instrucoes():
-    try:
-        with open(ARQUIVO_REGRAS, 'r', encoding='utf-8') as f:
-            return f.read()
-    except FileNotFoundError:
-        print(f"❌ Erro: O arquivo de regras {ARQUIVO_REGRAS} não foi encontrado.")
-        return ""
-
 def obter_proximo_nome_versao(caminho_original):
     diretorio = caminho_original.parent
     nome_base = re.sub(r'_v\d+$', '', caminho_original.stem)
@@ -85,80 +73,155 @@ def obter_proximo_nome_versao(caminho_original):
             return novo_caminho
         versao += 1
 
+def nome_base(path):
+    return re.sub(r'_v\d+$', '', path.stem.lower())
+
+import re
+import time
+from pathlib import Path
+
+# Certifique-se de que a função ask_gemini desenvolvida anteriormente está importada ou declarada no escopo deste arquivo.
+
 def processar_arquivos():
-    instrucoes_globais = obter_instrucoes()
-    if not instrucoes_globais:
-        return
+    # As diretrizes estáticas do cenário funcionam melhor fixadas no System Instruction
+    instrucoes_globais = """
+    Você é um Mestre de Mesa (DM) de D&D experiente e escritor de fantasia sombria (Dark Fantasy).
+    Seu objetivo é preencher lacunas de desenvolvimento do cenário de Phaeton.
+    
+    # O tema central do cenário e das aventuras em Phaeton
+    - Caos x Ordem.
+    - É melhor viver em um mundo de ordem perfeita, mas sem liberdade e sem consequências ou em um mundo de caos imperfeito, com sofrimento, mas repleto de oportunidades?
+    - É possível eliminar o caos de um ambiente caótico e ordenar, das pessoas até a natureza?
+
+    # Verdades Fundamentais de Phaeton
+    - A magia simples e fraca é comum, grandes poderes mágicos são raros.
+    - Os deuses são reais.
+    - O mundo já viveu uma era de glória perdida.
+    - Existem segredos ancestrais que jamais deveriam ser descobertos.
+    - O heroísmo existe, mas raramente vence sem sacrifícios.
+    - Monstros gigantes, titãs e seres lendários rondam pelo mundo, em sua superfície, nos céus, no subsolo e pelos oceanos
+
+    # Estilo Narrativo de Phaeton
+    - Phaeton é um cenário de Dark Fantasy épico.
+    - A sensação predominante deve ser de grandiosidade e mistério.
+    - Ruínas antigas são mais impressionantes que construções modernas.
+    - Quase toda cidade, castelo e forte estão construídos acima de uma civilização antiga que foi extinta e esquecida.
+    - A magia é majestosa, mas perigosa.
+    - Heróis podem mudar o destino do mundo, mas quase sempre pagam um preço por isso.
+
+    # O que evitar
+    - Não criar humor moderno.
+    - Não usar nomes excessivamente caricatos.
+    - Não criar sociedades completamente boas.
+    - Não criar sociedades completamente malignas.
+    - Evitar conflitos simplistas.
+
+    # O que criar quando necessário
+    - Foque em nomes criativos e relacionados ao assunto.
+    - Dê descrições à lugares seguindo o estilo e verdades de Phaeton.
+    - Invente cenários, lugares e pessoas onde necessário.
+    - Não altere informações já existentes e faça uso delas ao criar coisas novas.
+
+    ## O que realmente importa para esse cenário
+    ### O conflito central do mundo
+    - A expansão do Império Draco-Divino Branoth;
+    - A influência dos Antigos e de Mythos na mente dos mortais;
+    - A eterna disputa territorial entre Dragões, Reinados e Impérios;
+
+    ### Facções com objetivos legítimos
+    - Não existe o bem e o mal;
+    - Todos possuem seus objetivos por motivo real e em prol de seus próprios pontos de vista, corretos;
+    - Toda escolha nesse cenário, irá fazer os aventureiros ganharem algo e perder algo;
+
+    ### Perguntas sem resposta
+    - Problemas são criados que não existe resposta pronta para uma solução;
+    - Mistérios e situações causadas por forças não explicadas nem apresentadas, até que alguém resolva investigar a fundo;
+
+    ### Consequências em escala
+    - Situações e problemas devem representar situações amplas que afetam uma grande área ou uma grande população;
+    - Decisões dos aventureiros irão causar grandes mudanças e efeitos;
+    """
 
     caminho_phaeton = Path(PASTA_PHAETON)
     print(f"🔍 Analisando arquivos em: {caminho_phaeton.resolve()}")
     
     for arquivo in caminho_phaeton.rglob("*.md"):
-        # Evita reprocessar arquivos que já são versões antigas (ex: _v1.md, _v2.md)
-        if re.search(r'_v\d+$', arquivo.stem):
-            continue
-
         with open(arquivo, 'r', encoding='utf-8') as f:
             linhas = f.readlines()
             conteudo = "".join(linhas)
-            titulo = linhas[0].lstrip("# ").strip() if linhas else ""
+            titulo = Path(arquivo).stem
+            titulo = re.sub(r'_v\d+$', '', titulo.lower())
 
-        # Verifica se o arquivo atual possui alguma das tags de To Do
         tag_encontrada = next((tag for tag in TAG_ALVO if tag in conteudo), None)
         
         if tag_encontrada:
             print(f"\n📄 Tag encontrada no arquivo: {arquivo.name}")
-            
-            # Busca arquivos no mesmo diretório
             info_locais = ""
             for arquivo_local in arquivo.parent.glob("*.md"):
-                if arquivo_local != arquivo and not re.search(r'_v\d+$', arquivo_local.stem):
+                if nome_base(arquivo_local) != nome_base(arquivo):
                     with open(arquivo_local, "r", encoding="utf-8") as f:
-                        # Correção: printando o nome do arquivo local correto
-                        print(f" -> Lendo contexto local de: {arquivo_local.name}")
-                        info_locais += f.read() + "\n\n"
+                        conteudo_local = f.read()
+                        if (
+                            any(tag in conteudo_local for tag in TAG_ALVO)
+                            or "status: rascunho" in conteudo_local.lower()
+                            ):
+                            print(f"Arquivo relacionado ignorado por conter tag ou rascunho: {arquivo_local}")
+                            continue
+                        else:
+                            with open(arquivo_local, "r", encoding="utf-8") as f:
+                                print(f" -> Adicionar ao contexto local: {arquivo_local.name}")
+                                info_locais += f.read() + "\n\n"
             
-            info_importante = obter_arquivos_relacionados(titulo, arquivo)
+            info_importante = obter_arquivos_relacionados(titulo)
             
-            # Criamos uma instrução clara para que a IA busque a tag específica presente no arquivo
-            prompt = f"""
-            INSTRUÇÕES DE MUNDO (Siga estritamente):
-            {instrucoes_globais}
+            # Contexto de dados específicos do arquivo a ser modificado
+            prompt_conteudo = f"""
+Por favor, analise as informações abaixo para preencher as lacunas marcadas no arquivo de destino.
 
-            INFORMAÇÕES LOCAIS (Siga estritamente):
-            {info_locais}
+INFORMAÇÕES LOCAIS DO AMBIENTE (Arquivos da mesma pasta para consistência):
+{info_locais}
 
-            INFORMAÇÕES IMPORTANTES DE OUTROS ARQUIVOS:
-            {info_importante}
+INFORMAÇÕES IMPORTANTES RELACIONADAS:
+{info_importante}
 
-            CONTEXTO DO ARQUIVO ATUAL ({arquivo.name}):
-            {conteudo}
+CONTEÚDO ORIGINAL DO ARQUIVO ATUAL ({arquivo.name}):
+{conteudo}
 
-            TAREFA:
-            Não repita nenhuma instrução ou informação. No arquivo atual, identifique a linha que começa com uma variação de To-Do (como '{tag_encontrada}') e substitua essa tag/instrução pelo conteúdo criativo expandido, baseando-se estritamente nas instruções fornecidas.
-            Retorne o texto completo do arquivo original, mantendo a formatação e as partes intocadas, alterando apenas a seção indicada pela tag.
-            """
+TAREFA:
+No conteúdo do arquivo atual, identifique a linha que começa com a variação de To-Do '{tag_encontrada}'.
+Substitua essa linha pelo conteúdo expandido de forma criativa, mantendo total coesão com a história local e as diretrizes de Phaeton.
+
+REGRAS DE RETORNO:
+1. Retorne o texto completo do arquivo original, incluindo a modificação feita.
+2. Preserve rigorosamente a formatação Markdown existente.
+3. Não acrescente prefácios, comentários explicativos ou notas sobre o que você modificou. Retorne apenas o conteúdo final do arquivo editado.
+"""
 
             try:
-                # Salva o prompt enviado para debug
+                # Opcional: Registrar o prompt gerado para fins de depuração
                 with open("Prompts.txt", 'w', encoding='utf-8') as f:
                     f.write(f"Alterando Arquivo: {arquivo.name}\n")
-                    f.write(prompt + '\n')
+                    f.write(prompt_conteudo + '\n')
                     
-                # Geração de conteúdo utilizando o novo cliente
-                response = client.models.generate_content(
-                    model=MODELO_IA,
-                    contents=prompt
+                # Substituição da chamada nativa pela função estruturada ask_gemini
+                # Graças ao ask_gemini, a verificação de fallbacks de modelos e limites de taxa é herdada automaticamente.
+                texto_expandido = ask_gemini(
+                    contents=prompt_conteudo,
+                    system_instruction=instrucoes_globais,
+                    temperature=0.7 # Temperatura criativa e coerente
                 )
                 
-                texto_expandido = response.text
-                novo_arquivo_path = obter_proximo_nome_versao(arquivo)
+                if texto_expandido:
+                    novo_arquivo_path = obter_proximo_nome_versao(arquivo)
+                    
+                    with open(novo_arquivo_path, 'w', encoding='utf-8') as f:
+                        f.write(texto_expandido)
+                    
+                    print(f"✅ Nova versão gerada com sucesso: {novo_arquivo_path.name}")
+                else:
+                    print(f"⚠️ O retorno do modelo para {arquivo.name} foi vazio.")
                 
-                with open(novo_arquivo_path, 'w', encoding='utf-8') as f:
-                    f.write(texto_expandido)
-                
-                print(f"✅ Nova versão gerada com sucesso: {novo_arquivo_path.name}")
-                time.sleep(10)  # Pausa reduzida para 10 segundos para evitar limites sem demorar tanto
+                time.sleep(10)  # Pausa de segurança entre chamadas
                 
             except Exception as e:
                 print(f"❌ Erro ao processar {arquivo.name}: {e}")

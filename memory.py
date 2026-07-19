@@ -5,6 +5,7 @@ import glob
 import tiktoken
 from google import genai
 from google.genai import types
+from ai_utils import ask_gemini
 
 MEMORIES_DIR = "memories"
 enc = tiktoken.get_encoding("cl100k_base")
@@ -58,26 +59,36 @@ def trim_incomplete_sentences(texto):
 
     return resultado
 
-def criar_resumo_google(geminiclient, memorias):
+def criar_resumo_google(memorias: str) -> str:
+    """
+    Consolida dezenas de interações passadas em um resumo compacto e direto,
+    focado em economizar espaço de contexto (tokens).
+    """
     instrucao_sistema = (
-        "[Personalidade]\n"
-        "Você é um assistente especializado em resumir informações em uma única frase, "
-        "simples e direta. Explicando tudo que lhe for passado de forma concisa."
+        "Você é um assistente especializado em condensar históricos de RPG de forma extremamente objetiva.\n"
+        "Seu objetivo é extrair apenas os fatos consolidados, decisões tomadas, itens adquiridos e "
+        "revelações importantes sobre o universo. Escreva um resumo contínuo, em formato de parágrafo "
+        "ou lista compacta de fatos, sem rodeios ou saudações."
     )
-    corpo_usuario = f"Faça o resumo das seguintes interações:\n{memorias}"
-    config = types.GenerateContentConfig(
-        system_instruction=instrucao_sistema,
-        temperature=0.5,
-        top_p=0.9,
-        max_output_tokens=2048
+    
+    corpo_usuario = (
+        "Reduza as seguintes interações antigas de diálogo para um resumo consolidado, "
+        f"mantendo todas as informações vitais de enredo:\n\n{memorias}"
     )
+    
     try:
-        response = geminiclient.models.generate_content(
-            model="gemini-3.5-flash",
+        # Usamos uma temperatura baixa (0.3) para garantir foco nos fatos existentes, sem invenções.
+        resumo_texto = ask_gemini(
             contents=corpo_usuario,
-            config=config
+            system_instruction=instrucao_sistema,
+            temperature=0.3
         )
-        return trim_incomplete_sentences(response.text)
+        
+        # Caso a função de limpeza de sentenças incompletas esteja no módulo de memória
+        if resumo_texto:
+            return trim_incomplete_sentences(resumo_texto)
+        return ""
+        
     except Exception as e:
         print(f"\n--- 🛑 ERRO AO GERAR RESUMO EM MEMORIES ---")
         print(f"Tipo do Erro: {type(e).__name__}")
@@ -112,7 +123,7 @@ def carregar_memorias(guild_id, guild_name, userid, user_name):
     except FileNotFoundError:
         return ""
 
-def salvar_memoria(guild_id, guild_name, userid, user_name, prompt, resposta, geminiclient):
+def salvar_memoria(guild_id, guild_name, userid, user_name, prompt, resposta, geminiclient=None):
     """Salva a interação atual, aplicando a expiração por idade e resumo por token."""
     arquivo_existente = _buscar_arquivo_existente(guild_id, userid)
     caminho_ideal = _obter_caminho_alvo(guild_id, guild_name, userid, user_name)
@@ -148,10 +159,13 @@ def salvar_memoria(guild_id, guild_name, userid, user_name, prompt, resposta, ge
     with open(arquivo_final, "r", encoding="utf-8") as f:
         conteudo = f.read()
 
+    # 'enc' deve ser o seu codificador de tokens configurado previamente (ex: tiktoken)
     tamanho = len(enc.encode(conteudo))
     if tamanho > 20480:
         print(f"Memória de {user_name} excedeu o tamanho máximo. Gerando resumo...")
-        resumo = criar_resumo_google(geminiclient, conteudo)
+        
+        # Chamada da função de resumo atualizada
+        resumo = criar_resumo_google(conteudo)
         if resumo:
             with open(arquivo_final, "w", encoding="utf-8") as f:
                 f.write(f"Resumo de Memórias: {resumo}\n")

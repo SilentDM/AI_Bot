@@ -4,73 +4,28 @@ import json
 import asyncio
 import discord
 from pathlib import Path
-from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 import memory
 from PIL import Image
 from ai_utils import ask_gemini
+from dotenv import load_dotenv
 load_dotenv()
-TOKEN = os.getenv("DISCORD_TOKEN")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+GEMINICLIENT = genai.Client(api_key=GOOGLE_API_KEY)
+
+TOKEN = os.getenv("DISCORD_TOKEN")
 intents = discord.Intents.default()
 intents.message_content = True
 discordclient = discord.Client(intents=intents)
-geminiclient = genai.Client(api_key=GOOGLE_API_KEY)
+
 TAG_ALVO = [
     "<-- TO DO:", "<-- TO DO", "<-- TODO:", "<-- TODO", "<-- todo",
     "<-- To do:", "<-- to-do:", "<-- to-do", "<-- to do:", "<-- to do",
     "<-- To Do:", "<-- To Do", "<-- To-Do:", "<-- To-Do", "<-- To-do:", 
     "<-- To-do", "<-- Todo:"
 ]
-img = Image.open("phaeton/Phaeton_Mapa_Mundi.png")
-modelo = ["gemini-2.5-flash","gemini-3.1-flash-lite"]
-def gerar_resposta_google(prompt, extra, info, persona, regras, memorias, modelo):
-    instrucao_sistema = f"{persona}\n{regras}\nMemorias Relevantes: {memorias}\nInformations: {info}\n"
-    corpo_usuario = f"{prompt}\n{extra}"
-    prompt_final = f"{instrucao_sistema}\n{corpo_usuario}"
-    config = types.GenerateContentConfig(
-        system_instruction=instrucao_sistema,
-        temperature=0.5,
-        top_p=0.9,
-        max_output_tokens=8192,
-        tools=[
-            types.Tool(
-                google_search=types.GoogleSearch()
-            )
-        ]
-    )
-    for x in modelo:
-        try:
-            response = geminiclient.models.generate_content(
-                model=x,
-                contents=[
-                    img,
-                    f"""
-                    A imagem anexada é o mapa do planeta Phaeton.
-
-                    Considere as posições relativas dos continentes,
-                    reinos, cidades, oceanos e cadeias montanhosas
-                    ao criar novo conteúdo.
-
-                    Tarefa:
-                    {corpo_usuario}
-                    """
-                ],
-                config=config
-            )
-            with open("resposta.json", "w", encoding="utf-8") as f:
-                f.write(response.model_dump_json(indent=2))
-            with open("ultimoprompt.txt", "w", encoding="utf-8") as f: 
-                f.write(prompt_final)
-            return response.text
-        except Exception as e:
-            print("\n--- 🛑 ERRO NO MODELO ---")
-            print(f"Modelo: {x}")
-            print(f"Tipo do Erro: {type(e).__name__}")
-            print(f"Mensagem: {e}")
-            time.sleep(10)
-    return None
+IGNORELIST = ["Templates", "status: rascunho"]
 
 def carregar_phaeton():
     """
@@ -119,11 +74,13 @@ def carregar_phaeton():
                 continue
         
         # Verify if the file is clean of TODO markers
-        if any(tag in content for tag in TAG_ALVO):
-            print(f"Excluindo '{f_path.name}' do conhecimento por possuir tags TODO.")
+        if (any(tag in content for tag in TAG_ALVO)
+            or any(ignore in content for ignore in IGNORELIST)
+            ):
+            print(f"Excluindo '{f_path.name}' do conhecimento por possuir tags TODO ou Rascunho ou Template.")
             continue
             
-        conteudo_total.append(f"--- INÍCIO DO ARQUIVO: {f_path.name} ---\n{content}\n--- FIM DO ARQUIVO: {f_path.name} ---")
+        conteudo_total.append(f"\n{content}\n")
         
     return "\n\n".join(conteudo_total)
 
@@ -173,19 +130,24 @@ async def on_message(message):
         guild_id = message.guild.id if message.guild else "dm"
         guild_name = message.guild.name if message.guild else "DM"
         
+        # 1. Definindo as instruções do sistema (Persona + Regras)
         persona = (
             "[Personalidade]\n"
             "- Você é Ao, o criador do universo. Está aqui para responder dúvidas, com gentileza e sabedoria.\n"
-            "- Trate o usuário falando com você como alguém importante e que você esteja orgulhoso do interesse.\n"            
-            "- Você pode gerar e criar histórias para aqueles que desejam, mas jamais altere informações já definidas."
+            "- Trate o usuário falando com você como alguém importante e que você esteja orgulhoso do interesse.\n"
+            "- Evite comentar assuntos que estão descritos como segredos ou secretos.\n"
+            "- Você pode gerar e criar histórias para aqueles que desejam, mas jamais altere informações já definidas.\n"
         )
         regras = (
             "[REGRAS]\n"
             "- Não ofereça e não peça por mais informações;\n"
             "- Responda de forma clara e concisa;\n"
             "- Não faça julgamentos de valor;\n"
-            "- Pode criar histórias e lugares fictícios, mas não altere informações já definidas;\n"
+            "- Pode criar histórias e lugares fictícios, mas não altere as informações já definidas;\n"
         )
+        
+        # O system_instruction ideal do Gemini une a persona e as regras
+        instrucao_sistema = f"{persona}\n\n{regras}"
         
         # Load up-to-date Phaeton information dynamically
         info = carregar_phaeton()
@@ -203,8 +165,30 @@ async def on_message(message):
         else:
             print(f"Nenhum histórico encontrado para o usuário neste servidor. Inicializando...")
         
-        resposta = gerar_resposta_google(prompt, extra, info, persona, regras, memorias, modelo)
+        # 2. Reunindo tudo o que é contexto para o 'contents'
+        # Estruturamos o prompt de forma clara para que o modelo diferencie o histórico dos dados de Phaeton e da mensagem atual.
+        conteudo_input = ""
         
+        if info:
+            conteudo_input += f"--- CONTEXTO ATUAL DO MUNDO (PHAETON) ---\n{info}\n\n"
+            
+        if extra:
+            conteudo_input += f"--- CONTEXTO ADICIONAL DE INTENÇÃO ---\n{extra}\n\n"
+            
+        if memorias:
+            conteudo_input += f"--- HISTÓRICO RECENTE DE CONVERSAS ---\n{memorias}\n\n"
+            
+        # Adiciona a mensagem atual do usuário com o nome dele para personalização
+        conteudo_input += f"--- MENSAGEM DO USUÁRIO ({user_name}) ---\n{prompt}"
+        
+        # 3. Chamando o novo ask_gemini
+        # Definimos a temperatura em 0.65 para permitir flexibilidade sem quebrar as regras de Phaeton.
+        resposta = ask_gemini(
+            contents=conteudo_input,
+            system_instruction=instrucao_sistema,
+            temperature=0.65
+        )
+
         if resposta:
             print("Resposta criada!")
             finalz = [".", "!", "?"]
@@ -241,7 +225,9 @@ async def on_message(message):
                 await responderreply(message, resposta)
                 print("Resposta enviada!")
             
-            memory.salvar_memoria(guild_id, guild_name, userid, user_name, prompt, resposta, geminiclient)
+            # Nota: Mantenha a variável ou cliente correto dependendo de como você definiu globalmente.
+            # Se você usa a variável global GEMINICLIENT da sua configuração, passe ela aqui.
+            memory.salvar_memoria(guild_id, guild_name, userid, user_name, prompt, resposta, GEMINICLIENT)
             print("Memórias atualizadas com sucesso!")
         else:
             print("Não foi possível processar a resposta do modelo.")
