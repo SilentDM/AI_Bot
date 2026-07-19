@@ -35,6 +35,7 @@ class AoDesktopApp:
         # Estados internos das engines de background
         self.discord_running = False
         self.expander_running = False
+        self.worldbuilder_running = False
         
         # Constrói o layout de 3 colunas principais
         self.setup_ui()
@@ -198,6 +199,9 @@ class AoDesktopApp:
         self.lbl_expander = ttk.Label(status_frame, text="Expander status: Idle", font=("Segoe UI", 9))
         self.lbl_expander.pack(anchor=tk.W, padx=10, pady=5)
         
+        self.lbl_worldbuilder = ttk.Label(status_frame, text="WorldBuilder status: Idle", font=("Segoe UI", 9))
+        self.lbl_worldbuilder.pack(anchor=tk.W, padx=10, pady=5)
+        
         # Painel de Ações
         actions_frame = ttk.LabelFrame(sidebar_frame, text=" Tools ")
         actions_frame.pack(fill=tk.X, padx=5, pady=5)
@@ -206,6 +210,11 @@ class AoDesktopApp:
             actions_frame, text="Run Expander Task", command=self.start_expander_thread
         )
         self.btn_expander.pack(fill=tk.X, padx=10, pady=5)
+        
+        self.btn_worldbuilder = ttk.Button(
+            actions_frame, text="Run WorldBuilder", command=self.start_worldbuilder_thread
+        )
+        self.btn_worldbuilder.pack(fill=tk.X, padx=10, pady=5)
         
         # Ajuste de Fonte na barra de ferramentas
         font_control_frame = ttk.Frame(actions_frame)
@@ -428,6 +437,82 @@ class AoDesktopApp:
         self.log_activity("Shutting down... saving open files...")
         self.explorer_pane.save_current_file()
         self.root.destroy()
+
+# --- ENGINE DE WORLD BUILDER ---
+
+def start_worldbuilder_thread(self):
+    if self.worldbuilder_running:
+        messagebox.showwarning(
+            "Warning",
+            "The WorldBuilder task is currently running."
+        )
+        return
+    self.worldbuilder_running = True
+    self.btn_worldbuilder.config(
+        state=tk.DISABLED
+    )
+    self.lbl_worldbuilder.config(
+        text="WorldBuilder status: Working...",
+        foreground="#60a5fa"
+    )
+    self.log_activity(
+        "Spawning child task for WorldBuilder..."
+    )
+    self.explorer_pane.save_current_file()
+    threading.Thread(
+        target=self.run_worldbuilder_task,
+        daemon=True
+    ).start()
+
+def run_worldbuilder_task(self):
+    try:
+        import wbuilder
+        self.log_activity(
+            "Starting autonomous WorldBuilder..."
+        )
+        iterations = wbuilder.iterationschoice()
+        self.log_activity(
+            f"Gemini decided on {iterations} iterations."
+        )
+        wbuilder.taskplanner(iterations)
+        self.log_activity(
+            "WorldBuilder completed successfully."
+        )
+        self.finished_worldbuilder_ui_update(
+            "Task Finished"
+        )
+    except Exception as e:
+        self.log_activity(
+            f"WorldBuilder encountered an issue: {e}"
+        )
+        self.finished_worldbuilder_ui_update(
+            "Failed (Error)"
+        )
+
+def run_worldbuilder_task(self):
+    try:
+        import wbuilder
+        self.log_activity(
+            "Starting autonomous WorldBuilder..."
+        )
+        iterations = wbuilder.iterationschoice()
+        self.log_activity(
+            f"Gemini decided on {iterations} iterations."
+        )
+        wbuilder.taskplanner(iterations)
+        self.log_activity(
+            "WorldBuilder completed successfully."
+        )
+        self.finished_worldbuilder_ui_update(
+            "Task Finished"
+        )
+    except Exception as e:
+        self.log_activity(
+            f"WorldBuilder encountered an issue: {e}"
+        )
+        self.finished_worldbuilder_ui_update(
+            "Failed (Error)"
+        )
 
 if __name__ == "__main__":
     root = tk.Tk()

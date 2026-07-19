@@ -9,6 +9,7 @@ from google.genai import types
 import memory
 from PIL import Image
 from ai_utils import ask_gemini
+from project_utils import carregar_phaeton
 from dotenv import load_dotenv
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
@@ -25,65 +26,10 @@ TAG_ALVO = [
     "<-- To Do:", "<-- To Do", "<-- To-Do:", "<-- To-Do", "<-- To-do:", 
     "<-- To-do", "<-- Todo:"
 ]
-IGNORELIST = ["Templates", "status: rascunho"]
-
-def carregar_phaeton():
-    """
-    Crawls the 'Phaeton' folder dynamically.
-    1. Tracks only the latest revision of each markdown file (e.g. history_v2 over history_v1 or history).
-    2. Excludes any file containing unresolved TODO tags.
-    3. Merges the content to form the background knowledge payload.
-    """
-    pasta_phaeton = Path(os.getcwd()) / "phaeton"
-    if not pasta_phaeton.exists():
-        print(f"⚠️ Alerta: Pasta '{pasta_phaeton}' não encontrada.")
-        return ""
-    
-    # Retrieve all Markdown files recursively
-    all_files = list(pasta_phaeton.rglob("*.md"))
-    
-    # Group files by parent directory and base name (ignoring version suffixes like _v1, _v2)
-    groups = {}
-    for f in all_files:
-        base_name = re.sub(r'_v\d+$', '', f.stem)
-        key = (f.parent, base_name)
-        if key not in groups:
-            groups[key] = []
-        groups[key].append(f)
-        
-    # Isolate the highest available version of each document
-    latest_files = []
-    for key, files in groups.items():
-        def get_version(path):
-            match = re.search(r'_v(\d+)$', path.stem)
-            return int(match.group(1)) if match else 0
-        
-        files.sort(key=get_version, reverse=True)
-        latest_files.append(files[0]) # Newest/expanded revision goes first
-
-    conteudo_total = []
-    for f_path in latest_files:
-        try:
-            with open(f_path, "r", encoding="utf-8") as file_obj:
-                content = file_obj.read()
-        except UnicodeDecodeError:
-            try:
-                with open(f_path, "r", encoding="latin1") as file_obj:
-                    content = file_obj.read()
-            except Exception:
-                continue
-        
-        # Verify if the file is clean of TODO markers
-        if (any(tag in content for tag in TAG_ALVO)
-            or any(ignore in content for ignore in IGNORELIST)
-            ):
-            print(f"Excluindo '{f_path.name}' do conhecimento por possuir tags TODO ou Rascunho ou Template.")
-            continue
-            
-        conteudo_total.append(f"\n{content}\n")
-        
-    return "\n\n".join(conteudo_total)
-
+IGNORELIST = [
+    "Templates", 
+    "status: rascunho"
+]
 def detectar_intencao(pergunta):
     pergunta_lower = pergunta.lower()
     if "onde" in pergunta_lower:
@@ -172,14 +118,14 @@ async def on_message(message):
         if info:
             conteudo_input += f"--- CONTEXTO ATUAL DO MUNDO (PHAETON) ---\n{info}\n\n"
             
-        if extra:
-            conteudo_input += f"--- CONTEXTO ADICIONAL DE INTENÇÃO ---\n{extra}\n\n"
-            
         if memorias:
             conteudo_input += f"--- HISTÓRICO RECENTE DE CONVERSAS ---\n{memorias}\n\n"
             
         # Adiciona a mensagem atual do usuário com o nome dele para personalização
         conteudo_input += f"--- MENSAGEM DO USUÁRIO ({user_name}) ---\n{prompt}"
+        
+        if extra:
+            conteudo_input += f"\n{extra}\n"
         
         # 3. Chamando o novo ask_gemini
         # Definimos a temperatura em 0.65 para permitir flexibilidade sem quebrar as regras de Phaeton.

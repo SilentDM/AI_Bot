@@ -1,4 +1,4 @@
-import os,time
+import os,time, json
 from pathlib import Path
 from typing import Any, Optional, Type
 from pydantic import BaseModel
@@ -15,7 +15,6 @@ MODELS_LIST = [
     "gemini-3.1-flash-lite",
     "gemini-2.5-flash", 
     "gemini-2.5-pro", 
-    "gemini-1.5-flash", 
     "gemini-1.5-pro"
 ]
 
@@ -71,7 +70,8 @@ def generate_content_with_fallback(
         for model in MODELS_LIST:
             try:
                 print(f"🔮 Attempting to generate content using model: {model} (Attempt {attempt}/{max_attempts})...")
-                
+                with open("LastPrompt.txt", "w", encoding="utf-8") as f:
+                    f.write(f"Contents:\n{contents}\nModel:\n{model}\nConfig:\n{config}")
                 response = GEMINICLIENT.models.generate_content(
                     model=model,
                     contents=final_contents,
@@ -79,6 +79,8 @@ def generate_content_with_fallback(
                 )
                 
                 if response and response.text:
+                    with open("LastResponse.json", "w", encoding="utf-8") as file:
+                        file.write(response.model_dump_json(indent=4))
                     print(f"✅ Response successfully obtained using model: {model}!")
                     return response
                     
