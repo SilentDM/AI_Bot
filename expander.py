@@ -27,7 +27,7 @@ def obter_arquivos_relacionados(titulo):
             or any(tag in conteudo for tag in TAG_ALVO)
             or any(ignore in conteudo for ignore in IGNORELIST)
         ):
-            print(f"Arquivo relacionado ignorado por conter tag ou rascunho: {arquivo}")
+            #print(f"Arquivo relacionado ignorado por conter tag ou rascunho: {arquivo}")
             continue
         score = conteudo.lower().count(titulo)
         if score > 0:
@@ -84,10 +84,8 @@ def remover_markdown_fences(texto: str) -> str:
         
     return "\n".join(linhas).strip()
 
-# Certifique-se de que a função ask_gemini desenvolvida anteriormente está importada ou declarada no escopo deste arquivo.
-
 def processar_arquivos():
-    # As diretrizes estáticas do cenário funcionam melhor fixadas no System Instruction
+    tagx=0
     instrucoes_globais = """
     Você é um Mestre de Mesa (DM) de D&D experiente e escritor de fantasia sombria (Dark Fantasy).
     Seu objetivo é preencher lacunas de desenvolvimento do cenário de Phaeton.
@@ -148,18 +146,17 @@ def processar_arquivos():
 
     caminho_phaeton = Path(PASTA_PHAETON)
     print(f"🔍 Analisando arquivos em: {caminho_phaeton.resolve()}")
-    
     for arquivo in caminho_phaeton.rglob("*.md"):
+        print(f"🔍 Analisando {arquivo.name}")
         with open(arquivo, 'r', encoding='utf-8') as f:
             linhas = f.readlines()
             conteudo = "".join(linhas)
             titulo = Path(arquivo).stem
             titulo = re.sub(r'_v\d+$', '', titulo.lower())
-
         tag_encontrada = next((tag for tag in TAG_ALVO if tag in conteudo), None)
-        
         if tag_encontrada:
             print(f"\n📄 Tag encontrada no arquivo: {arquivo.name}")
+            tagx=1
             info_locais = ""
             for arquivo_local in arquivo.parent.glob("*.md"):
                 if nome_base(arquivo_local) != nome_base(arquivo):
@@ -231,6 +228,9 @@ REGRAS DE RETORNO:
             except Exception as e:
                 print(f"❌ Erro ao processar {arquivo.name}: {e}")
                 time.sleep(10)
+    if tagx==0:
+        print("Nenhuama tag encontrada")
+        return
 
 if __name__ == "__main__":
     processar_arquivos()

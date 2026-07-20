@@ -408,12 +408,6 @@ class AoDesktopApp:
     def run_expander_task(self):
         try:
             import expander
-            instrucoes = expander.obter_instrucoes()
-            if not instrucoes:
-                self.log_activity("Expander Error: 'vision.md' rules file missing.")
-                self.finished_expander_ui_update("Failed (No rules)")
-                return
-            
             expander.processar_arquivos()
             self.log_activity("Expansion process completed.")
             self.finished_expander_ui_update("Task Finished")
@@ -438,80 +432,85 @@ class AoDesktopApp:
         self.explorer_pane.save_current_file()
         self.root.destroy()
 
-# --- ENGINE DE WORLD BUILDER ---
+    # --- ENGINE DE WORLD BUILDER ---
 
-def start_worldbuilder_thread(self):
-    if self.worldbuilder_running:
-        messagebox.showwarning(
-            "Warning",
-            "The WorldBuilder task is currently running."
+    def start_worldbuilder_thread(self):
+        if self.worldbuilder_running:
+            messagebox.showwarning(
+                "Warning",
+                "The WorldBuilder task is currently running."
+            )
+            return
+        self.worldbuilder_running = True
+        self.btn_worldbuilder.config(
+            state=tk.DISABLED
         )
-        return
-    self.worldbuilder_running = True
-    self.btn_worldbuilder.config(
-        state=tk.DISABLED
-    )
-    self.lbl_worldbuilder.config(
-        text="WorldBuilder status: Working...",
-        foreground="#60a5fa"
-    )
-    self.log_activity(
-        "Spawning child task for WorldBuilder..."
-    )
-    self.explorer_pane.save_current_file()
-    threading.Thread(
-        target=self.run_worldbuilder_task,
-        daemon=True
-    ).start()
+        self.lbl_worldbuilder.config(
+            text="WorldBuilder status: Working...",
+            foreground="#60a5fa"
+        )
+        self.log_activity(
+            "Spawning child task for WorldBuilder..."
+        )
+        self.explorer_pane.save_current_file()
+        threading.Thread(
+            target=self.run_worldbuilder_task,
+            daemon=True
+        ).start()
 
-def run_worldbuilder_task(self):
-    try:
-        import wbuilder
-        self.log_activity(
-            "Starting autonomous WorldBuilder..."
-        )
-        iterations = wbuilder.iterationschoice()
-        self.log_activity(
-            f"Gemini decided on {iterations} iterations."
-        )
-        wbuilder.taskplanner(iterations)
-        self.log_activity(
-            "WorldBuilder completed successfully."
-        )
-        self.finished_worldbuilder_ui_update(
-            "Task Finished"
-        )
-    except Exception as e:
-        self.log_activity(
-            f"WorldBuilder encountered an issue: {e}"
-        )
-        self.finished_worldbuilder_ui_update(
-            "Failed (Error)"
-        )
+    def run_worldbuilder_task(self):
+        try:
+            import wbuilder
+            self.log_activity(
+                "Starting autonomous WorldBuilder..."
+            )
+            iterations = wbuilder.iterationschoice()
+            if iterations is None:
+                iterations = 1
+            self.log_activity(
+                f"Gemini decided on {iterations} iterations."
+            )
+            wbuilder.taskplanner(iterations)
+            self.log_activity(
+                "WorldBuilder completed successfully."
+            )
+            self.finished_worldbuilder_ui_update(
+                "Task Finished"
+            )
+        except Exception as e:
+            self.log_activity(
+                f"WorldBuilder encountered an issue: {e}"
+            )
+            self.finished_worldbuilder_ui_update(
+                "Failed (Error)"
+            )
 
-def run_worldbuilder_task(self):
-    try:
-        import wbuilder
-        self.log_activity(
-            "Starting autonomous WorldBuilder..."
-        )
-        iterations = wbuilder.iterationschoice()
-        self.log_activity(
-            f"Gemini decided on {iterations} iterations."
-        )
-        wbuilder.taskplanner(iterations)
-        self.log_activity(
-            "WorldBuilder completed successfully."
-        )
-        self.finished_worldbuilder_ui_update(
-            "Task Finished"
-        )
-    except Exception as e:
-        self.log_activity(
-            f"WorldBuilder encountered an issue: {e}"
-        )
-        self.finished_worldbuilder_ui_update(
-            "Failed (Error)"
+    def run_worldbuilder_task(self):
+        try:
+            import wbuilder
+            self.log_activity(
+                "Starting autonomous WorldBuilder..."
+            )
+            iterations = wbuilder.iterationschoice()
+            self.log_activity(
+                f"Gemini decided on {iterations} iterations."
+            )
+            wbuilder.taskplanner(iterations)
+            if iterations is None:
+                iterations = 1
+
+            self.log_activity(
+                "WorldBuilder completed successfully."
+            )
+            self.finished_worldbuilder_ui_update(
+                "Task Finished"
+            )
+        except Exception as e:
+            self.log_activity(
+                f"WorldBuilder encountered an issue: {e}"
+            )
+            self.finished_worldbuilder_ui_update(
+                "Failed (Error)"
         )
 
 if __name__ == "__main__":

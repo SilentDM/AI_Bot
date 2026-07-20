@@ -58,7 +58,7 @@ Quantas iterações ainda são necessárias?
         if numero:
             print(f"Gemini analisou e decidiu que precisa de: {numero} etapas para melhorar o projeto")
             taskplanner(numero)
-            return 
+            return 1
 
     except Exception as e:
         print(f"Erro ao determinar iterações: {e}")
@@ -159,10 +159,12 @@ Retorne apenas JSON.
                 reverse=True
             )
             enactchoices(actions)
+            time.sleep(10)
             maxiterations -= 1
         except Exception as e:
             print(f"Erro na resposta do TaskPlanner: {e}")
             maxiterations -= 1
+            time.sleep(10)
 
 def enactchoices(actions):
     for action in actions:
@@ -210,10 +212,6 @@ def createfolder(path, reason):
 
 def createfile(path, reason):
     print(f"Vamos criar um arquivo: {path}, por que {reason}")
-    from pathlib import Path
-
-def createfile(path, reason):
-    print(f"Vamos criar um arquivo: {path}, por que {reason}")
     try:
         arquivo = Path(path)
         # Força extensão .md
@@ -238,7 +236,7 @@ def createfile(path, reason):
 status: rascunho
 ----
 Este local, personagem, facção ou elemento da lore ainda não foi desenvolvido.
-<!-- Todo: Expandir completamente este arquivo na próxima iteração.
+<-- TO DO: Expandir completamente este arquivo na próxima iteração.
 """
         with open(
             arquivo,
@@ -317,11 +315,13 @@ Retorne apenas o conteúdo final do arquivo.
             f"✅ Nova versão criada: "
             f"{novo_arquivo_path.name}"
         )
+        time.sleep(15)
 
     except Exception as e:
         print(
             f"❌ Erro ao processar "
             f"{arquivo.name}: {e}"
         )
+        time.sleep(15)
 
 iterationschoice()

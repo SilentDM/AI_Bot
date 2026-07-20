@@ -5,12 +5,12 @@
             "content-type": "application/json; charset=UTF-8",
             "vary": "Origin, X-Origin, Referer",
             "content-encoding": "gzip",
-            "date": "Sun, 19 Jul 2026 22:57:24 GMT",
+            "date": "Mon, 20 Jul 2026 00:03:08 GMT",
             "server": "scaffolding on HTTPServer2",
             "x-xss-protection": "0",
             "x-frame-options": "SAMEORIGIN",
             "x-content-type-options": "nosniff",
-            "server-timing": "gfet4t7; dur=10966",
+            "server-timing": "gfet4t7; dur=11101",
             "alt-svc": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000",
             "transfer-encoding": "chunked"
         },
@@ -28,9 +28,9 @@
                         "function_call": null,
                         "function_response": null,
                         "inline_data": null,
-                        "text": "# Campanha\n\nO Império Draco-Divino Branoth precisa expandir suas fronteiras e, para isso, convocou em todas as cidades do continente heróis, aventureiros e mercenários que desejam integrar a 'Vanguarda' do Império. Este grupo de elite é formado por generais do exército Imperial e pelos poucos indivíduos poderosos o suficiente para enfrentar os desafios cósmicos e territoriais que a expansão impõe.\n\nOs personagens começam no **nível 8**. Cerca de 30 aventureiros foram aceitos na Vanguarda e divididos em grupos de 4 ou 5, cada um recebendo uma missão estratégica para a consolidação do poder imperial.\n\nAos nossos aventureiros, a jornada começa com uma destas missões críticas:\n\n### Ganchos de Aventura Iniciais (Nível 8)\n\n1.  **O Roc Elétrico de Colwin:** A Vanguarda precisa abater um lendário Roc Elétrico que nidifica nos picos de Colwin. A criatura está gerando tempestades caóticas que destroem caravanas e isolam vilarejos. A missão exige astúcia para escalar o terreno perigoso e força para enfrentar uma besta que desafia as leis naturais.\n2.  **O Pacto Submarino:** O Imperador Branoth ordena uma missão diplomática nas profundezas do oceano. Os aventureiros devem localizar o isolado Reinado dos Elfos Aquáticos e negociar uma aliança vital, garantindo proteção contra as ameaças que emergem das fossas abissais, antes que o Império perca o controle das rotas marítimas.\n3.  **O Coração Pulsante de Kerath:** Após o fracasso de uma expedição liderada pelo General Antiok, os aventureiros são convocados para uma missão de infiltração na Cidade Monstruosa de Kerath. O objetivo é descobrir a fonte do poder de N'argot e enfraquecer as defesas da cidade antes que uma campanha militar em larga escala seja lançada.\n4.  **O Enigma do Pilar Cristalino:** Um culto misterioso surgiu nas planícies de Hiraeth, adorando um pilar de cristal que brotou da terra. Seus seguidores afirmam que o pilar sussurra verdades esquecidas. O Império deseja que os aventureiros investiguem a natureza do objeto e garantam que ele seja \"trazido para a ordem imperial\", seja pela diplomacia ou pela força.\n5.  **O Rastro do Errante Pétreo (Fortaleza de Aestor):** Perto da Fortaleza de Aestor, uma criatura fantasmagórica que desliza através da rocha sólida está dizimando patrulhas. Os aventureiros devem rastrear o \"Errante Pétreo\" e descobrir se sua existência é um sintoma da instabilidade do Portão-Vivo nas montanhas de Nord'Svind.",
+                        "text": "# Albor_Doz\n> Este arquivo foi criado automaticamente pelo WorldBuilder.\n----\nstatus: rascunho\n----\nAlbor_Doz não é uma cidade, mas um aglomerado de ruínas ciclópicas que perfuram o solo árido de Thal-Elyr como dentes de um titã esquecido. Situado em uma península isolada, o local é composto por torres de obsidiana que desafiam a gravidade, inclinadas em ângulos impossíveis sobre o oceano revolto.\n\nDiz a lenda que Albor_Doz foi o epicentro de uma catástrofe mágica durante a Era de Glória, onde os antigos habitantes tentaram \"ordenar\" o fluxo do tempo, resultando em uma anomalia persistente: a região é um ponto cego onde o tempo flui de maneira errática. Ruínas de uma civilização anterior à fundação dos reinos atuais jazem sob camadas de sedimentos, e escavações recentes revelaram câmaras que contêm ecos de vozes em línguas que não deveriam mais ser pronunciadas.\n\nA facção conhecida como *Os Guardiões do Vazio* mantém uma presença vigilante no local, não para proteger o que há dentro, mas para garantir que o que foi enterrado não desperte. Para eles, Albor_Doz é uma cicatriz no mundo que deve ser mantida contida, custe o que custar. No entanto, emissários do Império Branoth começaram a cercar a região, atraídos pelos relatos de fontes de poder antigo que poderiam ser \"ordenadas\" para servir ao crescimento do Império. O preço da exploração de Albor_Doz não é apenas o perigo físico, mas a erosão da sanidade e a distorção da própria realidade daqueles que ousam cruzar suas fronteiras.",
                         "thought": null,
-                        "thought_signature": "EjQKMgERTTIPDlOFPnhGws2_X5jYKBQU9vDilacNoSylQG3wMxPY2EQ_qNLvxsyDXyGszKyP",
+                        "thought_signature": "EjQKMgERTTIPNldAGAkQ4-PUwMH-DGZ8zdHefhOHxG-w2AImrpXasw3a_LpcXw3D7i7gdtkS",
                         "video_metadata": null,
                         "tool_call": null,
                         "tool_response": null,
@@ -54,17 +54,17 @@
     "create_time": null,
     "model_version": "gemini-3.1-flash-lite",
     "prompt_feedback": null,
-    "response_id": "S1ZdapjIE9Dgz7IPjurpwQI",
+    "response_id": "s2VdavzQA4GTqtsP8-WfsAU",
     "usage_metadata": {
         "cache_tokens_details": null,
         "cached_content_token_count": null,
-        "candidates_token_count": 624,
+        "candidates_token_count": 396,
         "candidates_tokens_details": null,
-        "prompt_token_count": 60244,
+        "prompt_token_count": 4258,
         "prompt_tokens_details": [
             {
                 "modality": "TEXT",
-                "token_count": 57000
+                "token_count": 1014
             },
             {
                 "modality": "IMAGE",
@@ -74,7 +74,7 @@
         "thoughts_token_count": null,
         "tool_use_prompt_token_count": null,
         "tool_use_prompt_tokens_details": null,
-        "total_token_count": 60868,
+        "total_token_count": 4654,
         "traffic_type": null
     },
     "model_status": null,
