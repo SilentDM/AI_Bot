@@ -1,8 +1,10 @@
 import os, sys, explorer, memory, json, re, time
 import project_utils as pu
+import expander as ex
+from typing import Optional
 from pathlib import Path
 from ai_utils import ask_gemini
-import expander as ex
+
 
 
 CONTEUDO = pu.carregar_phaeton()
@@ -21,13 +23,14 @@ IGNORELIST = [
     "status: rascunho"
 ]
 
-def iterationschoice():
+def iterationschoice(reason: Optional[str] = "O projeto esteja concluído"):
     CONTEUDO = pu.carregar_phaeton()
     DIRETORIOS = pu.carregar_estrutura_phaeton()
     INDICE = pu.gerar_indice()
-    instrucao_sistema = """
+    instrucao_sistema = f"""
 Você é um especialista em worldbuilding para RPG.
-Analise o estado atual do projeto e estime quantas iterações de expansão ainda são necessárias.
+Analise o estado atual do projeto e estime quantas iterações de expansão são necessárias para que: 
+{reason}.
 Responda apenas um número inteiro entre 1 e 10.
 """
 
@@ -57,25 +60,23 @@ Quantas iterações ainda são necessárias?
 
         if numero:
             print(f"Gemini analisou e decidiu que precisa de: {numero} etapas para melhorar o projeto")
-            taskplanner(numero)
+            taskplanner(numero, reason)
             return 1
 
     except Exception as e:
         print(f"Erro ao determinar iterações: {e}")
         return 1
 
-def taskplanner(maxiterations: int = 1):
+def taskplanner(maxiterations: int = 1, reason: Optional[str] = "O projeto esteja concluído"):
     print(f"O iterationschoice retornou que vamos precisar de {maxiterations} iterações! Vamos começar o Taskplanner!")
     CONTEUDO = pu.carregar_phaeton()
     DIRETORIOS = pu.carregar_estrutura_phaeton()
     INDICE = pu.gerar_indice()
     while maxiterations>0:
-        instrucao_sistema = """
+        instrucao_sistema = f"""
 Você é um especialista em worldbuilding para RPG.
-
-Analise o projeto e identifique quais ações são necessárias
-para torná-lo mais completo.
-
+Analise o projeto e identifique quais ações são necessárias para:
+{reason}
 Você possui apenas três ferramentas:
 
 CreateFolder
@@ -83,31 +84,29 @@ CreateFile
 ImproveFile
 
 Retorne EXCLUSIVAMENTE um JSON válido.
-
 Formato obrigatório:
-
-{
+{{
     "actions": [
-    {
+    {{
         "type": "CreateFolder",
         "path": "Phaeton/...",
-        "priority":10,
-        "reason": "motivo"
-    },
-    {
+        "priority":7,
+        "objective": "motivo"
+    }},
+    {{
         "type": "CreateFile",
         "path": "Phaeton/.../arquivo.md",
-        "priority":9,        
-        "reason": "motivo"
-    },
-    {
+        "priority":8,        
+        "objective": "O que deve ter no arquivo"
+    }},
+    {{
         "type": "ImproveFile",
         "path": "Phaeton/.../arquivo.md",
-        "priority":8,
-        "reason": "motivo"
-    }
+        "priority":10,        
+        "objective": "O que deve ter no arquivo"
+    }}
     ]
-}
+}}
 
 Não escreva explicações.
 Não utilize markdown.
@@ -128,11 +127,9 @@ Projeto:
 Critérios:
 - Quantidade de regiões documentadas.
 - Quantidade de cidades documentadas.
-- Quantidade de facções documentadas.
-- Quantidade de NPCs documentados.
 - Possibilidade de conduzir aventuras sem gerar novas informações.
 
-Liste no máximo 10 ações prioritárias.
+Liste no máximo 15 ações prioritárias.
 Retorne apenas JSON.
 """
 
@@ -165,16 +162,33 @@ Retorne apenas JSON.
             print(f"Erro na resposta do TaskPlanner: {e}")
             maxiterations -= 1
             time.sleep(10)
+    ex.processar_arquivos()
 
 def enactchoices(actions):
     for action in actions:
         tipo = action["type"]
+        path = action.get("path", "")
+        objective = action.get("objective", "")
+        with open("changelog.jsonl","a",encoding="utf-8") as f:
+            registro = {
+                "timestamp": pu.currentdate(),
+                "action": tipo,
+                "path": path,
+                "objective": objective
+            }
+            f.write(
+                json.dumps(
+                    registro,
+                    ensure_ascii=False
+                )
+                + "\n"
+            )
         if tipo == "CreateFolder":
-            createfolder(action["path"], action.get("reason", ""))
+            createfolder(action["path"], action.get("objective", ""))
         elif tipo == "CreateFile":
-            createfile(action["path"], action.get("reason", ""))
+            createfile(action["path"], action.get("objective", ""))
         elif tipo == "ImproveFile":
-            alterfile(action["path"], action.get("reason", ""))
+            improvefile(action["path"], action.get("objective", ""))
 
 def createfolder(path, reason):
     print(f"Vamos criar uma pasta: {path}, por que {reason}")
@@ -235,8 +249,7 @@ def createfile(path, reason):
 ----
 status: rascunho
 ----
-Este local, personagem, facção ou elemento da lore ainda não foi desenvolvido.
-<-- TO DO: Expandir completamente este arquivo na próxima iteração.
+<-- TO DO: {reason}
 """
         with open(
             arquivo,
@@ -256,7 +269,7 @@ Este local, personagem, facção ou elemento da lore ainda não foi desenvolvido
         )
         return False
 
-def alterfile(path, reason):
+def improvefile(path, reason):
     print(f"Vamos melhorar o arquivo: {path}")
     print(f"Motivo: {reason}")
     arquivo = Path(path)
@@ -323,5 +336,3 @@ Retorne apenas o conteúdo final do arquivo.
             f"{arquivo.name}: {e}"
         )
         time.sleep(15)
-
-iterationschoice()

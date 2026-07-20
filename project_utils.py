@@ -1,5 +1,6 @@
 import os,re, json
 from pathlib import Path
+from datetime import datetime
 
 TAG_ALVO = [
     "<-- TO DO:", "<-- TO DO", "<-- TODO:", "<-- TODO", "<-- todo",
@@ -11,6 +12,9 @@ IGNORELIST = [
     "Templates", 
     "status: rascunho"
 ]
+
+def currentdate():
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 def gerar_indice(root="Phaeton"):
     root = Path(root)
