@@ -22,7 +22,6 @@ Style\*
 Style/
 LastResponse.json
 testing.py
-changelog.jsonl
 
 # Distribution / packaging
 .Python

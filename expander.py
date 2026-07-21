@@ -2,8 +2,8 @@ import os, re, time
 from pathlib import Path
 from google import genai  # Utilizando o SDK moderno
 from ai_utils import ask_gemini
-PASTA_PHAETON = os.path.join(os.getcwd(), "Phaeton")
-ARQUIVO_REGRAS = "vision.md"
+
+PASTA_PHAETON = os.path.join(os.getcwd(), os.getenv("PASTA_PROJETO", "Phaeton"))
 
 TAG_ALVO = [
     "<-- TO DO:", "<-- TO DO", "<-- TODO:", "<-- TODO", "<-- todo",
@@ -21,13 +21,11 @@ def obter_arquivos_relacionados(titulo):
             continue
         with open(arquivo, encoding="utf-8") as f:
             conteudo = f.read()
-
         if (
             arquivo.stem.lower() == titulo
             or any(tag in conteudo for tag in TAG_ALVO)
             or any(ignore in conteudo for ignore in IGNORELIST)
         ):
-            #print(f"Arquivo relacionado ignorado por conter tag ou rascunho: {arquivo}")
             continue
         score = conteudo.lower().count(titulo)
         if score > 0:
@@ -38,29 +36,57 @@ def obter_arquivos_relacionados(titulo):
         reverse=True
     )
     
-    # Limita aos 10 mais relevantes
     relacionados = relacionados[:10]
     
     print("\n==== Arquivos relacionados encontrados:====")
     for name, _, score in relacionados:
         print(f"{name}: {score} ocorrências")
     
-    # Correção: Ajustado o separador de join para quebras de linha limpas
     return "\n\n".join(
         conteudo for _, conteudo, _ in relacionados
     )
 
 def obter_proximo_nome_versao(caminho_original):
     diretorio = caminho_original.parent
-    nome_base = re.sub(r'_v\d+$', '', caminho_original.stem)
+    nome_base = re.sub(
+        r'_v\d+$',
+        '',
+        caminho_original.stem
+    )
     extensao = caminho_original.suffix
-    versao = 1
-    while True:
-        novo_nome = f"{nome_base}_v{versao}{extensao}"
-        novo_caminho = diretorio / novo_nome
-        if not novo_caminho.exists():
-            return novo_caminho
-        versao += 1
+    maior_versao = 0
+    for arquivo in diretorio.glob(
+        f"{nome_base}_v*{extensao}"
+    ):
+        match = re.search(
+            r'_v(\d+)$',
+            arquivo.stem
+        )
+        if match:
+            maior_versao = max(
+                maior_versao,
+                int(match.group(1))
+            )
+    nova_versao = maior_versao + 1
+    return (
+        diretorio /
+        f"{nome_base}_v{nova_versao}{extensao}"
+    )
+
+def carregar_diretrizes_estilo():
+    """Carrega e unifica as diretrizes de estilo contidas na pasta designada."""
+    pasta_estilo = Path(os.getenv("PASTA_ESTILO", "Style"))
+    conteudo_estilo = []
+    if pasta_estilo.exists() and pasta_estilo.is_dir():
+        for arquivo in sorted(pasta_estilo.glob("*.md")):
+            try:
+                with open(arquivo, "r", encoding="utf-8") as f:
+                    conteudo_estilo.append(f"# DIRETRIZ ({arquivo.name}):{f.read()}")
+            except Exception as e:
+                print(f"Erro ao carregar diretriz {arquivo.name}: {e}")
+    return "".join(conteudo_estilo)
+
+
 
 def nome_base(path):
     return re.sub(r'_v\d+$', '', path.stem.lower())
@@ -86,68 +112,16 @@ def remover_markdown_fences(texto: str) -> str:
 
 def processar_arquivos():
     tagx=0
-    instrucoes_globais = """
+    estilo_contexto = carregar_diretrizes_estilo()
+    instrucoes_globais = f"""
     Você é um Mestre de Mesa (DM) de D&D experiente e escritor de fantasia sombria (Dark Fantasy).
     Seu objetivo é preencher lacunas de desenvolvimento do cenário de Phaeton.
-    
-    # O tema central do cenário e das aventuras em Phaeton
-    - Caos x Ordem.
-    - É melhor viver em um mundo de ordem perfeita, mas sem liberdade e sem consequências ou em um mundo de caos imperfeito, com sofrimento, mas repleto de oportunidades?
-    - É possível eliminar o caos de um ambiente caótico e ordenar, das pessoas até a natureza?
-
-    # Verdades Fundamentais de Phaeton
-    - A magia simples e fraca é comum, grandes poderes mágicos são raros.
-    - Os deuses são reais.
-    - O mundo já viveu uma era de glória perdida.
-    - Existem segredos ancestrais que jamais deveriam ser descobertos.
-    - O heroísmo existe, mas raramente vence sem sacrifícios.
-    - Monstros gigantes, titãs e seres lendários rondam pelo mundo, em sua superfície, nos céus, no subsolo e pelos oceanos
-
-    # Estilo Narrativo de Phaeton
-    - Phaeton é um cenário de Dark Fantasy épico.
-    - A sensação predominante deve ser de grandiosidade e mistério.
-    - Ruínas antigas são mais impressionantes que construções modernas.
-    - Quase toda cidade, castelo e forte estão construídos acima de uma civilização antiga que foi extinta e esquecida.
-    - A magia é majestosa, mas perigosa.
-    - Heróis podem mudar o destino do mundo, mas quase sempre pagam um preço por isso.
-
-    # O que evitar
-    - Não criar humor moderno.
-    - Não usar nomes excessivamente caricatos.
-    - Não criar sociedades completamente boas.
-    - Não criar sociedades completamente malignas.
-    - Evitar conflitos simplistas.
-
-    # O que criar quando necessário
-    - Foque em nomes criativos e relacionados ao assunto.
-    - Dê descrições à lugares seguindo o estilo e verdades de Phaeton.
-    - Invente cenários, lugares e pessoas onde necessário.
-    - Não altere informações já existentes e faça uso delas ao criar coisas novas.
-
-    ## O que realmente importa para esse cenário
-    ### O conflito central do mundo
-    - A expansão do Império Draco-Divino Branoth;
-    - A influência dos Antigos e de Mythos na mente dos mortais;
-    - A eterna disputa territorial entre Dragões, Reinados e Impérios;
-
-    ### Facções com objetivos legítimos
-    - Não existe o bem e o mal;
-    - Todos possuem seus objetivos por motivo real e em prol de seus próprios pontos de vista, corretos;
-    - Toda escolha nesse cenário, irá fazer os aventureiros ganharem algo e perder algo;
-
-    ### Perguntas sem resposta
-    - Problemas são criados que não existe resposta pronta para uma solução;
-    - Mistérios e situações causadas por forças não explicadas nem apresentadas, até que alguém resolva investigar a fundo;
-
-    ### Consequências em escala
-    - Situações e problemas devem representar situações amplas que afetam uma grande área ou uma grande população;
-    - Decisões dos aventureiros irão causar grandes mudanças e efeitos;
+    # Diretrizes e Regras Adicionais do Projeto:
+    {estilo_contexto}
     """
 
     caminho_phaeton = Path(PASTA_PHAETON)
-    print(f"🔍 Analisando arquivos em: {caminho_phaeton.resolve()}")
     for arquivo in caminho_phaeton.rglob("*.md"):
-        print(f"🔍 Analisando {arquivo.name}")
         with open(arquivo, 'r', encoding='utf-8') as f:
             linhas = f.readlines()
             conteudo = "".join(linhas)
@@ -155,7 +129,7 @@ def processar_arquivos():
             titulo = re.sub(r'_v\d+$', '', titulo.lower())
         tag_encontrada = next((tag for tag in TAG_ALVO if tag in conteudo), None)
         if tag_encontrada:
-            print(f"\n📄 Tag encontrada no arquivo: {arquivo.name}")
+            print(f"\n=====\nTag encontrada no arquivo:\n{arquivo.name}\n=====")
             tagx=1
             info_locais = ""
             for arquivo_local in arquivo.parent.glob("*.md"):
@@ -166,11 +140,9 @@ def processar_arquivos():
                             any(tag in conteudo_local for tag in TAG_ALVO)
                             or "status: rascunho" in conteudo_local.lower()
                             ):
-                            print(f"Arquivo relacionado ignorado por conter tag ou rascunho: {arquivo_local}")
                             continue
                         else:
                             with open(arquivo_local, "r", encoding="utf-8") as f:
-                                print(f" -> Adicionar ao contexto local: {arquivo_local.name}")
                                 info_locais += f.read() + "\n\n"
             
             info_importante = obter_arquivos_relacionados(titulo)

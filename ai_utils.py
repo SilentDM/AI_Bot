@@ -1,6 +1,7 @@
 import os,time, json
 from pathlib import Path
 from typing import Any, Optional, Type
+from openai import images
 from pydantic import BaseModel
 from google import genai
 from google.genai import types
@@ -33,7 +34,7 @@ def load_phaeton_images():
     if pasta_phaeton.exists():
         for img_path in pasta_phaeton.rglob("*.png"):
             try:
-                print(f"🖼️ [Local API] Automatically attaching map/region image: {img_path.name}")
+                #print(f"🖼️ [Local API] Automatically attaching map/region image: {img_path.name}")
                 with open(img_path, "rb") as f:
                     img_data = f.read()
                 parts.append(
@@ -56,7 +57,8 @@ def generate_content_with_fallback(
     If all models fail, it waits and retries up to max_attempts times.
     """
     # Prepare contents with images if present
-    images = load_phaeton_images()
+    images = ""
+    #images = load_phaeton_images()
     if images:
         if isinstance(contents, list):
             final_contents = list(contents) + images

@@ -194,13 +194,10 @@ def createfolder(path, reason):
     print(f"Vamos criar uma pasta: {path}, por que {reason}")
     try:
         pasta = Path(path)
-        raiz = Path("Phaeton").resolve()
+        raiz = Path(os.getenv("PASTA_PROJETO", "Phaeton")).resolve()
         destino = pasta.resolve()
         if not str(destino).startswith(str(raiz)):
-            print(
-                "❌ Tentativa de criar "
-                "pasta fora de Phaeton."
-            )
+            print("❌ Tentativa de criar pasta fora da pasta raiz de conhecimento.")
             return False
         if destino.exists():
             print(

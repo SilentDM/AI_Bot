@@ -5,12 +5,12 @@
             "content-type": "application/json; charset=UTF-8",
             "vary": "Origin, X-Origin, Referer",
             "content-encoding": "gzip",
-            "date": "Mon, 20 Jul 2026 00:03:08 GMT",
+            "date": "Tue, 21 Jul 2026 04:33:17 GMT",
             "server": "scaffolding on HTTPServer2",
             "x-xss-protection": "0",
             "x-frame-options": "SAMEORIGIN",
             "x-content-type-options": "nosniff",
-            "server-timing": "gfet4t7; dur=11101",
+            "server-timing": "gfet4t7; dur=3083",
             "alt-svc": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000",
             "transfer-encoding": "chunked"
         },
@@ -28,9 +28,9 @@
                         "function_call": null,
                         "function_response": null,
                         "inline_data": null,
-                        "text": "# Albor_Doz\n> Este arquivo foi criado automaticamente pelo WorldBuilder.\n----\nstatus: rascunho\n----\nAlbor_Doz não é uma cidade, mas um aglomerado de ruínas ciclópicas que perfuram o solo árido de Thal-Elyr como dentes de um titã esquecido. Situado em uma península isolada, o local é composto por torres de obsidiana que desafiam a gravidade, inclinadas em ângulos impossíveis sobre o oceano revolto.\n\nDiz a lenda que Albor_Doz foi o epicentro de uma catástrofe mágica durante a Era de Glória, onde os antigos habitantes tentaram \"ordenar\" o fluxo do tempo, resultando em uma anomalia persistente: a região é um ponto cego onde o tempo flui de maneira errática. Ruínas de uma civilização anterior à fundação dos reinos atuais jazem sob camadas de sedimentos, e escavações recentes revelaram câmaras que contêm ecos de vozes em línguas que não deveriam mais ser pronunciadas.\n\nA facção conhecida como *Os Guardiões do Vazio* mantém uma presença vigilante no local, não para proteger o que há dentro, mas para garantir que o que foi enterrado não desperte. Para eles, Albor_Doz é uma cicatriz no mundo que deve ser mantida contida, custe o que custar. No entanto, emissários do Império Branoth começaram a cercar a região, atraídos pelos relatos de fontes de poder antigo que poderiam ser \"ordenadas\" para servir ao crescimento do Império. O preço da exploração de Albor_Doz não é apenas o perigo físico, mas a erosão da sanidade e a distorção da própria realidade daqueles que ousam cruzar suas fronteiras.",
+                        "text": "### Adrastea\nÉ uma lua, nada demais, nada de menos, nada de especial, nada de anormal, ela existe junto com o planeta e faz coisas que luas fazem com o planeta.\n\n### Menai\nEssa lua não é uma lua, ela é filha de Selûne, como isso é possivel, ninguém sabe, mas é o fato. Menai é um ser vivo, mas outro tipo de existência, como um corpo celeste, ela é eterna até que um cataclisma cósmico destrua seu corpo, ela não vê a passagem do tempo como humanóides, uma era cósmica é como um ano para um humano. Ela existe desde que Phaeton existe. Sua presença não afeta o planeta de nenhuma forma, mas ela pode ver tudo que acontece em sua superfície e sabe de tudo que já aconteceu no planeta sob seu olhar, desde o começo. Um dia ela terá seu objetivo revelado, nem ela própria sabe por que a Deusa a teve e a deixou nesse local.\n\nA superfície de Menai é composta por um solo de poeira prateada que nunca esfria, onde a topografia se altera sutilmente conforme o humor da entidade, formando cânions que lembram veias e planícies que pulsam com uma luz pálida. No centro de uma cratera que nunca recebe sombra, ergue-se o \"Santuário do Reflexo\", uma estrutura de arquitetura impossível feita de vidro estelar e mármore lunar, onde os ecos de toda a história de Phaeton podem ser ouvidos como sussurros constantes. É neste santuário que Menai manifesta o \"Avatar da Observadora\", uma forma humanóide de beleza etérea e olhos que contêm nebulosas, capaz de converter o conhecimento acumulado em diálogos crípticos para visitantes que consigam realizar a travessia astral até lá. Contudo, a lua não está desabitada; nas fendas abissais de sua crosta, vivem os *Tecelões de Éter*, criaturas aracnídeas translúcidas que se alimentam das memórias esquecidas que vazam do planeta, mantendo o equilíbrio mental da filha de Selûne ao drenar os eventos traumáticos que ela testemunha. Aqueles que buscam o Santuário devem estar preparados, pois Menai não oferece conselhos gratuitos: ela frequentemente exige que o viajante sacrifique uma memória pessoal preciosa para que ela possa adicioná-la à sua vasta biblioteca de existência.",
                         "thought": null,
-                        "thought_signature": "EjQKMgERTTIPNldAGAkQ4-PUwMH-DGZ8zdHefhOHxG-w2AImrpXasw3a_LpcXw3D7i7gdtkS",
+                        "thought_signature": "EjQKMgERTTIP8T4UdTrNVoKbca1N2a79T0_Dlt1Z10YXbLfWGvJGykNpjQwssXVA7nV3faPd",
                         "video_metadata": null,
                         "tool_call": null,
                         "tool_response": null,
@@ -54,27 +54,23 @@
     "create_time": null,
     "model_version": "gemini-3.1-flash-lite",
     "prompt_feedback": null,
-    "response_id": "s2VdavzQA4GTqtsP8-WfsAU",
+    "response_id": "ivZeapjZGaStz7IPxKuWkQ0",
     "usage_metadata": {
         "cache_tokens_details": null,
         "cached_content_token_count": null,
-        "candidates_token_count": 396,
+        "candidates_token_count": 525,
         "candidates_tokens_details": null,
-        "prompt_token_count": 4258,
+        "prompt_token_count": 8914,
         "prompt_tokens_details": [
             {
                 "modality": "TEXT",
-                "token_count": 1014
-            },
-            {
-                "modality": "IMAGE",
-                "token_count": 3244
+                "token_count": 8914
             }
         ],
         "thoughts_token_count": null,
         "tool_use_prompt_token_count": null,
         "tool_use_prompt_tokens_details": null,
-        "total_token_count": 4654,
+        "total_token_count": 9439,
         "traffic_type": null
     },
     "model_status": null,

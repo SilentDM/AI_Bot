@@ -8,12 +8,14 @@ import shutil
 import subprocess
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog, scrolledtext
+from dotenv import env
 
 class PhaetonExplorerFrame(ttk.Frame):
     def __init__(self, parent, log_callback):
         super().__init__(parent)
         self.log_callback = log_callback
         self.current_file = None
+        self.path_to_item = {}  # Mapeia caminhos absolutos para os IDs da Treeview
         
         # Splitter interno horizontal para dividir a árvore de arquivos e o editor de texto
         self.pane = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
@@ -77,20 +79,59 @@ class PhaetonExplorerFrame(ttk.Frame):
         
         # Sincronização inicial do diretório
         self.refresh_tree()
+    def on_key_release(self, event):
+        # Cancela o temporizador anterior se houver nova digitação
+        if self.autosave_timer:
+            self.after_cancel(self.autosave_timer)
+        # Agenda o salvamento para 5000ms (5 segundos)
+        self.autosave_timer = self.after(5000, self.save_current_file_on_timer)
+    def get_open_folders(self):
+        abertas = []
+        def walk(item):
+            values = self.tree.item(item, "values")
+            if values and self.tree.item(item, "open"):
+                abertas.append(os.path.abspath(values[0]))
+            for child in self.tree.get_children(item):
+                walk(child)
+        for root in self.tree.get_children():
+            walk(root)
+        return abertas
+    
+    def restore_open_folders(self, folders):
+        def walk(item):
+            values = self.tree.item(item, "values")
+            if values:
+                path_abs = os.path.abspath(values[0])
+                if path_abs in folders:
+                    self.tree.item(item, open=True)
+            for child in self.tree.get_children(item):
+                walk(child)
+        for root in self.tree.get_children():
+            walk(root)
 
     # --- ATUALIZAÇÃO DA ÁRVORE DE DIRETÓRIOS ---
     def refresh_tree(self):
-        """Reconstrói a árvore com base no diretório de conhecimento configurado."""
+        nome_pasta = os.getenv("PASTA_PROJETO", "Phaeton")
+        current_file = self.current_file
+        open_folders = self.get_open_folders()
+        
         for item in self.tree.get_children():
             self.tree.delete(item)
             
+        self.path_to_item.clear()
+        
         nome_pasta = os.getenv("KNOWLEDGE_FOLDER", "Phaeton")
         pasta_phaeton = os.path.join(os.getcwd(), nome_pasta)
-        if not os.path.exists(pasta_phaeton):
-            os.makedirs(pasta_phaeton, exist_ok=True)
-            
+        
+        # Garante a existência da pasta antes de tentar povoar a árvore
+        os.makedirs(pasta_phaeton, exist_ok=True)
+        
         root_node = self.tree.insert("", "end", text=f"📁 {nome_pasta}", open=True, values=[pasta_phaeton])
+        self.path_to_item[os.path.abspath(pasta_phaeton)] = root_node
+        
         self.populate_tree(root_node, pasta_phaeton)
+        self.restore_open_folders(open_folders)
+        self.restore_current_file(current_file)
         self.log_callback("File explorer tree synchronized.")
 
     def populate_tree(self, parent_node, path):
@@ -98,19 +139,42 @@ class PhaetonExplorerFrame(ttk.Frame):
             for item in sorted(os.listdir(path)):
                 item_path = os.path.join(path, item)
                 is_dir = os.path.isdir(item_path)
-                icon = "📁 " if is_dir else "📄 "
                 
+                # Se não for pasta, verifica se é markdown (.md)
+                if not is_dir:
+                    if not item.lower().endswith(".md"):
+                        continue
+                
+                icon = "📁 " if is_dir else "📄 "
                 node = self.tree.insert(
                     parent_node, "end", text=f"{icon}{item}", open=False, values=[item_path]
                 )
+                
+                # Armazena o mapeamento do caminho absoluto para o ID do nó
+                self.path_to_item[os.path.abspath(item_path)] = node
+                
                 if is_dir:
                     self.populate_tree(node, item_path)
         except Exception as e:
             self.log_callback(f"Error accessing subfolder {path}: {e}")
 
+    def restore_current_file(self, current_file):
+        if not current_file:
+            return
+
+        caminho = os.path.abspath(current_file)
+        item = self.path_to_item.get(caminho)
+
+        if item:
+            self.tree.selection_set(item)
+            self.tree.focus(item)
+            self.tree.see(item)
+
     # --- SALVAMENTO AUTOMÁTICO E SELEÇÃO DE ARQUIVOS ---
     def save_current_file(self):
         """Salva as alterações pendentes no arquivo atual."""
+        self.save_current_file()
+        self.autosave_timer = None
         if self.current_file and os.path.isfile(self.current_file):
             try:
                 conteudo = self.editor.get("1.0", tk.END)
@@ -138,6 +202,10 @@ class PhaetonExplorerFrame(ttk.Frame):
         # Se for o mesmo arquivo que já está aberto, não faz nada
         if self.current_file and os.path.abspath(self.current_file) == os.path.abspath(novo_caminho):
             return
+            # Cancela qualquer salvamento temporizado pendente para evitar gravação cruzada
+        if self.autosave_timer:
+            self.after_cancel(self.autosave_timer)
+            self.autosave_timer = None
             
         # 1. Salva automaticamente o arquivo anterior
         self.save_current_file()

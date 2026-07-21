@@ -7,6 +7,8 @@ import time
 import asyncio
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
+from main import detectar_intencao, ask_gemini, GEMINICLIENT
+from project_utils import carregar_phaeton
 
 # Import do novo módulo de visualização e arquivos e o gerenciador de memória
 import explorer
@@ -53,13 +55,6 @@ class AoDesktopApp:
         """Configura uma paleta dark mode moderna e minimalista nos elementos ttk."""
         self.style = ttk.Style()
         self.style.theme_use('clam')
-        
-        # Cores base:
-        # Fundo principal: #121212 (Escuro profundo)
-        # Fundo secundário (frames/widgets): #1e1e1e (Escuro médio)
-        # Fundo terciário (campos): #252526 (Cinza macio)
-        # Texto principal: #e3e3e3 (Branco fosco)
-        # Bordas: #2d2d2d (Muito sutil)
         
         self.style.configure('.', 
             background='#121212', 
@@ -210,7 +205,29 @@ class AoDesktopApp:
             actions_frame, text="Run Expander Task", command=self.start_expander_thread
         )
         self.btn_expander.pack(fill=tk.X, padx=10, pady=5)
-        
+        self.worldbuilder_objective = tk.StringVar(
+            value="Completar o Projeto"
+        )
+
+        ttk.Label(
+            actions_frame,
+            text="WorldBuilder Objective:"
+        ).pack(
+            anchor=tk.W,
+            padx=10,
+            pady=(10, 0)
+        )
+
+        self.objective_entry = ttk.Entry(
+            actions_frame,
+            textvariable=self.worldbuilder_objective
+        )
+
+        self.objective_entry.pack(
+            fill=tk.X,
+            padx=10,
+            pady=5
+        )
         self.btn_worldbuilder = ttk.Button(
             actions_frame, text="Run WorldBuilder", command=self.start_worldbuilder_thread
         )
@@ -266,12 +283,7 @@ class AoDesktopApp:
         # 1. Atualiza o texto do Chat
         self.chat_display.configure(font=("Segoe UI", self.current_font_size))
         
-        # 2. Atualiza as Tags em negrito para crescerem proporcionalmente
-        #self.chat_display.tag_config("You", font=("Segoe UI", self.current_font_size, "bold"))
-        #self.chat_display.tag_config("Ao", font=("Segoe UI", self.current_font_size, "bold"))
-        #self.chat_display.tag_config("System", font=("Segoe UI", max(7, self.current_font_size - 1), "italic"))
-        
-        # 3. Envia o sinal para redimensionar o editor dinâmico no explorer.py
+        # 2. Envia o sinal para redimensionar o editor dinâmico no explorer.py
         self.explorer_pane.update_editor_font(self.current_font_size)
         
         if delta != 0:
@@ -309,24 +321,19 @@ class AoDesktopApp:
 
     def query_ao_api(self, prompt):
         try:
-            # Substituição do antigo gerar_resposta_google pelo padrão de importação do novo esqueleto
-            from main import carregar_phaeton, detectar_intencao, ask_gemini, GEMINICLIENT
-            
             guild_id = "desktop_env"
             guild_name = "Desktop_Console"
             userid = "999999"
             user_name = "Local_Admin"
             
             persona = (
-                "[Personalidade]\n"
-                "- Você é um mestre de mesa, focado em aventuras de D&D.\n"
+                "- Você é um mestre de mesa chamado Ao, focado em aventuras de D&D.\n"
                 "- Você se diverte criando situações e aventuras engajantes para jogadores e aventureiros.\n"
                 "- Você pode gerar e criar histórias para aqueles que desejam, mas jamais altere informações já definidas."
             )
             regras = (
-                "[REGRAS]\n"
                 "- Não faça julgamentos de valor;\n"
-                "- Pode criar histórias e lugares fictícios, mas não altere informações já definidas;\n"
+                "- Pode criar histórias e lugares fictícios, mas não altere informações já definidas, exceto se isso for pedido diretamente;\n"
             )
             
             # Carrega a leitura dinâmica de arquivos
@@ -433,8 +440,12 @@ class AoDesktopApp:
         self.root.destroy()
 
     # --- ENGINE DE WORLD BUILDER ---
-
     def start_worldbuilder_thread(self):
+        self.worldbuilder_objective_value = (self.worldbuilder_objective.get().strip())
+        
+        if not self.worldbuilder_objective_value:
+            self.worldbuilder_objective_value = ("Completar o Projeto")
+        
         if self.worldbuilder_running:
             messagebox.showwarning(
                 "Warning",
@@ -464,13 +475,21 @@ class AoDesktopApp:
             self.log_activity(
                 "Starting autonomous WorldBuilder..."
             )
-            iterations = wbuilder.iterationschoice()
+            objective = self.worldbuilder_objective_value
+
+            iterations = wbuilder.iterationschoice(objective)
+
             if iterations is None:
                 iterations = 1
             self.log_activity(
                 f"Gemini decided on {iterations} iterations."
             )
-            wbuilder.taskplanner(iterations)
+            
+            wbuilder.taskplanner(
+                iterations,
+                objective
+            )
+
             self.log_activity(
                 "WorldBuilder completed successfully."
             )
@@ -485,33 +504,14 @@ class AoDesktopApp:
                 "Failed (Error)"
             )
 
-    def run_worldbuilder_task(self):
-        try:
-            import wbuilder
-            self.log_activity(
-                "Starting autonomous WorldBuilder..."
-            )
-            iterations = wbuilder.iterationschoice()
-            self.log_activity(
-                f"Gemini decided on {iterations} iterations."
-            )
-            wbuilder.taskplanner(iterations)
-            if iterations is None:
-                iterations = 1
+    def finished_worldbuilder_ui_update(self, status):
+        self.worldbuilder_running = False
+        self.root.after(0, self._safe_finished_worldbuilder, status)
 
-            self.log_activity(
-                "WorldBuilder completed successfully."
-            )
-            self.finished_worldbuilder_ui_update(
-                "Task Finished"
-            )
-        except Exception as e:
-            self.log_activity(
-                f"WorldBuilder encountered an issue: {e}"
-            )
-            self.finished_worldbuilder_ui_update(
-                "Failed (Error)"
-        )
+    def _safe_finished_worldbuilder(self, status):
+        self.btn_worldbuilder.config(state=tk.NORMAL)
+        self.lbl_worldbuilder.config(text=f"WorldBuilder status: {status}", foreground="#e3e3e3")
+        self.explorer_pane.refresh_tree()
 
 if __name__ == "__main__":
     root = tk.Tk()

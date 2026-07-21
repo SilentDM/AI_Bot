@@ -9,7 +9,7 @@ from google.genai import types
 import memory
 from PIL import Image
 from ai_utils import ask_gemini
-from project_utils import carregar_phaeton
+import project_utils as pu
 from dotenv import load_dotenv
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
@@ -95,8 +95,7 @@ async def on_message(message):
         # O system_instruction ideal do Gemini une a persona e as regras
         instrucao_sistema = f"{persona}\n\n{regras}"
         
-        # Load up-to-date Phaeton information dynamically
-        info = carregar_phaeton()
+        info = pu.carregar_phaeton()
         print("Info Dinâmica Carregada!")
         
         extra = detectar_intencao(prompt)   

@@ -16,7 +16,9 @@ IGNORELIST = [
 def currentdate():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-def gerar_indice(root="Phaeton"):
+def gerar_indice(root=None):
+    if root is None:
+        root = os.getenv("PASTA_PROJETO", "Phaeton")
     root = Path(root)
     indice = {}
     if not root.exists():
@@ -39,7 +41,9 @@ def gerar_indice(root="Phaeton"):
         indent=2
     )
 
-def build_tree(root="Phaeton"):
+def build_tree(root=None):
+    if root is None:
+        root = os.getenv("PASTA_PROJETO", "Phaeton")
     root = Path(root)
     if not root.exists():
         return "Pasta não encontrada."
@@ -66,7 +70,7 @@ def build_tree(root="Phaeton"):
     return "\n".join(linhas)
 
 def carregar_estrutura_phaeton():
-    raiz = Path("Phaeton")
+    raiz = Path(os.getenv("PASTA_PROJETO", "Phaeton"))
     resultado = []
     for caminho in sorted(raiz.rglob("*")):
         relativo = caminho.relative_to(raiz)
@@ -81,13 +85,7 @@ def carregar_estrutura_phaeton():
     return "\n".join(resultado)
 
 def carregar_phaeton():
-    """
-    Crawls the 'Phaeton' folder dynamically.
-    1. Tracks only the latest revision of each markdown file (e.g. history_v2 over history_v1 or history).
-    2. Excludes any file containing unresolved TODO tags.
-    3. Merges the content to form the background knowledge payload.
-    """
-    pasta_phaeton = Path(os.getcwd()) / "phaeton"
+    pasta_phaeton = Path(os.getcwd()) / os.getenv("PASTA_PROJETO", "Phaeton")
     if not pasta_phaeton.exists():
         print(f"⚠️ Alerta: Pasta '{pasta_phaeton}' não encontrada.")
         return ""
