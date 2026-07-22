@@ -4,7 +4,7 @@ import asyncio
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
 from main import detectar_intencao, ask_gemini
-from project_utils import carregar_phaeton
+import project_utils as pu
 import explorer
 import memory
 
@@ -332,7 +332,7 @@ class AoDesktopApp:
             )
             
             # Carrega a leitura dinâmica de arquivos
-            info = carregar_phaeton()
+            info = pu.carregar_phaeton()
             extra = detectar_intencao(prompt)
             memorias = memory.carregar_memorias(guild_id, guild_name, userid, user_name)
             
@@ -342,7 +342,7 @@ class AoDesktopApp:
             system_instruction = f"{persona}\n\n{regras}"
             conteudo_prompt = ""
             if info:
-                conteudo_prompt += f"--- CONTEXTO ATUAL DO MUNDO (PHAETON) ---\n{info}\n\n"
+                conteudo_prompt += f"--- CONTEXTO ATUAL DO MUNDO ({pu.PASTA_PROJETO}) ---\n{info}\n\n"
             if extra:
                 conteudo_prompt += f"--- CONTEXTO ADICIONAL DE INTENÇÃO ---\n{extra}\n\n"
             if memorias:
@@ -361,7 +361,7 @@ class AoDesktopApp:
                     resposta = memory.trim_incomplete_sentences(resposta)
                 
                 self.root.after(0, lambda: self.append_to_chat("Ao", resposta))
-                memory.salvar_memoria(guild_id, guild_name, userid, user_name, prompt, resposta, GEMINICLIENT)
+                memory.salvar_memoria(guild_id, guild_name, userid, user_name, prompt, resposta)
                 self.log_activity("Interaction registered to memories successfully.")
             else:
                 self.root.after(0, lambda: self.append_to_chat("System", "No response received. Check terminal."))

@@ -106,7 +106,7 @@ async def on_message(message):
         conteudo_input = ""
         
         if info:
-            conteudo_input += f"--- CONTEXTO ATUAL DO MUNDO (PHAETON) ---\n{info}\n\n"
+            conteudo_input += f"--- CONTEXTO ATUAL DO MUNDO ({pu.PASTA_PROJETO}) ---\n{info}\n\n"
             
         if memorias:
             conteudo_input += f"--- HISTÓRICO RECENTE DE CONVERSAS ---\n{memorias}\n\n"
@@ -119,12 +119,16 @@ async def on_message(message):
         
         # 3. Chamando o novo ask_gemini
         # Definimos a temperatura em 0.65 para permitir flexibilidade sem quebrar as regras de Phaeton.
-        resposta = ask_gemini(
-            contents=conteudo_input,
-            system_instruction=instrucao_sistema,
-            temperature=0.65
-        )
-
+        try:
+            resposta = ask_gemini(
+                contents=conteudo_input,
+                system_instruction=instrucao_sistema,
+                temperature=0.65
+            )
+        except Exception as e:
+            print(f"❌ Erro ao processar: {e}")
+            resposta = "Me perdoe, mortal, estou ocupado com outros afazeres cósmicos!"
+            
         if resposta:
             print("Resposta criada!")
             finalz = [".", "!", "?"]

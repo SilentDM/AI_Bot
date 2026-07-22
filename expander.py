@@ -3,14 +3,10 @@ from pathlib import Path
 from ai_utils import ask_gemini
 import project_utils as pu
 
-PASTA_PHAETON = os.path.join(os.getcwd(), os.getenv("PASTA_PROJETO", "Phaeton"))
-
-
-
 def obter_arquivos_relacionados(titulo):
     relacionados = []
     titulo = re.sub(r'_v\d+$', '', titulo.lower())
-    for arquivo in Path(PASTA_PHAETON).rglob("*.md"):
+    for arquivo in Path(pu.PASTA_PROJETO).rglob("*.md"):
         if any(part in pu.IGNORELIST for part in arquivo.parts):
             continue
         with open(arquivo, encoding="utf-8") as f:
@@ -103,13 +99,13 @@ def processar_arquivos():
     estilo_contexto = carregar_diretrizes_estilo()
     instrucoes_globais = f"""
     Você é um Mestre de Mesa (DM) de D&D experiente e escritor de fantasia sombria (Dark Fantasy).
-    Seu objetivo é preencher lacunas de desenvolvimento do cenário de Phaeton.
+    Seu objetivo é preencher lacunas de desenvolvimento do cenário de {pu.PASTA_PROJETO}.
     # Diretrizes e Regras Adicionais do Projeto:
     {estilo_contexto}
     """
 
-    caminho_phaeton = Path(PASTA_PHAETON)
-    for arquivo in caminho_phaeton.rglob("*.md"):
+    caminho_projeto = Path(pu.PASTA_PROJETO)
+    for arquivo in caminho_projeto.rglob("*.md"):
         with open(arquivo, 'r', encoding='utf-8') as f:
             linhas = f.readlines()
             conteudo = "".join(linhas)
@@ -150,7 +146,7 @@ CONTEÚDO ORIGINAL DO ARQUIVO ATUAL ({arquivo.name}):
 
 TAREFA:
 No conteúdo do arquivo atual, identifique a linha que começa com a variação de To-Do '{tag_encontrada}'.
-Substitua essa linha pelo conteúdo expandido de forma criativa, mantendo total coesão com a história local e as diretrizes de Phaeton.
+Substitua essa linha pelo conteúdo expandido de forma criativa, mantendo total coesão com a história local e as diretrizes de {pu.PASTA_PROJETO}.
 
 REGRAS DE RETORNO:
 1. Retorne o texto completo do arquivo original, incluindo a modificação feita.

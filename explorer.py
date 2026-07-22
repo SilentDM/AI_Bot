@@ -1,11 +1,10 @@
-# --- START OF FILE explorer.py ---
-
 import os
 import sys
 import shutil
 import subprocess
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog, scrolledtext
+import project_utils as pu
 
 class PhaetonExplorerFrame(ttk.Frame):
     def __init__(self, parent, log_callback):
@@ -13,6 +12,7 @@ class PhaetonExplorerFrame(ttk.Frame):
         self.log_callback = log_callback
         self.current_file = None
         self.path_to_item = {}  # Mapeia caminhos absolutos para os IDs da Treeview
+        self.autosave_timer = None
         
         # Splitter interno horizontal para dividir a árvore de arquivos e o editor de texto
         self.pane = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
@@ -55,7 +55,7 @@ class PhaetonExplorerFrame(ttk.Frame):
         # Inicializa o editor bloqueado até que um arquivo seja selecionado
         self.editor.insert("1.0", "--- Select a file to view and edit ---")
         self.editor.config(state=tk.DISABLED)
-        
+        self.editor.bind("<KeyRelease>",self.on_key_release)
         # Menu de contexto clássico (Clique direito) estilizado no novo dark mode
         self.context_menu = tk.Menu(
             self, 
@@ -76,12 +76,21 @@ class PhaetonExplorerFrame(ttk.Frame):
         
         # Sincronização inicial do diretório
         self.refresh_tree()
+        
+
+        
+        
     def on_key_release(self, event):
         # Cancela o temporizador anterior se houver nova digitação
         if self.autosave_timer:
             self.after_cancel(self.autosave_timer)
         # Agenda o salvamento para 5000ms (5 segundos)
         self.autosave_timer = self.after(5000, self.save_current_file_on_timer)
+        
+    def save_current_file_on_timer(self):
+        self.autosave_timer = None
+        self.save_current_file()
+
     def get_open_folders(self):
         abertas = []
         def walk(item):
@@ -108,7 +117,7 @@ class PhaetonExplorerFrame(ttk.Frame):
 
     # --- ATUALIZAÇÃO DA ÁRVORE DE DIRETÓRIOS ---
     def refresh_tree(self):
-        nome_pasta = os.getenv("PASTA_PROJETO", "Phaeton")
+        nome_pasta = pu.PASTA_PROJETO
         current_file = self.current_file
         open_folders = self.get_open_folders()
         
@@ -117,16 +126,16 @@ class PhaetonExplorerFrame(ttk.Frame):
             
         self.path_to_item.clear()
         
-        nome_pasta = os.getenv("KNOWLEDGE_FOLDER", "Phaeton")
-        pasta_phaeton = os.path.join(os.getcwd(), nome_pasta)
+        nome_pasta = pu.PASTA_PROJETO
+        pasta_projeto = os.path.join(os.getcwd(), nome_pasta)
         
         # Garante a existência da pasta antes de tentar povoar a árvore
-        os.makedirs(pasta_phaeton, exist_ok=True)
+        os.makedirs(pasta_projeto, exist_ok=True)
         
-        root_node = self.tree.insert("", "end", text=f"📁 {nome_pasta}", open=True, values=[pasta_phaeton])
-        self.path_to_item[os.path.abspath(pasta_phaeton)] = root_node
+        root_node = self.tree.insert("", "end", text=f"📁 {nome_pasta}", open=True, values=[pasta_projeto])
+        self.path_to_item[os.path.abspath(pasta_projeto)] = root_node
         
-        self.populate_tree(root_node, pasta_phaeton)
+        self.populate_tree(root_node, pasta_projeto)
         self.restore_open_folders(open_folders)
         self.restore_current_file(current_file)
         self.log_callback("File explorer tree synchronized.")
@@ -384,3 +393,5 @@ class PhaetonExplorerFrame(ttk.Frame):
     def update_editor_font(self, font_size):
         """Ajusta dinamicamente a fonte do painel de escrita."""
         self.editor.configure(font=("Consolas", font_size))
+        
+    

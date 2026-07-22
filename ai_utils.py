@@ -99,7 +99,6 @@ def generate_content_with_fallback(
         print("\n🛑 All configured models in the fallback chain failed.")
         if attempt < max_attempts:
             print("⏳ Waiting for 60 seconds before retrying the fallback chain...")
-            time.sleep(30)
         attempt += 1
 
     raise RuntimeError("All models and retry attempts failed to generate content.")

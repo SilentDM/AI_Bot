@@ -2,8 +2,7 @@ import os,re, json
 from pathlib import Path
 from datetime import datetime
 
-
-PASTA_PHAETON = os.path.join(os.getcwd(), os.getenv("PASTA_PROJETO", "Phaeton"))
+PASTA_PROJETO = os.path.join(os.getcwd(), os.getenv("PASTA_PROJETO", "Phaeton"))
 
 TAG_ALVO = [
     "<-- TO DO:", "<-- TO DO", "<-- TODO:", "<-- TODO", "<-- todo",
@@ -21,7 +20,7 @@ def currentdate():
 
 def gerar_indice(root=None):
     if root is None:
-        root = os.getenv("PASTA_PROJETO", "Phaeton")
+        root = PASTA_PROJETO
     root = Path(root)
     indice = {}
     if not root.exists():
@@ -46,7 +45,7 @@ def gerar_indice(root=None):
 
 def build_tree(root=None):
     if root is None:
-        root = os.getenv("PASTA_PROJETO", "Phaeton")
+        root = PASTA_PROJETO
     root = Path(root)
     if not root.exists():
         return "Pasta não encontrada."
@@ -73,7 +72,7 @@ def build_tree(root=None):
     return "\n".join(linhas)
 
 def carregar_estrutura_phaeton():
-    raiz = Path(os.getenv("PASTA_PROJETO", "Phaeton"))
+    raiz = Path(PASTA_PROJETO)
     resultado = []
     for caminho in sorted(raiz.rglob("*")):
         relativo = caminho.relative_to(raiz)
@@ -88,13 +87,13 @@ def carregar_estrutura_phaeton():
     return "\n".join(resultado)
 
 def carregar_phaeton():
-    pasta_phaeton = Path(os.getcwd()) / os.getenv("PASTA_PROJETO", "Phaeton")
-    if not pasta_phaeton.exists():
-        print(f"⚠️ Alerta: Pasta '{pasta_phaeton}' não encontrada.")
+    
+    if not PASTA_PROJETO.exists():
+        print(f"⚠️ Alerta: Pasta '{PASTA_PROJETO}' não encontrada.")
         return ""
     
     # Retrieve all Markdown files recursively
-    all_files = list(pasta_phaeton.rglob("*.md"))
+    all_files = list(PASTA_PROJETO.rglob("*.md"))
     
     # Group files by parent directory and base name (ignoring version suffixes like _v1, _v2)
     groups = {}
