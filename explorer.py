@@ -127,7 +127,7 @@ class PhaetonExplorerFrame(ttk.Frame):
         self.path_to_item.clear()
         
         nome_pasta = pu.PASTA_PROJETO
-        pasta_projeto = os.path.join(os.getcwd(), nome_pasta)
+        pasta_projeto = pu.CAMINHO_PROJETO
         
         # Garante a existência da pasta antes de tentar povoar a árvore
         os.makedirs(pasta_projeto, exist_ok=True)

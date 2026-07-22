@@ -454,13 +454,6 @@ class AoDesktopApp:
         # Atualiza a árvore de arquivos dinamicamente de forma segura
         self.explorer_pane.refresh_tree()
 
-    # --- FECHAMENTO SEGURO DO APLICATIVO ---
-    def on_closing(self):
-        """Garante o salvamento automático do rascunho em edição caso a janela seja fechada."""
-        self.log_activity("Shutting down... saving open files...")
-        self.explorer_pane.save_current_file()
-        self.root.destroy()
-
     # --- ENGINE DE WORLD BUILDER ---
     def start_worldbuilder_thread(self):
         self.worldbuilder_objective_value = (self.worldbuilder_objective.get().strip())

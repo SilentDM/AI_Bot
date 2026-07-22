@@ -1,4 +1,4 @@
-import os,time
+import os,threading, time
 from pathlib import Path
 from typing import Any, Optional, Type
 from pydantic import BaseModel
@@ -18,12 +18,14 @@ if _faltando:
     )
 GEMINICLIENT = genai.Client(api_key=GOOGLE_API_KEY)
 
+_api_lock = threading.Lock()
+
 # Adjusted to use standard active Gemini models
 MODELS_LIST = [
     "gemini-3.1-flash-lite",
-    "gemini-2.5-flash", 
-    "gemini-2.5-pro", 
-    "gemini-1.5-pro"
+    "gemini-3.5-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-3.6-flash"    
 ]
 
 DEFAULT_SYSTEM_INSTRUCTION = "You are a helpful assistant that explains things and creates what is requested."
@@ -113,6 +115,8 @@ def ask_gemini(
     Unified entrypoint for Gemini API requests.
     Supports structured output if a Pydantic model is provided via response_schema.
     """
+    
+
     # Use default fallbacks if arguments are missing
     if not system_instruction:
         system_instruction = DEFAULT_SYSTEM_INSTRUCTION
@@ -132,11 +136,11 @@ def ask_gemini(
     if response_schema:
         config_args["response_mime_type"] = "application/json"
         config_args["response_schema"] = response_schema
-
     config = types.GenerateContentConfig(**config_args)
-    
-    response = generate_content_with_fallback(contents, config)
-    time.sleep(15)
+    with _api_lock:
+        response = generate_content_with_fallback(contents, config)
+        time.sleep(15)    
+        
     return response.text
 
 

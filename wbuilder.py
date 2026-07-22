@@ -12,6 +12,37 @@ DIRETORIOS = pu.carregar_estrutura_phaeton()
 INDICE = pu.gerar_indice()
 print("Iniciando World Builder! Boa Sorte!")
 
+def resolver_caminho(path_str):
+    """
+    Normaliza um caminho sugerido pela IA para garantir que ele sempre
+    seja interpretado como relativo à pasta raiz do projeto (CAMINHO_PROJETO),
+    não relativo à pasta onde o Python está rodando (cwd).
+
+    A IA às vezes manda o caminho:
+    - sem o nome da pasta do projeto na frente: "4.Regions/Colwin/arquivo.md"
+    - com o nome da pasta do projeto na frente: "Phaeton/4.Regions/Colwin/arquivo.md"
+    Esta função trata os dois casos da mesma forma, sempre resultando
+    no caminho real correto dentro de CAMINHO_PROJETO.
+    """
+    caminho = Path(path_str)
+    raiz = Path(pu.CAMINHO_PROJETO).resolve()
+
+    # Se por algum motivo vier um caminho absoluto, apenas resolvemos ele
+    # (a checagem de segurança "is_relative_to" feita depois, em quem chamar
+    # esta função, ainda vai barrar se ele cair fora da raiz).
+    if caminho.is_absolute():
+        return caminho.resolve()
+
+    partes = caminho.parts
+
+    # Se o caminho já vier prefixado com o nome da pasta do projeto (ex: "Phaeton/..."),
+    # removemos esse prefixo antes de juntar com a raiz, para não duplicar
+    # (evita virar "Phaeton/Phaeton/...").
+    if partes and partes[0] == pu.PASTA_PROJETO:
+        caminho = Path(*partes[1:]) if len(partes) > 1 else Path("")
+
+    return (raiz / caminho).resolve()
+
 def iterationschoice(reason: Optional[str] = "O projeto esteja concluído"):
     CONTEUDO = pu.carregar_phaeton()
     DIRETORIOS = pu.carregar_estrutura_phaeton()
@@ -44,25 +75,23 @@ Quantas iterações ainda são necessárias?
             system_instruction=instrucao_sistema,
             temperature=0.35
         )
-
-        numero = re.search(r"\d+", str(resposta))
-        numero = max(1, min(10, int(numero.group())))
-
-        if numero:
-            print(f"Gemini analisou e decidiu que precisa de: {numero} etapas para melhorar o projeto")
-            taskplanner(numero, reason)
-            return 1
-
+        match = re.search(r"\d+", str(resposta))
+        if not match:
+            print("⚠️ A IA não retornou um número válido de iterações. Usando 1 como padrão.")
+            numero = 1
+        else:
+            numero = max(1, min(10, int(match.group())))
+        print(f"Gemini analisou e decidiu que precisa de: {numero} etapas para melhorar o projeto")
+        taskplanner(numero, reason)
+        return 1
     except Exception as e:
         print(f"Erro ao determinar iterações: {e}")
         return 1
-
 class Action(BaseModel):
     type: Literal["CreateFolder", "CreateFile", "ImproveFile"]
     path: str
     priority: int
     objective: str
-
 class ActionPlan(BaseModel):
     actions: List[Action]
 
@@ -184,58 +213,39 @@ def enactchoices(actions):
 def createfolder(path, reason):
     print(f"Vamos criar uma pasta: {path}, por que {reason}")
     try:
-        pasta = Path(path)
-        raiz = Path(pu.PASTA_PROJETO).resolve()
-        destino = pasta.resolve()
-        if not str(destino).is_relative_to(raiz):
+        raiz = Path(pu.CAMINHO_PROJETO).resolve()
+        destino = resolver_caminho(path)   # <-- normaliza o caminho recebido
+
+        if not destino.is_relative_to(raiz):
             print("❌ Tentativa de criar pasta fora da pasta raiz de conhecimento.")
             return False
         if destino.exists():
-            print(
-                f"⚠️ Pasta já existe: "
-                f"{destino}"
-            )
+            print(f"⚠️ Pasta já existe: {destino}")
             return False
-        destino.mkdir(
-            parents=True,
-            exist_ok=True
-        )
-        print(
-            f"✅ Pasta criada: "
-            f"{destino}"
-        )
+        destino.mkdir(parents=True, exist_ok=True)
+        print(f"✅ Pasta criada: {destino}")
         return True
     except Exception as e:
-        print(
-            f"❌ Erro ao criar pasta: "
-            f"{e}"
-        )
+        print(f"❌ Erro ao criar pasta: {e}")
         return False
 
 def createfile(path, reason):
     print(f"Vamos criar um arquivo: {path}, por que {reason}")
     try:
-        arquivo = Path(path)
-        raiz = Path(pu.PASTA_PROJETO).resolve()
-        destino = arquivo.resolve()
-        if not str(destino).is_relative_to(raiz):
-            print("❌ Tentativa de criar pasta fora da pasta raiz de conhecimento.")
+        raiz = Path(pu.CAMINHO_PROJETO).resolve()
+        arquivo = resolver_caminho(path)   # <-- normaliza o caminho recebido
+
+        if not arquivo.is_relative_to(raiz):
+            print("❌ Tentativa de criar arquivo fora da pasta raiz de conhecimento.")
             return False
-        # Força extensão .md
+
         arquivo = arquivo.with_suffix(".md")
-        # Verifica se já existe
         if arquivo.exists():
-            print(
-                f"⚠️ Arquivo já existe: "
-                f"{arquivo}"
-            )
+            print(f"⚠️ Arquivo já existe: {arquivo}")
             return False
-        # Garante que a pasta existe
-        arquivo.parent.mkdir(
-            parents=True,
-            exist_ok=True
-        )
-        titulo = re.sub(r"_v\d+$","",arquivo.stem)
+
+        arquivo.parent.mkdir(parents=True, exist_ok=True)
+        titulo = re.sub(r"_v\d+$", "", arquivo.stem)
 
         conteudo = f"""# {titulo}
 > Este arquivo foi criado automaticamente pelo WorldBuilder.
@@ -244,31 +254,35 @@ status: rascunho
 ----
 <-- TO DO: {reason}
 """
-        with open(
-            arquivo,
-            "w",
-            encoding="utf-8"
-        ) as f:
+        with open(arquivo, "w", encoding="utf-8") as f:
             f.write(conteudo)
-        print(
-            f"✅ Arquivo criado com sucesso: "
-            f"{arquivo}"
-        )
+        print(f"✅ Arquivo criado com sucesso: {arquivo}")
         return True
     except Exception as e:
-        print(
-            f"❌ Erro ao criar arquivo "
-            f"{path}: {e}"
-        )
+        print(f"❌ Erro ao criar arquivo {path}: {e}")
         return False
 
 def improvefile(path, reason):
     print(f"Vamos melhorar o arquivo: {path}")
     print(f"Motivo: {reason}")
-    arquivo = Path(path)
+    arquivo = resolver_caminho(path)   # <-- normaliza o caminho recebido
+
+    if not arquivo.exists():
+        print(f"❌ Arquivo não encontrado, ação ignorada: {arquivo}")
+        return False
+
+    if not arquivo.is_file():
+        print(f"❌ O caminho informado não é um arquivo, ação ignorada: {arquivo}")
+        return False
+
     CONTEUDO = pu.carregar_phaeton()
-    with open(arquivo, "r", encoding="utf-8") as f:
-        arquivoatual = f.read()
+
+    try:
+        with open(arquivo, "r", encoding="utf-8") as f:
+            arquivoatual = f.read()
+    except Exception as e:
+        print(f"❌ Erro ao ler o arquivo {arquivo.name}: {e}")
+        return False
 
     instrucoes_globais = f"""
 Você é um Mestre de Mesa (DM) de D&D experiente.
@@ -295,36 +309,20 @@ Retorne apenas o conteúdo final do arquivo.
 """
 
     try:
-
         texto_expandido = ask_gemini(
             contents=prompt_conteudo,
             system_instruction=instrucoes_globais,
             temperature=0.4
         )
+        texto_limpo = ex.remover_markdown_fences(texto_expandido)
+        novo_arquivo_path = ex.obter_proximo_nome_versao(arquivo)
 
-        texto_limpo = ex.remover_markdown_fences(
-            texto_expandido
-        )
-
-        novo_arquivo_path = ex.obter_proximo_nome_versao(
-            arquivo
-        )
-
-        with open(
-            novo_arquivo_path,
-            "w",
-            encoding="utf-8"
-        ) as f:
+        with open(novo_arquivo_path, "w", encoding="utf-8") as f:
             f.write(texto_limpo)
 
-        print(
-            f"✅ Nova versão criada: "
-            f"{novo_arquivo_path.name}"
-        )
-        
+        print(f"✅ Nova versão criada: {novo_arquivo_path.name}")
+        return True
     except Exception as e:
-        print(
-            f"❌ Erro ao processar "
-            f"{arquivo.name}: {e}"
-        )
+        print(f"❌ Erro ao processar {arquivo.name}: {e}")
+        return False
         
