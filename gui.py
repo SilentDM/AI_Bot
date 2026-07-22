@@ -500,10 +500,7 @@ class AoDesktopApp:
                 f"Gemini decided on {iterations} iterations."
             )
             
-            wbuilder.taskplanner(
-                iterations,
-                objective
-            )
+            wbuilder.taskplanner(iterations,objective)
 
             self.log_activity(
                 "WorldBuilder completed successfully."

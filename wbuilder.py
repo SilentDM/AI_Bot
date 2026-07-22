@@ -44,9 +44,11 @@ def resolver_caminho(path_str):
     return (raiz / caminho).resolve()
 
 def iterationschoice(reason: Optional[str] = "O projeto esteja concluído"):
+    print("Iterations Iniciado!")
     CONTEUDO = pu.carregar_phaeton()
     DIRETORIOS = pu.carregar_estrutura_phaeton()
     INDICE = pu.gerar_indice()
+    numero=1
     instrucao_sistema = f"""
 Você é um especialista em worldbuilding para RPG.
 Analise o estado atual do projeto e estime quantas iterações de expansão são necessárias para que: 
@@ -78,15 +80,15 @@ Quantas iterações ainda são necessárias?
         match = re.search(r"\d+", str(resposta))
         if not match:
             print("⚠️ A IA não retornou um número válido de iterações. Usando 1 como padrão.")
-            numero = 1
         else:
             numero = max(1, min(10, int(match.group())))
         print(f"Gemini analisou e decidiu que precisa de: {numero} etapas para melhorar o projeto")
-        taskplanner(numero, reason)
-        return 1
+        print("Iterations Concluído!")
+        return numero
     except Exception as e:
         print(f"Erro ao determinar iterações: {e}")
-        return 1
+        print("Iterations Concluído!")
+        return numero
 class Action(BaseModel):
     type: Literal["CreateFolder", "CreateFile", "ImproveFile"]
     path: str
@@ -177,14 +179,17 @@ Liste no máximo 15 ações prioritárias.
                 reverse=True
             )
             enactchoices(actions)
+            print("1 iteração concluída!")
             maxiterations -= 1
         except Exception as e:
             print(f"Erro na resposta do TaskPlanner: {e}")
+            print("1 iteração concluída!")
             maxiterations -= 1
-            
     ex.processar_arquivos()
+    print("TaskPlanner Concluído!")
 
 def enactchoices(actions):
+    print("Enactchoices Iniciado!")
     for action in actions:
         tipo = action["type"]
         path = action.get("path", "")
@@ -209,6 +214,8 @@ def enactchoices(actions):
             createfile(action["path"], action.get("objective", ""))
         elif tipo == "ImproveFile":
             improvefile(action["path"], action.get("objective", ""))
+    print("Enactchoices Concluído!")
+
 
 def createfolder(path, reason):
     print(f"Vamos criar uma pasta: {path}, por que {reason}")

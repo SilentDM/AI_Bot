@@ -6,6 +6,7 @@ import project_utils as pu
 def obter_arquivos_relacionados(titulo):
     relacionados = []
     titulo = re.sub(r'_v\d+$', '', titulo.lower())
+    titulo = re.sub(r'_',' ', titulo)
     for arquivo in Path(pu.PASTA_PROJETO).rglob("*.md"):
         if any(part in pu.IGNORELIST for part in arquivo.parts):
             continue

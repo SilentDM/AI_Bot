@@ -5,12 +5,12 @@
             "content-type": "application/json; charset=UTF-8",
             "vary": "Origin, X-Origin, Referer",
             "content-encoding": "gzip",
-            "date": "Wed, 22 Jul 2026 17:02:30 GMT",
+            "date": "Wed, 22 Jul 2026 17:52:47 GMT",
             "server": "scaffolding on HTTPServer2",
             "x-xss-protection": "0",
             "x-frame-options": "SAMEORIGIN",
             "x-content-type-options": "nosniff",
-            "server-timing": "gfet4t7; dur=5152",
+            "server-timing": "gfet4t7; dur=7552",
             "alt-svc": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000",
             "transfer-encoding": "chunked"
         },
@@ -28,9 +28,9 @@
                         "function_call": null,
                         "function_response": null,
                         "inline_data": null,
-                        "text": "{\n  \"actions\": [\n    {\n      \"type\": \"CreateFolder\",\n      \"path\": \"4.Regions/Main Continent/Colwin/Ruinas\",\n      \"priority\": 1,\n      \"objective\": \"Estruturar a exploração de ruínas antigas na região de Colwin.\"\n    },\n    {\n      \"type\": \"CreateFile\",\n      \"path\": \"4.Regions/Main Continent/Colwin/Ruinas/Ruinas_de_Aethelgard.md\",\n      \"priority\": 2,\n      \"objective\": \"Detalhar uma ruína costeira afundada com segredos sobre o Portão-Vivo.\"\n    },\n    {\n      \"type\": \"CreateFile\",\n      \"path\": \"4.Regions/Main Continent/Colwin/Segredos_de_Colwin.md\",\n      \"priority\": 3,\n      \"objective\": \"Documentar os segredos proibidos e magias antigas escondidas nos pântanos de Colwin.\"\n    },\n    {\n      \"type\": \"CreateFile\",\n      \"path\": \"4.Regions/Main Continent/Colwin/Magias_Antigas_de_Colwin.md\",\n      \"priority\": 4,\n      \"objective\": \"Listar magias esquecidas que podem ser encontradas como recompensas em Colwin.\"\n    },\n    {\n      \"type\": \"CreateFile\",\n      \"path\": \"4.Regions/Main Continent/Colwin/aventura_o_roc_eletrico.md\",\n      \"priority\": 5,\n      \"objective\": \"Criar uma aventura baseada no gancho do Roc Elétrico em Colwin.\"\n    },\n    {\n      \"type\": \"ImproveFile\",\n      \"path\": \"4.Regions/Regioes de Phaeton.md\",\n      \"priority\": 6,\n      \"objective\": \"Expandir a descrição de Colwin para incluir pontos de interesse específicos e perigos ambientais.\"\n    },\n    {\n      \"type\": \"CreateFile\",\n      \"path\": \"4.Regions/Main Continent/Colwin/Culto_do_Abismo_Sussurrante.md\",\n      \"priority\": 7,\n      \"objective\": \"Detalhar uma facção que busca os segredos nas ruínas de Colwin.\"\n    },\n    {\n      \"type\": \"CreateFile\",\n      \"path\": \"4.Regions/Main Continent/Colwin/NPC_O_Eremita_de_Colwin.md\",\n      \"priority\": 8,\n      \"objective\": \"Criar um NPC que guarda o conhecimento sobre as magias antigas da região.\"\n    },\n    {\n      \"type\": \"CreateFile\",\n      \"path\": \"4.Regions/Main Continent/Colwin/Ruinas/Templo_da_Maré_Parada.md\",\n      \"priority\": 9,\n      \"objective\": \"Descrever um templo submerso que contém um fragmento do Portão-Vivo.\"\n    },\n    {\n      \"type\": \"ImproveFile\",\n      \"path\": \"Templates/local.md\",\n      \"priority\": 10,\n      \"objective\": \"Adicionar campos específicos para 'Segredos' e 'Magias Antigas' no template de locais.\"\n    },\n    {\n      \"type\": \"CreateFile\",\n      \"path\": \"4.Regions/Main Continent/Colwin/Flora_e_Fauna_Corrompida.md\",\n      \"priority\": 11,\n      \"objective\": \"Descrever criaturas mutantes causadas pela magia antiga em Colwin.\"\n    },\n    {\n      \"type\": \"CreateFile\",\n      \"path\": \"4.Regions/Main Continent/Colwin/aventura_o_eco_do_imperio_afundado.md\",\n      \"priority\": 12,\n      \"objective\": \"Criar uma aventura de exploração de ruínas em Colwin.\"\n    },\n    {\n      \"type\": \"CreateFile\",\n      \"path\": \"4.Regions/Main Continent/Colwin/Mapa_de_Colwin.md\",\n      \"priority\": 13,\n      \"objective\": \"Descrever os marcos geográficos principais de Colwin para facilitar a navegação.\"\n    },\n    {\n      \"type\": \"ImproveFile\",\n      \"path\": \"4.Regions/Main Continent/Colwin/Ruinas/Ruinas_de_Aethelgard.md\",\n      \"priority\": 14,\n      \"objective\": \"Adicionar ganchos de aventura específicos para a ruína de Aethelgard.\"\n    },\n    {\n      \"type\": \"ImproveFile\",\n      \"path\": \"Phaethon.md\",\n      \"priority\": 15,\n      \"objective\": \"Integrar Colwin como um ponto focal de instabilidade da realidade no lore global.\"\n    }\n  ]\n}",
+                        "text": "# Aventura: O Eco de Sargan\n**Tom:** Dark Fantasy Épico (O \"Crime da Existência\", o peso do Portão-Vivo e a fragilidade da sanidade)  \n**Tema central:** A corrida contra a entropia; o resgate de relíquias imperiais em um terreno que está sendo apagado da realidade.  \n**Gatilho do horror:** A \"Areia do Esquecimento\" — um fenômeno onde a areia de Bala'ur não apenas soterra ruínas, mas apaga as memórias e a existência de quem é tocado por ela, transformando exploradores em estátuas de sal sem nome.\n\n## Visão Geral (para você como Mestre)\n- **Ameaça:** Uma tempestade de \"Areia do Esquecimento\" está engolindo as ruínas do antigo Império de Veh'Sargan. A Vanguarda foi enviada para recuperar artefatos imperiais antes que a história do local seja permanentemente deletada da realidade.\n- **O preço inevitável:** A Vanguarda deve escolher entre salvar os registros históricos e relíquias do Império ou resgatar os sobreviventes de uma escavação arqueológica que foram pegos pela tempestade.\n- **A verdade incômoda:** Os artefatos que o Império Branoth busca não são apenas históricos; eles contêm \"âncoras de realidade\" que, se removidas, acelerarão o desaparecimento de Bala'ur do mapa de Phaethon.\n- **O dilema moral da cena 4:**  \n  - “Se recuperar as relíquias, você garante recursos para a Vanguarda, mas condena os arqueólogos ao esquecimento eterno.”\n  - “Se salvar os arqueólogos, você perde o conhecimento proibido que poderia conter a influência de Rahab, mas preserva a humanidade dos seus aliados.”\n- **Como termina:** O deserto de Bala'ur se torna um vazio de silêncio, onde até o vento parece ter esquecido como soprar, enquanto os heróis retornam com o peso de uma escolha que o mundo nunca saberá que foi feita.\n\n---\n\n## 1) Room 1 — Abertura (O Chamado)\n**Objetivo da sala:** Instalar a urgência da tempestade e o horror do esquecimento.  \n**Clima/Descrição:** O céu de Bala'ur está tingido de um roxo doentio. A areia, ao tocar a pele, causa uma dormência imediata. O som da tempestade é um murmúrio de milhares de nomes sendo esquecidos.\n\n**Elementos na cena:**\n- **Alvo imediato:** O acampamento da expedição imperial, onde os arqueólogos estão começando a perder a capacidade de lembrar seus próprios nomes.\n- **Pista-chave:** Um mapa estelar de Sêlune que brilha intensamente, indicando a localização exata da relíquia antes que a tempestade a apague.\n- **Ameaça menor:** \"Espectros de Sal\" — ecos dos antigos habitantes de Veh'Sargan que tentam absorver a memória dos PJ para se tornarem reais novamente.\n\n---\n\n## 2) Room 2 — Obstáculo (O Labirinto de Dunas)\n**Objetivo da sala:** Forçar o gasto de recursos contra a distorção da realidade.  \n**Clima/Descrição:** As dunas mudam de forma a cada segundo. O caminho de volta desaparece enquanto os PJ caminham.\n\n**Mecanismo:**\n- Os PJ devem navegar usando a bússola arcana da Vanguarda.\n- **Custo:** Cada rodada na tempestade exige um teste de salvaguarda de Carisma (DC 17) ou o PJ perde uma memória de um aliado (desvantagem em testes de perícia que envolvam esse aliado).\n\n---\n\n## 3) Room 3 — Meio (O Registro do Esquecimento)\n**Objetivo da sala:** Revelar a verdade sobre a natureza de Veh'Sargan e a ambição de Branoth.  \n**Clima/Descrição:** Uma câmara subterrânea que resistiu à areia. Paredes cobertas de hieróglifos que mudam conforme são lidos.\n\n**Verdades Ocultas:**\n- **Pista 1:** O Império Branoth sabia que a tempestade era um mecanismo de defesa de Sêlune contra a influência de Shar.\n- **Pista 2:** A relíquia imperial é, na verdade, um \"Fragmento de Memória\" de um Tabaxi que sobreviveu à queda do império, contendo a chave para a localização de Cordial Sihar.\n\n---\n\n## 4) Room 4 — A Virada Moral\n**Situação:** A tempestade atingiu o nível crítico. A relíquia está instável e os arqueólogos estão presos em uma câmara que está sendo preenchida por areia.\n\n**Opção A (Ordem Imperial):** Priorizar a recuperação da relíquia.\n- **Resultado:** A Vanguarda garante o artefato, mas os arqueólogos são soterrados e apagados da existência.\n- **Consequência:** A Vanguarda ganha prestígio imperial, mas os PJ sofrem a \"Marca do Esquecimento\" (perda permanente de 1 ponto de perícia).\n\n**Opção B (Liberdade/Compaixão):** Priorizar o resgate dos arqueólogos.\n- **Resultado:** Os arqueólogos vivem, mas a relíquia é destruída pela areia.\n- **Consequência:** Os PJ perdem o favor do Império, mas ganham a \"Bênção de Sêlune\" (vantagem em testes de sanidade contra influências de Shar).\n\n---\n\n## 5) Room 5 — Clímax (O Eco de Sargan)\n**Objetivo:** Confrontar o \"Eco de Pristino\", uma manifestação da vontade do antigo Rei Tabaxi que não quer que sua história seja saqueada.\n\n**Mecânica:** O Eco utiliza as memórias dos jogadores contra eles, criando ilusões de seus maiores fracassos.\n- **Fraqueza:** A relíquia (se recuperada) ou o sacrifício de uma memória real (se salva).\n\n**Epílogo:**\n- O deserto de Bala'ur se torna um local de silêncio absoluto.\n- O Império Branoth reage conforme a escolha, mas o eco de Veh'Sargan permanece como uma cicatriz na mente dos heróis.\n- A imagem final: O sol se põe sobre as dunas, e por um breve momento, a silhueta de uma cidade próspera aparece na areia antes de desaparecer para sempre.",
                         "thought": null,
-                        "thought_signature": "EjQKMgERTTIPqpMYCogBSmQkOv9OrFlsStslEgVb5QNegGlPoptKUE4CM55u-a-HVPKXEJUV",
+                        "thought_signature": "EjQKMgERTTIPPHqqH5wOe1Gedtfwt2EqZMe5dblABXA40G3WA5PrrWSqqmdvRSc2MDR1CiA2",
                         "video_metadata": null,
                         "tool_call": null,
                         "tool_response": null,
@@ -54,119 +54,26 @@
     "create_time": null,
     "model_version": "gemini-3.1-flash-lite",
     "prompt_feedback": null,
-    "response_id": "ovdgau3oG-XBqtsPha-JiQk",
+    "response_id": "aANhapLPK8i-qtsP5erdoA8",
     "usage_metadata": {
         "cache_tokens_details": null,
         "cached_content_token_count": null,
-        "candidates_token_count": 1111,
+        "candidates_token_count": 1463,
         "candidates_tokens_details": null,
-        "prompt_token_count": 68258,
+        "prompt_token_count": 76861,
         "prompt_tokens_details": [
             {
                 "modality": "TEXT",
-                "token_count": 68258
+                "token_count": 76861
             }
         ],
         "thoughts_token_count": null,
         "tool_use_prompt_token_count": null,
         "tool_use_prompt_tokens_details": null,
-        "total_token_count": 69369,
+        "total_token_count": 78324,
         "traffic_type": null
     },
     "model_status": null,
     "automatic_function_calling_history": [],
-    "parsed": {
-        "actions": [
-            {
-                "type": "CreateFolder",
-                "path": "4.Regions/Main Continent/Colwin/Ruinas",
-                "priority": 1,
-                "objective": "Estruturar a exploração de ruínas antigas na região de Colwin."
-            },
-            {
-                "type": "CreateFile",
-                "path": "4.Regions/Main Continent/Colwin/Ruinas/Ruinas_de_Aethelgard.md",
-                "priority": 2,
-                "objective": "Detalhar uma ruína costeira afundada com segredos sobre o Portão-Vivo."
-            },
-            {
-                "type": "CreateFile",
-                "path": "4.Regions/Main Continent/Colwin/Segredos_de_Colwin.md",
-                "priority": 3,
-                "objective": "Documentar os segredos proibidos e magias antigas escondidas nos pântanos de Colwin."
-            },
-            {
-                "type": "CreateFile",
-                "path": "4.Regions/Main Continent/Colwin/Magias_Antigas_de_Colwin.md",
-                "priority": 4,
-                "objective": "Listar magias esquecidas que podem ser encontradas como recompensas em Colwin."
-            },
-            {
-                "type": "CreateFile",
-                "path": "4.Regions/Main Continent/Colwin/aventura_o_roc_eletrico.md",
-                "priority": 5,
-                "objective": "Criar uma aventura baseada no gancho do Roc Elétrico em Colwin."
-            },
-            {
-                "type": "ImproveFile",
-                "path": "4.Regions/Regioes de Phaeton.md",
-                "priority": 6,
-                "objective": "Expandir a descrição de Colwin para incluir pontos de interesse específicos e perigos ambientais."
-            },
-            {
-                "type": "CreateFile",
-                "path": "4.Regions/Main Continent/Colwin/Culto_do_Abismo_Sussurrante.md",
-                "priority": 7,
-                "objective": "Detalhar uma facção que busca os segredos nas ruínas de Colwin."
-            },
-            {
-                "type": "CreateFile",
-                "path": "4.Regions/Main Continent/Colwin/NPC_O_Eremita_de_Colwin.md",
-                "priority": 8,
-                "objective": "Criar um NPC que guarda o conhecimento sobre as magias antigas da região."
-            },
-            {
-                "type": "CreateFile",
-                "path": "4.Regions/Main Continent/Colwin/Ruinas/Templo_da_Maré_Parada.md",
-                "priority": 9,
-                "objective": "Descrever um templo submerso que contém um fragmento do Portão-Vivo."
-            },
-            {
-                "type": "ImproveFile",
-                "path": "Templates/local.md",
-                "priority": 10,
-                "objective": "Adicionar campos específicos para 'Segredos' e 'Magias Antigas' no template de locais."
-            },
-            {
-                "type": "CreateFile",
-                "path": "4.Regions/Main Continent/Colwin/Flora_e_Fauna_Corrompida.md",
-                "priority": 11,
-                "objective": "Descrever criaturas mutantes causadas pela magia antiga em Colwin."
-            },
-            {
-                "type": "CreateFile",
-                "path": "4.Regions/Main Continent/Colwin/aventura_o_eco_do_imperio_afundado.md",
-                "priority": 12,
-                "objective": "Criar uma aventura de exploração de ruínas em Colwin."
-            },
-            {
-                "type": "CreateFile",
-                "path": "4.Regions/Main Continent/Colwin/Mapa_de_Colwin.md",
-                "priority": 13,
-                "objective": "Descrever os marcos geográficos principais de Colwin para facilitar a navegação."
-            },
-            {
-                "type": "ImproveFile",
-                "path": "4.Regions/Main Continent/Colwin/Ruinas/Ruinas_de_Aethelgard.md",
-                "priority": 14,
-                "objective": "Adicionar ganchos de aventura específicos para a ruína de Aethelgard."
-            },
-            {
-                "type": "ImproveFile",
-                "path": "Phaethon.md",
-                "priority": 15,
-                "objective": "Integrar Colwin como um ponto focal de instabilidade da realidade no lore global."
-            }
-        ]
-    }
+    "parsed": null
 }
