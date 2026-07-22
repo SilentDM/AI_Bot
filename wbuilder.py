@@ -1,9 +1,9 @@
 import os, json, re, time
 import project_utils as pu
+import ai_utils as au
 import expander as ex
 from typing import Optional
 from pathlib import Path
-from ai_utils import ask_gemini
 from pydantic import BaseModel
 from typing import Literal, List
 
@@ -68,7 +68,7 @@ Quantas iterações ainda são necessárias?
 """
     try:
 
-        resposta = ask_gemini(
+        resposta = au.ask_ai(
             contents=corpo_usuario,
             system_instruction=instrucao_sistema,
             temperature=0.35
@@ -164,7 +164,7 @@ Liste no máximo 15 ações prioritárias.
 """
 
         try:    
-            resposta = ask_gemini(
+            resposta = au.ask_ai(
             contents=corpo_usuario,
             system_instruction=instrucao_sistema,
             temperature=0.4,
@@ -336,7 +336,7 @@ Retorne apenas o conteúdo final do arquivo.
 """
 
     try:
-        texto_expandido = ask_gemini(
+        texto_expandido = au.ask_ai(
             contents=prompt_conteudo,
             system_instruction=instrucoes_globais,
             temperature=0.4

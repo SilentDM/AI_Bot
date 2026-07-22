@@ -1,6 +1,6 @@
 import os, re
 from pathlib import Path
-from ai_utils import ask_gemini
+import ai_utils as au
 import project_utils as pu
 
 def obter_arquivos_relacionados(titulo):
@@ -161,9 +161,9 @@ REGRAS DE RETORNO:
                     f.write(f"Alterando Arquivo: {arquivo.name}\n")
                     f.write(prompt_conteudo + '\n')
                     
-                # Substituição da chamada nativa pela função estruturada ask_gemini
-                # Graças ao ask_gemini, a verificação de fallbacks de modelos e limites de taxa é herdada automaticamente.
-                texto_expandido = ask_gemini(
+                # Substituição da chamada nativa pela função estruturada ask_ai
+                # Graças ao ask_ai, a verificação de fallbacks de modelos e limites de taxa é herdada automaticamente.
+                texto_expandido = au.ask_ai(
                     contents=prompt_conteudo,
                     system_instruction=instrucoes_globais,
                     temperature=0.7 # Temperatura criativa e coerente

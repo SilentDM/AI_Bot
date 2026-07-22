@@ -1,7 +1,7 @@
 import os
 import asyncio
+from ai_utils import ask_ai
 import memory
-from ai_utils import ask_gemini
 import project_utils as pu
 from dotenv import load_dotenv
 
@@ -95,10 +95,10 @@ if DISCORD_ENABLED:
             if extra:
                 conteudo_input += f"\n{extra}\n"
             
-            # 3. Chamando o novo ask_gemini
+            # 3. Chamando o novo ask_ai
             # Definimos a temperatura em 0.65 para permitir flexibilidade sem quebrar as regras.
             try:
-                resposta = ask_gemini(
+                resposta = ask_ai(
                     contents=conteudo_input,
                     system_instruction=instrucao_sistema,
                     temperature=0.65

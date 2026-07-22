@@ -5,9 +5,9 @@ import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
 # OBS: se você já aplicou a separação main.py -> dbot.py + setup_env.py combinada
 # em mensagens anteriores, troque esta linha por:
-#     from ai_utils import ask_gemini
+#     from ai_utils import ask_ai
 # e use pu.detectar_intencao(...) no lugar de detectar_intencao(...) mais abaixo.
-import ai_utils as au
+import ai_gemini as au
 import project_utils as pu
 import explorer
 import memory
@@ -375,7 +375,7 @@ class AoDesktopApp:
                 conteudo_prompt += f"--- HISTÓRICO RECENTE DE CONVERSAS ---\n{memorias}\n\n"
             conteudo_prompt += f"--- MENSAGEM DO USUÁRIO ({user_name}) ---\n{prompt}"
 
-            resposta = au.ask_gemini(
+            resposta = au.ask_ai(
                 contents=conteudo_prompt,
                 system_instruction=system_instruction,
                 temperature=0.65

@@ -3,7 +3,7 @@ import time
 import re
 import glob
 import tiktoken
-from ai_utils import ask_gemini
+import ai_utils as au
 
 MEMORIES_DIR = "memories"
 enc = tiktoken.get_encoding("cl100k_base")
@@ -76,7 +76,7 @@ def criar_resumo_google(memorias: str) -> str:
     
     try:
         # Usamos uma temperatura baixa (0.3) para garantir foco nos fatos existentes, sem invenções.
-        resumo_texto = ask_gemini(
+        resumo_texto = au.ask_ai(
             contents=corpo_usuario,
             system_instruction=instrucao_sistema,
             temperature=0.3
