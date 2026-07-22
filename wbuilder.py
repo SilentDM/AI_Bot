@@ -185,7 +185,7 @@ def createfolder(path, reason):
     print(f"Vamos criar uma pasta: {path}, por que {reason}")
     try:
         pasta = Path(path)
-        raiz = Path(os.getenv("PASTA_PROJETO", "Phaeton")).resolve()
+        raiz = Path(pu.PASTA_PROJETO).resolve()
         destino = pasta.resolve()
         if not str(destino).is_relative_to(raiz):
             print("❌ Tentativa de criar pasta fora da pasta raiz de conhecimento.")
@@ -216,6 +216,11 @@ def createfile(path, reason):
     print(f"Vamos criar um arquivo: {path}, por que {reason}")
     try:
         arquivo = Path(path)
+        raiz = Path(pu.PASTA_PROJETO).resolve()
+        destino = arquivo.resolve()
+        if not str(destino).is_relative_to(raiz):
+            print("❌ Tentativa de criar pasta fora da pasta raiz de conhecimento.")
+            return False
         # Força extensão .md
         arquivo = arquivo.with_suffix(".md")
         # Verifica se já existe
