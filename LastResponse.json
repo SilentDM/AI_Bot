@@ -5,12 +5,12 @@
             "content-type": "application/json; charset=UTF-8",
             "vary": "Origin, X-Origin, Referer",
             "content-encoding": "gzip",
-            "date": "Wed, 22 Jul 2026 17:52:47 GMT",
+            "date": "Wed, 22 Jul 2026 19:16:52 GMT",
             "server": "scaffolding on HTTPServer2",
             "x-xss-protection": "0",
             "x-frame-options": "SAMEORIGIN",
             "x-content-type-options": "nosniff",
-            "server-timing": "gfet4t7; dur=7552",
+            "server-timing": "gfet4t7; dur=2977",
             "alt-svc": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000",
             "transfer-encoding": "chunked"
         },
@@ -28,9 +28,9 @@
                         "function_call": null,
                         "function_response": null,
                         "inline_data": null,
-                        "text": "# Aventura: O Eco de Sargan\n**Tom:** Dark Fantasy Épico (O \"Crime da Existência\", o peso do Portão-Vivo e a fragilidade da sanidade)  \n**Tema central:** A corrida contra a entropia; o resgate de relíquias imperiais em um terreno que está sendo apagado da realidade.  \n**Gatilho do horror:** A \"Areia do Esquecimento\" — um fenômeno onde a areia de Bala'ur não apenas soterra ruínas, mas apaga as memórias e a existência de quem é tocado por ela, transformando exploradores em estátuas de sal sem nome.\n\n## Visão Geral (para você como Mestre)\n- **Ameaça:** Uma tempestade de \"Areia do Esquecimento\" está engolindo as ruínas do antigo Império de Veh'Sargan. A Vanguarda foi enviada para recuperar artefatos imperiais antes que a história do local seja permanentemente deletada da realidade.\n- **O preço inevitável:** A Vanguarda deve escolher entre salvar os registros históricos e relíquias do Império ou resgatar os sobreviventes de uma escavação arqueológica que foram pegos pela tempestade.\n- **A verdade incômoda:** Os artefatos que o Império Branoth busca não são apenas históricos; eles contêm \"âncoras de realidade\" que, se removidas, acelerarão o desaparecimento de Bala'ur do mapa de Phaethon.\n- **O dilema moral da cena 4:**  \n  - “Se recuperar as relíquias, você garante recursos para a Vanguarda, mas condena os arqueólogos ao esquecimento eterno.”\n  - “Se salvar os arqueólogos, você perde o conhecimento proibido que poderia conter a influência de Rahab, mas preserva a humanidade dos seus aliados.”\n- **Como termina:** O deserto de Bala'ur se torna um vazio de silêncio, onde até o vento parece ter esquecido como soprar, enquanto os heróis retornam com o peso de uma escolha que o mundo nunca saberá que foi feita.\n\n---\n\n## 1) Room 1 — Abertura (O Chamado)\n**Objetivo da sala:** Instalar a urgência da tempestade e o horror do esquecimento.  \n**Clima/Descrição:** O céu de Bala'ur está tingido de um roxo doentio. A areia, ao tocar a pele, causa uma dormência imediata. O som da tempestade é um murmúrio de milhares de nomes sendo esquecidos.\n\n**Elementos na cena:**\n- **Alvo imediato:** O acampamento da expedição imperial, onde os arqueólogos estão começando a perder a capacidade de lembrar seus próprios nomes.\n- **Pista-chave:** Um mapa estelar de Sêlune que brilha intensamente, indicando a localização exata da relíquia antes que a tempestade a apague.\n- **Ameaça menor:** \"Espectros de Sal\" — ecos dos antigos habitantes de Veh'Sargan que tentam absorver a memória dos PJ para se tornarem reais novamente.\n\n---\n\n## 2) Room 2 — Obstáculo (O Labirinto de Dunas)\n**Objetivo da sala:** Forçar o gasto de recursos contra a distorção da realidade.  \n**Clima/Descrição:** As dunas mudam de forma a cada segundo. O caminho de volta desaparece enquanto os PJ caminham.\n\n**Mecanismo:**\n- Os PJ devem navegar usando a bússola arcana da Vanguarda.\n- **Custo:** Cada rodada na tempestade exige um teste de salvaguarda de Carisma (DC 17) ou o PJ perde uma memória de um aliado (desvantagem em testes de perícia que envolvam esse aliado).\n\n---\n\n## 3) Room 3 — Meio (O Registro do Esquecimento)\n**Objetivo da sala:** Revelar a verdade sobre a natureza de Veh'Sargan e a ambição de Branoth.  \n**Clima/Descrição:** Uma câmara subterrânea que resistiu à areia. Paredes cobertas de hieróglifos que mudam conforme são lidos.\n\n**Verdades Ocultas:**\n- **Pista 1:** O Império Branoth sabia que a tempestade era um mecanismo de defesa de Sêlune contra a influência de Shar.\n- **Pista 2:** A relíquia imperial é, na verdade, um \"Fragmento de Memória\" de um Tabaxi que sobreviveu à queda do império, contendo a chave para a localização de Cordial Sihar.\n\n---\n\n## 4) Room 4 — A Virada Moral\n**Situação:** A tempestade atingiu o nível crítico. A relíquia está instável e os arqueólogos estão presos em uma câmara que está sendo preenchida por areia.\n\n**Opção A (Ordem Imperial):** Priorizar a recuperação da relíquia.\n- **Resultado:** A Vanguarda garante o artefato, mas os arqueólogos são soterrados e apagados da existência.\n- **Consequência:** A Vanguarda ganha prestígio imperial, mas os PJ sofrem a \"Marca do Esquecimento\" (perda permanente de 1 ponto de perícia).\n\n**Opção B (Liberdade/Compaixão):** Priorizar o resgate dos arqueólogos.\n- **Resultado:** Os arqueólogos vivem, mas a relíquia é destruída pela areia.\n- **Consequência:** Os PJ perdem o favor do Império, mas ganham a \"Bênção de Sêlune\" (vantagem em testes de sanidade contra influências de Shar).\n\n---\n\n## 5) Room 5 — Clímax (O Eco de Sargan)\n**Objetivo:** Confrontar o \"Eco de Pristino\", uma manifestação da vontade do antigo Rei Tabaxi que não quer que sua história seja saqueada.\n\n**Mecânica:** O Eco utiliza as memórias dos jogadores contra eles, criando ilusões de seus maiores fracassos.\n- **Fraqueza:** A relíquia (se recuperada) ou o sacrifício de uma memória real (se salva).\n\n**Epílogo:**\n- O deserto de Bala'ur se torna um local de silêncio absoluto.\n- O Império Branoth reage conforme a escolha, mas o eco de Veh'Sargan permanece como uma cicatriz na mente dos heróis.\n- A imagem final: O sol se põe sobre as dunas, e por um breve momento, a silhueta de uma cidade próspera aparece na areia antes de desaparecer para sempre.",
+                        "text": "# Enclave_Draconico_Leste\n> Este arquivo foi criado automaticamente pelo WorldBuilder.\n----\nstatus: rascunho\n----\nSituado nas bordas mais densas e sombrias da selva de Vog'Mur, o Enclave Dracônico do Leste, conhecido pelos locais como *A Cicatriz de Obsidiana*, é um posto avançado monumental erguido sobre os ossos de uma estrutura geométrica de origem desconhecida, anterior à era dos Ssurrans. O Enclave serve como o braço diplomático e militar do Império Draco-Divino Branoth na região, um monólito de basalto negro que desafia a umidade corrosiva da selva.\n\nDiferente das construções orgânicas e integradas à natureza de Vasyugan, o Enclave é uma afronta à selva: suas torres pontiagudas cortam a copa das árvores como lanças, e o solo ao seu redor é mantido estéril por uma magia de preservação que emana de um fragmento selado no subsolo — um pedaço residual do que muitos estudiosos creem ser um dos eixos do Portão-Vivo.\n\nO Enclave é governado pelo Exarca Korth-Vahl, um draconato de escamas pálidas que busca não a conquista imediata de Vasyugan, mas a submissão gradual através do conhecimento. Ele oferece aos Ssurrans acesso a tecnologias ancestrais e proteção contra os horrores que despertam nas ruínas profundas, em troca de tributos sangrentos e informações sobre as relíquias que o Rei Alado mantém escondidas em suas pirâmides. A tensão é palpável; enquanto o Império Branoth deseja a ordem absoluta e o controle sobre os mistérios que o Portão-Vivo espalha pela terra, os Ssurrans veem no Enclave um mal necessário, uma presença que traz estabilidade ao custo da alma selvagem de seu povo. O ar ao redor do Enclave é carregado de uma eletricidade estática persistente, e há boatos de que, nas noites de lua nova, as sombras projetadas pelas torres não seguem a luz, mas parecem sussurrar em línguas que não pertencem a este mundo.",
                         "thought": null,
-                        "thought_signature": "EjQKMgERTTIPPHqqH5wOe1Gedtfwt2EqZMe5dblABXA40G3WA5PrrWSqqmdvRSc2MDR1CiA2",
+                        "thought_signature": "EjQKMgERTTIPuL_vuASPGzRu3gkH2jkAOavdYqdZlKiWipeutelI47z0btQ8uk-ANtSnIfuM",
                         "video_metadata": null,
                         "tool_call": null,
                         "tool_response": null,
@@ -54,23 +54,23 @@
     "create_time": null,
     "model_version": "gemini-3.1-flash-lite",
     "prompt_feedback": null,
-    "response_id": "aANhapLPK8i-qtsP5erdoA8",
+    "response_id": "IRdhaujTJ-Hqz7IPptik2Ag",
     "usage_metadata": {
         "cache_tokens_details": null,
         "cached_content_token_count": null,
-        "candidates_token_count": 1463,
+        "candidates_token_count": 483,
         "candidates_tokens_details": null,
-        "prompt_token_count": 76861,
+        "prompt_token_count": 1386,
         "prompt_tokens_details": [
             {
                 "modality": "TEXT",
-                "token_count": 76861
+                "token_count": 1386
             }
         ],
         "thoughts_token_count": null,
         "tool_use_prompt_token_count": null,
         "tool_use_prompt_tokens_details": null,
-        "total_token_count": 78324,
+        "total_token_count": 1869,
         "traffic_type": null
     },
     "model_status": null,

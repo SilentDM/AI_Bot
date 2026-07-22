@@ -1,6 +1,8 @@
 import os, re, json
 from pathlib import Path
 from datetime import datetime
+import unicodedata
+import difflib
 
 PASTA_PROJETO = os.getenv("PASTA_PROJETO", "Phaeton")
 CAMINHO_PROJETO = os.path.join(os.getcwd(), PASTA_PROJETO)
@@ -15,6 +17,45 @@ IGNORELIST = [
     "Templates", 
     "status: rascunho"
 ]
+
+
+def normalizar_nome(nome: str) -> str:
+    """
+    Normaliza um nome de arquivo/pasta para comparação:
+    - remove acentos (Ruína -> Ruina)
+    - deixa tudo minúsculo
+    - remove plural simples em 's' no final (aproximação simples, não é perfeita)
+    - remove extensão .md, se houver
+    Isso permite comparar "Segredos" com "Segredo", "Ruínas" com "Ruina", etc.
+    """
+    nome = Path(nome).stem  # remove extensão, se houver
+    nome = unicodedata.normalize("NFKD", nome).encode("ASCII", "ignore").decode("ASCII")
+    nome = nome.lower().strip()
+    if nome.endswith("s") and len(nome) > 3:
+        nome = nome[:-1]
+    return nome
+
+def existe_nome_parecido(nome_proposto: str, pasta_destino: Path, limiar: float = 0.85):
+    """
+    Verifica se já existe, na pasta_destino, algum arquivo ou subpasta com nome
+    muito parecido ao nome_proposto (mesmo que não seja idêntico).
+    Retorna o nome existente parecido, ou None se não encontrar nada.
+
+    'limiar' vai de 0 a 1: quanto mais perto de 1, mais exigente é a exigência
+    de parecença (0.85 já pega coisas como "Segredos" vs "Segredo").
+    """
+    if not pasta_destino.exists():
+        return None
+
+    alvo = normalizar_nome(nome_proposto)
+
+    for item in pasta_destino.iterdir():
+        existente = normalizar_nome(item.name)
+        similaridade = difflib.SequenceMatcher(None, alvo, existente).ratio()
+        if similaridade >= limiar:
+            return item.name
+
+    return None
 
 def currentdate():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -72,7 +113,7 @@ def build_tree(root=None):
     walk(root)
     return "\n".join(linhas)
 
-def carregar_estrutura_phaeton():
+def carregar_estrutura_projeto():
     raiz = Path(CAMINHO_PROJETO)
     resultado = []
     for caminho in sorted(raiz.rglob("*")):
@@ -87,7 +128,7 @@ def carregar_estrutura_phaeton():
             )
     return "\n".join(resultado)
 
-def carregar_phaeton():
+def carregar_projeto():
     caminho=Path(CAMINHO_PROJETO)
     if not caminho.exists():
         print(f"⚠️ Alerta: Pasta '{PASTA_PROJETO}' não encontrada.")

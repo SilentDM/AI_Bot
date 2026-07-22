@@ -141,7 +141,7 @@ class AoDesktopApp:
         main_paned.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
         # --- COLUNA 1: Dynamic Explorer & Editor Pane (explorer.py) ---
-        self.explorer_pane = explorer.PhaetonExplorerFrame(main_paned, self.log_activity)
+        self.explorer_pane = explorer.ExplorerFrame(main_paned, self.log_activity)
         main_paned.add(self.explorer_pane, weight=2)
         
         # --- COLUNA 2: Chat Box (Centro) ---
@@ -332,7 +332,7 @@ class AoDesktopApp:
             )
             
             # Carrega a leitura dinâmica de arquivos
-            info = pu.carregar_phaeton()
+            info = pu.carregar_projeto()
             extra = detectar_intencao(prompt)
             memorias = memory.carregar_memorias(guild_id, guild_name, userid, user_name)
             
@@ -492,7 +492,7 @@ class AoDesktopApp:
             )
             objective = self.worldbuilder_objective_value
 
-            iterations = wbuilder.iterationschoice(objective)
+            iterations = 2#wbuilder.iterationschoice(objective)
 
             if iterations is None:
                 iterations = 1

@@ -7,8 +7,8 @@ from ai_utils import ask_gemini
 from pydantic import BaseModel
 from typing import Literal, List
 
-CONTEUDO = pu.carregar_phaeton()
-DIRETORIOS = pu.carregar_estrutura_phaeton()
+CONTEUDO = pu.carregar_projeto()
+DIRETORIOS = pu.carregar_estrutura_projeto()
 INDICE = pu.gerar_indice()
 print("Iniciando World Builder! Boa Sorte!")
 
@@ -20,7 +20,6 @@ def resolver_caminho(path_str):
 
     A IA às vezes manda o caminho:
     - sem o nome da pasta do projeto na frente: "4.Regions/Colwin/arquivo.md"
-    - com o nome da pasta do projeto na frente: "Phaeton/4.Regions/Colwin/arquivo.md"
     Esta função trata os dois casos da mesma forma, sempre resultando
     no caminho real correto dentro de CAMINHO_PROJETO.
     """
@@ -35,9 +34,6 @@ def resolver_caminho(path_str):
 
     partes = caminho.parts
 
-    # Se o caminho já vier prefixado com o nome da pasta do projeto (ex: "Phaeton/..."),
-    # removemos esse prefixo antes de juntar com a raiz, para não duplicar
-    # (evita virar "Phaeton/Phaeton/...").
     if partes and partes[0] == pu.PASTA_PROJETO:
         caminho = Path(*partes[1:]) if len(partes) > 1 else Path("")
 
@@ -45,8 +41,8 @@ def resolver_caminho(path_str):
 
 def iterationschoice(reason: Optional[str] = "O projeto esteja concluído"):
     print("Iterations Iniciado!")
-    CONTEUDO = pu.carregar_phaeton()
-    DIRETORIOS = pu.carregar_estrutura_phaeton()
+    CONTEUDO = pu.carregar_projeto()
+    DIRETORIOS = pu.carregar_estrutura_projeto()
     INDICE = pu.gerar_indice()
     numero=1
     instrucao_sistema = f"""
@@ -99,14 +95,23 @@ class ActionPlan(BaseModel):
 
 def taskplanner(maxiterations: int = 1, reason: Optional[str] = "O projeto esteja concluído"):
     print(f"O iterationschoice retornou que vamos precisar de {maxiterations} iterações! Vamos começar o Taskplanner!")
-    CONTEUDO = pu.carregar_phaeton()
-    DIRETORIOS = pu.carregar_estrutura_phaeton()
+    CONTEUDO = pu.carregar_projeto()
+    DIRETORIOS = pu.carregar_estrutura_projeto()
     INDICE = pu.gerar_indice()
     while maxiterations>0:
         instrucao_sistema = f"""
 Você é um especialista em worldbuilding para RPG.
 Analise o projeto e identifique quais ações são necessárias para:
 {reason}
+
+REGRA IMPORTANTE SOBRE NOMES:
+Antes de sugerir CreateFolder ou CreateFile, verifique cuidadosamente o Índice
+e a Estrutura fornecidos. NÃO crie algo com nome igual, similar, singular/plural,
+ou com pequenas variações de grafia/acentuação de algo que já existe
+(ex: "Segredos" e "Segredo" são a MESMA coisa, "Ruína" e "Ruinas" são a MESMA coisa).
+Se um conceito já existe com outro nome, use ImproveFile no arquivo existente
+em vez de criar um novo.
+
 Você possui apenas três ferramentas:
 
 CreateFolder
@@ -118,25 +123,25 @@ Formato obrigatório:
     "actions": [
     {{
         "type": "CreateFolder",
-        "path": "Phaeton/...",
+        "path": "{pu.PASTA_PROJETO}/...",
         "priority":7,
         "objective": "motivo"
     }},
     {{
         "type": "CreateFile",
-        "path": "Phaeton/.../arquivo.md",
+        "path": "{pu.PASTA_PROJETO}/.../arquivo.md",
         "priority":8,        
         "objective": "O que deve ter no arquivo"
     }},
     {{
         "type": "ImproveFile",
-        "path": "Phaeton/.../arquivo.md",
+        "path": "{pu.PASTA_PROJETO}/.../arquivo.md",
         "priority":10,        
         "objective": "O que deve ter no arquivo"
     }}
     ]
 }}
-Não escreva explicações.
+Passe o path inteiro desde a pasta {pu.PASTA_PROJETO}.
 Não utilize markdown.
 """
 
@@ -221,11 +226,19 @@ def createfolder(path, reason):
     print(f"Vamos criar uma pasta: {path}, por que {reason}")
     try:
         raiz = Path(pu.CAMINHO_PROJETO).resolve()
-        destino = resolver_caminho(path)   # <-- normaliza o caminho recebido
+        destino = resolver_caminho(path)
 
         if not destino.is_relative_to(raiz):
             print("❌ Tentativa de criar pasta fora da pasta raiz de conhecimento.")
             return False
+
+        # --- CHECAGEM DE NOME PARECIDO ---
+        # Evita criar "Segredos" quando já existe "Segredo" na mesma pasta pai.
+        parecido = pu.existe_nome_parecido(destino.name, destino.parent)
+        if parecido:
+            print(f"⚠️ Pasta não criada: '{destino.name}' é muito parecida com a já existente '{parecido}'.")
+            return False
+
         if destino.exists():
             print(f"⚠️ Pasta já existe: {destino}")
             return False
@@ -240,13 +253,20 @@ def createfile(path, reason):
     print(f"Vamos criar um arquivo: {path}, por que {reason}")
     try:
         raiz = Path(pu.CAMINHO_PROJETO).resolve()
-        arquivo = resolver_caminho(path)   # <-- normaliza o caminho recebido
+        arquivo = resolver_caminho(path)
 
         if not arquivo.is_relative_to(raiz):
             print("❌ Tentativa de criar arquivo fora da pasta raiz de conhecimento.")
             return False
 
         arquivo = arquivo.with_suffix(".md")
+
+        # --- CHECAGEM DE NOME PARECIDO ---
+        parecido = pu.existe_nome_parecido(arquivo.name, arquivo.parent)
+        if parecido:
+            print(f"⚠️ Arquivo não criado: '{arquivo.name}' é muito parecido com o já existente '{parecido}'.")
+            return False
+
         if arquivo.exists():
             print(f"⚠️ Arquivo já existe: {arquivo}")
             return False
@@ -282,7 +302,7 @@ def improvefile(path, reason):
         print(f"❌ O caminho informado não é um arquivo, ação ignorada: {arquivo}")
         return False
 
-    CONTEUDO = pu.carregar_phaeton()
+    CONTEUDO = pu.carregar_projeto()
 
     try:
         with open(arquivo, "r", encoding="utf-8") as f:

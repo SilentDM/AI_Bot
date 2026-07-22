@@ -1,10 +1,12 @@
 import os,threading, time
+import project_utils as pu
 from pathlib import Path
 from typing import Any, Optional, Type
 from pydantic import BaseModel
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
+
 
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
@@ -33,15 +35,15 @@ DEFAULT_TEMPERATURE = 0.6  # Changed to a float (the API expects a float, not a 
 DEFAULT_CONTENTS = "Please repeat: I did not receive a correct prompt, your coding has failed somewhere."
 MAX_TOKENS = 20480
 
-def load_phaeton_images():
+def load_projeto_images():
     """
-    Looks for all .png files in the Phaeton directory, reads them as bytes,
+    Looks for all .png files in the directory, reads them as bytes,
     and returns them as a list of genai.types.Part objects.
     """
     parts = []
-    pasta_phaeton = Path(os.getcwd()) / "phaeton"
-    if pasta_phaeton.exists():
-        for img_path in pasta_phaeton.rglob("*.png"):
+    pasta_projeto = pu.CAMINHO_PROJETO
+    if pasta_projeto.exists():
+        for img_path in pasta_projeto.rglob("*.png"):
             try:
                 #print(f"🖼️ [Local API] Automatically attaching map/region image: {img_path.name}")
                 with open(img_path, "rb") as f:
@@ -67,7 +69,7 @@ def generate_content_with_fallback(
     """
     # Prepare contents with images if present
     images = ""
-    #images = load_phaeton_images()
+    #images = load_projeto_images()
     if images:
         if isinstance(contents, list):
             final_contents = list(contents) + images

@@ -6,7 +6,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog, scrolledtext
 import project_utils as pu
 
-class PhaetonExplorerFrame(ttk.Frame):
+class ExplorerFrame(ttk.Frame):
     def __init__(self, parent, log_callback):
         super().__init__(parent)
         self.log_callback = log_callback
@@ -19,7 +19,7 @@ class PhaetonExplorerFrame(ttk.Frame):
         self.pane.pack(fill=tk.BOTH, expand=True)
         
         # --- SUBCOLUNA A: Árvore de Diretórios (Esquerda) ---
-        self.tree_frame = ttk.LabelFrame(self.pane, text=" Phaeton Explorer ")
+        self.tree_frame = ttk.LabelFrame(self.pane, text=" Explorer ")
         self.pane.add(self.tree_frame, weight=1)
         
         self.tree = ttk.Treeview(self.tree_frame, selectmode="browse")

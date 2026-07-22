@@ -86,7 +86,7 @@ async def on_message(message):
         # O system_instruction ideal do Gemini une a persona e as regras
         instrucao_sistema = f"{persona}\n\n{regras}"
         
-        info = pu.carregar_phaeton()
+        info = pu.carregar_projeto()
         print("Info Dinâmica Carregada!")
         
         extra = detectar_intencao(prompt)   
@@ -102,7 +102,6 @@ async def on_message(message):
             print(f"Nenhum histórico encontrado para o usuário neste servidor. Inicializando...")
         
         # 2. Reunindo tudo o que é contexto para o 'contents'
-        # Estruturamos o prompt de forma clara para que o modelo diferencie o histórico dos dados de Phaeton e da mensagem atual.
         conteudo_input = ""
         
         if info:
@@ -118,7 +117,7 @@ async def on_message(message):
             conteudo_input += f"\n{extra}\n"
         
         # 3. Chamando o novo ask_gemini
-        # Definimos a temperatura em 0.65 para permitir flexibilidade sem quebrar as regras de Phaeton.
+        # Definimos a temperatura em 0.65 para permitir flexibilidade sem quebrar as regras.
         try:
             resposta = ask_gemini(
                 contents=conteudo_input,
