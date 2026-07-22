@@ -3,7 +3,7 @@ import time
 import asyncio
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
-from main import detectar_intencao, ask_gemini, GEMINICLIENT
+from main import detectar_intencao, ask_gemini
 from project_utils import carregar_phaeton
 import explorer
 import memory
@@ -43,6 +43,7 @@ class AoDesktopApp:
         self.change_font_size(0)
         
         # Inicializa a sincronização do Discord Bot em segundo plano
+        self.discord_loop = None
         self.start_discord_bot_thread()
 
     def setup_dark_style(self):
@@ -370,6 +371,7 @@ class AoDesktopApp:
             self.root.after(0, lambda: self.append_to_chat("System", f"Execution error: {e}"))
 
     # --- ENGINE DE DISCORD ---
+    
     def start_discord_bot_thread(self):
         threading.Thread(target=self.run_discord_bot, daemon=True).start()
 
@@ -381,6 +383,8 @@ class AoDesktopApp:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             
+            self.discord_loop = loop
+            
             # Ajuste de cores para contraste do status no tema escuro
             self.root.after(0, lambda: self.lbl_discord.config(text="Discord Bot: Online", foreground="#10b981"))
             self.log_activity("Discord server instance online.")
@@ -389,6 +393,30 @@ class AoDesktopApp:
         except Exception as e:
             self.log_activity(f"Discord exception occurred: {e}")
             self.root.after(0, lambda: self.lbl_discord.config(text="Discord Bot: Offline/Error", foreground="#ef4444"))
+        finally:
+                # Quando o loop termina (seja por erro ou por close() pedido no shutdown),
+                # garantimos que ele seja fechado corretamente para liberar recursos.
+                self.discord_loop = None
+    def on_closing(self):
+        """Garante o salvamento automático do rascunho em edição e o encerramento limpo da conexão com o Discord caso a janela seja fechada."""
+        self.log_activity("Shutting down... saving open files...")
+        self.explorer_pane.save_current_file()
+
+        # --- ENCERRAMENTO SEGURO DO BOT DO DISCORD ---
+        # discordclient.close() é uma coroutine e o bot está rodando em outra thread,
+        # com seu próprio event loop (self.discord_loop). Por isso não podemos chamar
+        # await diretamente aqui; usamos run_coroutine_threadsafe para agendar o close()
+        # dentro do loop correto, de forma segura entre threads.
+        if self.discord_loop and self.discord_loop.is_running():
+            from main import discordclient
+            self.log_activity("Closing Discord connection...")
+            future = asyncio.run_coroutine_threadsafe(discordclient.close(), self.discord_loop)
+            try:
+                # Espera até 5 segundos pelo fechamento, para não travar o app indefinidamente
+                future.result(timeout=5)
+            except Exception as e:
+                self.log_activity(f"Warning: Discord close did not finish cleanly: {e}")
+        self.root.destroy()
 
     # --- ENGINE DE EXPANSOR ---
     def start_expander_thread(self):
@@ -511,3 +539,4 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = AoDesktopApp(root)
     root.mainloop()
+    

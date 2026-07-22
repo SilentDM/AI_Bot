@@ -7,9 +7,18 @@ import project_utils as pu
 from dotenv import load_dotenv
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
+_faltando = []
+if not TOKEN:
+    _faltando.append("DISCORD_TOKEN")
+if _faltando:
+    raise SystemExit(
+        f"❌ Erro de configuração: variável(is) ausente(s) no .env: {', '.join(_faltando)}.\n"
+        f"Verifique se o arquivo .env existe na raiz do projeto e contém essas chaves."
+    )
 intents = discord.Intents.default()
 intents.message_content = True
 discordclient = discord.Client(intents=intents)
+
 
 
 def detectar_intencao(pergunta):
@@ -161,3 +170,4 @@ async def on_message(message):
 
 if __name__ == "__main__":
     discordclient.run(TOKEN)
+    

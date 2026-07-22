@@ -4,14 +4,13 @@ import expander as ex
 from typing import Optional
 from pathlib import Path
 from ai_utils import ask_gemini
-
-
+from pydantic import BaseModel
+from typing import Literal, List
 
 CONTEUDO = pu.carregar_phaeton()
 DIRETORIOS = pu.carregar_estrutura_phaeton()
 INDICE = pu.gerar_indice()
 print("Iniciando World Builder! Boa Sorte!")
-
 
 def iterationschoice(reason: Optional[str] = "O projeto esteja concluído"):
     CONTEUDO = pu.carregar_phaeton()
@@ -23,10 +22,11 @@ Analise o estado atual do projeto e estime quantas iterações de expansão são
 {reason}.
 Responda apenas um número inteiro entre 1 e 10.
 """
-
     corpo_usuario = f"""
 Projeto:
-{CONTEUDO}
+{DIRETORIOS}\n
+{INDICE}\n
+{CONTEUDO}\n
 
 Critérios:
 - Regiões
@@ -57,6 +57,15 @@ Quantas iterações ainda são necessárias?
         print(f"Erro ao determinar iterações: {e}")
         return 1
 
+class Action(BaseModel):
+    type: Literal["CreateFolder", "CreateFile", "ImproveFile"]
+    path: str
+    priority: int
+    objective: str
+
+class ActionPlan(BaseModel):
+    actions: List[Action]
+
 def taskplanner(maxiterations: int = 1, reason: Optional[str] = "O projeto esteja concluído"):
     print(f"O iterationschoice retornou que vamos precisar de {maxiterations} iterações! Vamos começar o Taskplanner!")
     CONTEUDO = pu.carregar_phaeton()
@@ -73,7 +82,6 @@ CreateFolder
 CreateFile
 ImproveFile
 
-Retorne EXCLUSIVAMENTE um JSON válido.
 Formato obrigatório:
 {{
     "actions": [
@@ -97,11 +105,8 @@ Formato obrigatório:
     }}
     ]
 }}
-
 Não escreva explicações.
 Não utilize markdown.
-Não utilize ```json.
-Retorne apenas o JSON.
 """
 
         corpo_usuario = f"""
@@ -120,28 +125,25 @@ Critérios:
 - Possibilidade de conduzir aventuras sem gerar novas informações.
 
 Liste no máximo 15 ações prioritárias.
-Retorne apenas JSON.
 """
 
         try:    
             resposta = ask_gemini(
             contents=corpo_usuario,
             system_instruction=instrucao_sistema,
-            temperature=0.4
+            temperature=0.4,
+            response_schema=ActionPlan
             )
-            resposta = resposta.strip()
-            inicio = resposta.find("{")
-            fim = resposta.rfind("}")
-            if inicio == -1 or fim == -1:
-                raise ValueError("Resposta não contém JSON.")
-            resposta = resposta[inicio:fim+1]
-            dados = json.loads(resposta)
-            actions = dados.get("actions", [])
-            if not actions:
+            plano = ActionPlan.model_validate_json(resposta)
+
+            if not plano.actions:
                 print("Nenhuma ação necessária.")
                 break
+
+            # model_dump() converte os objetos Pydantic de volta para dicts,
+            # já que enactchoices() e o resto do código trabalham com dicts/JSON puro.
             actions = sorted(
-                actions,
+                [a.model_dump() for a in plano.actions],
                 key=lambda x: x.get("priority", 0),
                 reverse=True
             )

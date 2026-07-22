@@ -2,6 +2,9 @@ import os,re, json
 from pathlib import Path
 from datetime import datetime
 
+
+PASTA_PHAETON = os.path.join(os.getcwd(), os.getenv("PASTA_PROJETO", "Phaeton"))
+
 TAG_ALVO = [
     "<-- TO DO:", "<-- TO DO", "<-- TODO:", "<-- TODO", "<-- todo",
     "<-- To do:", "<-- to-do:", "<-- to-do", "<-- to do:", "<-- to do",
