@@ -83,8 +83,7 @@ def generate_content_with_fallback(
                     with open("LastResponse.json", "w", encoding="utf-8") as file:
                         file.write(response.model_dump_json(indent=4))
                     print(f"✅ Response successfully obtained using model: {model}!")
-                    return response
-                    
+                    return response                    
             except Exception as e:
                 print(f"⚠️ Error using model {model}: {e}")
                 print("Trying next available model in the fallback chain...")
@@ -92,7 +91,7 @@ def generate_content_with_fallback(
         print("\n🛑 All configured models in the fallback chain failed.")
         if attempt < max_attempts:
             print("⏳ Waiting for 60 seconds before retrying the fallback chain...")
-            time.sleep(60)
+            time.sleep(30)
         attempt += 1
 
     raise RuntimeError("All models and retry attempts failed to generate content.")
@@ -112,7 +111,7 @@ def ask_gemini(
         system_instruction = DEFAULT_SYSTEM_INSTRUCTION
     if temperature is None:
         temperature = DEFAULT_TEMPERATURE
-    if not contents:
+    if contents is None:
         contents = DEFAULT_CONTENTS
     
     # Build configuration arguments
@@ -130,6 +129,7 @@ def ask_gemini(
     config = types.GenerateContentConfig(**config_args)
     
     response = generate_content_with_fallback(contents, config)
+    time.sleep(15)
     return response.text
 
 

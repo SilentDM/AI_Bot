@@ -121,7 +121,7 @@ def carregar_memorias(guild_id, guild_name, userid, user_name):
     except FileNotFoundError:
         return ""
 
-def salvar_memoria(guild_id, guild_name, userid, user_name, prompt, resposta, geminiclient=None):
+def salvar_memoria(guild_id, guild_name, userid, user_name, prompt, resposta):
     """Salva a interação atual, aplicando a expiração por idade e resumo por token."""
     arquivo_existente = _buscar_arquivo_existente(guild_id, userid)
     caminho_ideal = _obter_caminho_alvo(guild_id, guild_name, userid, user_name)

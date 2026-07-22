@@ -141,7 +141,7 @@ async def on_message(message):
                             await respondersend(message, buffer)
                             print(f"Enviei a {t}º resposta!")
                         
-                        await asyncio.sleep(1) 
+                        await asyncio.sleep(2) 
                         t += 1
                         buffer = "\u200b"
                 

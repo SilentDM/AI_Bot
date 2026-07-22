@@ -146,12 +146,11 @@ Retorne apenas JSON.
                 reverse=True
             )
             enactchoices(actions)
-            time.sleep(10)
             maxiterations -= 1
         except Exception as e:
             print(f"Erro na resposta do TaskPlanner: {e}")
             maxiterations -= 1
-            time.sleep(10)
+            
     ex.processar_arquivos()
 
 def enactchoices(actions):
@@ -186,7 +185,7 @@ def createfolder(path, reason):
         pasta = Path(path)
         raiz = Path(os.getenv("PASTA_PROJETO", "Phaeton")).resolve()
         destino = pasta.resolve()
-        if not str(destino).startswith(str(raiz)):
+        if not str(destino).is_relative_to(raiz):
             print("❌ Tentativa de criar pasta fora da pasta raiz de conhecimento.")
             return False
         if destino.exists():
@@ -315,11 +314,10 @@ Retorne apenas o conteúdo final do arquivo.
             f"✅ Nova versão criada: "
             f"{novo_arquivo_path.name}"
         )
-        time.sleep(15)
-
+        
     except Exception as e:
         print(
             f"❌ Erro ao processar "
             f"{arquivo.name}: {e}"
         )
-        time.sleep(15)
+        

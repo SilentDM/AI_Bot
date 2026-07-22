@@ -183,11 +183,9 @@ REGRAS DE RETORNO:
                 else:
                     print(f"⚠️ O retorno do modelo para {arquivo.name} foi vazio.")
                 
-                time.sleep(10)  # Pausa de segurança entre chamadas
-                
             except Exception as e:
                 print(f"❌ Erro ao processar {arquivo.name}: {e}")
-                time.sleep(10)
+                
     if tagx==0:
         print("Nenhuama tag encontrada")
         return
