@@ -1,0 +1,204 @@
+import os
+import tkinter as tk
+from tkinter import ttk, messagebox
+from pathlib import Path
+from dotenv import load_dotenv
+
+ENV_PATH = Path(".env")
+
+class SetupWizard:
+    """
+    Janela de configuração inicial (primeira execução).
+    Pede, em sequência, cada informação necessária para o .env:
+    1. Nome da pasta do projeto
+    2. Nome da pasta de estilo
+    3. Token do Discord (opcional)
+    4. Chave da API do Gemini (obrigatória)
+
+    Ao finalizar, grava o arquivo .env e fecha a janela. O programa principal
+    (gui.py) só continua depois que esta janela é fechada com sucesso.
+    """
+
+    # Cada item da lista descreve um "passo" do assistente:
+    # (chave_no_env, título, descrição, obrigatório?, é_senha?)
+    PASSOS = [
+        ("PASTA_PROJETO", "Pasta do Projeto",
+        "Nome da pasta onde o seu mundo/lore será construído.\n"
+        "Ela será criada automaticamente se não existir.",
+        True, False, "Projeto"),
+
+        ("PASTA_ESTILO", "Pasta de Estilo",
+        "Nome da pasta com diretrizes de estilo de escrita (opcional,\n"
+        "usada pelo Expander para guiar o tom dos textos gerados).",
+        False, False, "Estilo"),
+
+        ("DISCORD_TOKEN", "Token do Discord (opcional)",
+        "Cole aqui o token do seu bot do Discord.\n"
+        "Deixe em branco se você não for usar o bot do Discord —\n"
+        "essa parte do programa fica automaticamente desativada.",
+        False, True, ""),
+
+        ("GOOGLE_API_KEY", "Chave da API do Gemini",
+        "Cole aqui sua chave gratuita da API do Google Gemini.\n"
+        "Este campo é OBRIGATÓRIO — o programa não funciona sem ele.",
+        True, True, ""),
+    ]
+
+    def __init__(self):
+        self.valores = {}  # vai guardar o que o usuário digitar em cada passo
+        self.passo_atual = 0
+        self.concluido = False
+
+        self.root = tk.Tk()
+        self.root.title("Configuração Inicial — Ao Multiverse Console")
+        self.root.geometry("520x320")
+        self.root.resizable(False, False)
+        self.root.configure(bg="#121212")
+
+        # Impede que o usuário feche a janela no X sem preencher nada
+        # (senão o programa seguiria sem .env e quebraria nos módulos que dependem dele).
+        self.root.protocol("WM_DELETE_WINDOW", self._confirmar_cancelamento)
+
+        self._montar_estilo()
+        self._montar_layout()
+        self._mostrar_passo(0)
+
+        self.root.mainloop()
+
+    # --- VISUAL (reaproveitando a mesma paleta dark do gui.py) ---
+    def _montar_estilo(self):
+        style = ttk.Style()
+        style.theme_use("clam")
+        style.configure(".", background="#121212", foreground="#e3e3e3",fieldbackground="#1e1e1e", font=("Segoe UI", 10))
+        style.configure("TButton", background="#252526", foreground="#e3e3e3",padding=6)
+        style.map("TButton", background=[("active", "#333333")])
+        style.configure("TEntry", fieldbackground="#252526", foreground="#ffffff")
+        style.configure("Titulo.TLabel", background="#121212", foreground="#10b981",font=("Segoe UI", 13, "bold"))
+        style.configure("Descricao.TLabel", background="#121212", foreground="#aaaaaa",font=("Segoe UI", 9), wraplength=460, justify="left")
+        style.configure("Passo.TLabel", background="#121212", foreground="#666666",font=("Segoe UI", 8))
+
+    def _montar_layout(self):
+        container = ttk.Frame(self.root)
+        container.pack(fill=tk.BOTH, expand=True, padx=30, pady=25)
+
+        self.lbl_passo = ttk.Label(container, style="Passo.TLabel")
+        self.lbl_passo.pack(anchor=tk.W)
+
+        self.lbl_titulo = ttk.Label(container, style="Titulo.TLabel")
+        self.lbl_titulo.pack(anchor=tk.W, pady=(2, 8))
+
+        self.lbl_descricao = ttk.Label(container, style="Descricao.TLabel")
+        self.lbl_descricao.pack(anchor=tk.W, pady=(0, 15))
+
+        self.entry_var = tk.StringVar()
+        self.entry = ttk.Entry(container, textvariable=self.entry_var, font=("Segoe UI", 11))
+        self.entry.pack(fill=tk.X, pady=(0, 5))
+        self.entry.bind("<Return>", lambda e: self._avancar())
+
+        self.lbl_erro = ttk.Label(container, text="", foreground="#ef4444", background="#121212")
+        self.lbl_erro.pack(anchor=tk.W, pady=(0, 10))
+
+        botoes = ttk.Frame(container)
+        botoes.pack(fill=tk.X, pady=(15, 0), side=tk.BOTTOM)
+
+        self.btn_voltar = ttk.Button(botoes, text="◀ Voltar", command=self._voltar)
+        self.btn_voltar.pack(side=tk.LEFT)
+
+        self.btn_avancar = ttk.Button(botoes, text="Avançar ▶", command=self._avancar)
+        self.btn_avancar.pack(side=tk.RIGHT)
+
+    # --- NAVEGAÇÃO ENTRE OS PASSOS ---
+    def _mostrar_passo(self, indice):
+        self.passo_atual = indice
+        chave, titulo, descricao, obrigatorio, senha, padrao = self.PASSOS[indice]
+
+        self.lbl_passo.config(text=f"Passo {indice + 1} de {len(self.PASSOS)}")
+        self.lbl_titulo.config(text=titulo + (" *" if obrigatorio else ""))
+        self.lbl_descricao.config(text=descricao)
+        self.lbl_erro.config(text="")
+
+        # Restaura valor já digitado (se o usuário voltou um passo), senão usa o padrão sugerido
+        valor_existente = self.valores.get(chave, padrao)
+        self.entry_var.set(valor_existente)
+        self.entry.config(show="*" if senha else "")
+
+        self.btn_voltar.config(state=(tk.NORMAL if indice > 0 else tk.DISABLED))
+        ultimo = indice == len(self.PASSOS) - 1
+        self.btn_avancar.config(text="Concluir ✅" if ultimo else "Avançar ▶")
+
+        self.entry.focus_set()
+        self.entry.selection_range(0, tk.END)
+
+    def _voltar(self):
+        if self.passo_atual > 0:
+            self._salvar_passo_atual()
+            self._mostrar_passo(self.passo_atual - 1)
+
+    def _avancar(self):
+        chave, titulo, descricao, obrigatorio, senha, padrao = self.PASSOS[self.passo_atual]
+        valor = self.entry_var.get().strip()
+
+        # Validação: campos obrigatórios não podem ficar vazios
+        if obrigatorio and not valor:
+            self.lbl_erro.config(text="⚠️ Este campo é obrigatório.")
+            return
+
+        self._salvar_passo_atual()
+
+        if self.passo_atual < len(self.PASSOS) - 1:
+            self._mostrar_passo(self.passo_atual + 1)
+        else:
+            self._finalizar()
+
+    def _salvar_passo_atual(self):
+        chave = self.PASSOS[self.passo_atual][0]
+        self.valores[chave] = self.entry_var.get().strip()
+
+    def _confirmar_cancelamento(self):
+        if messagebox.askyesno(
+            "Cancelar configuração",
+            "O programa precisa dessas informações para funcionar.\n"
+            "Deseja realmente sair sem concluir a configuração?"
+        ):
+            self.root.destroy()
+            raise SystemExit("Configuração inicial cancelada pelo usuário.")
+
+    # --- FINALIZAÇÃO: GRAVA O .env ---
+    def _finalizar(self):
+        conteudo = (
+            f"DISCORD_TOKEN={self.valores.get('DISCORD_TOKEN', '')}\n"
+            f"GOOGLE_API_KEY={self.valores.get('GOOGLE_API_KEY', '')}\n"
+            f"PASTA_PROJETO={self.valores.get('PASTA_PROJETO', 'Phaeton')}\n"
+            f"PASTA_ESTILO={self.valores.get('PASTA_ESTILO', 'Style')}\n"
+        )
+        ENV_PATH.write_text(conteudo, encoding="utf-8")
+        self.concluido = True
+
+        aviso = "✅ Configuração concluída!\n\nO programa vai iniciar agora."
+        if not self.valores.get("DISCORD_TOKEN"):
+            aviso += "\n\nℹ️ Nenhum token do Discord informado — o bot ficará desativado."
+        messagebox.showinfo("Tudo pronto!", aviso)
+
+        self.root.destroy()
+
+
+def garantir_env():
+    """
+    Garante que o arquivo .env exista com as configurações necessárias.
+    Se não existir, abre o assistente gráfico (SetupWizard) — só acontece
+    na primeira execução do programa.
+
+    IMPORTANTE: esta função deve ser chamada bem no início de qualquer script
+    de entrada (gui.py, dbot.py), ANTES de importar project_utils, ai_utils, etc.
+    Esses módulos leem variáveis de ambiente assim que são importados, então
+    se o .env ainda não existir/estiver carregado nesse momento, eles vão
+    ler valores vazios.
+    """
+    if not ENV_PATH.exists():
+        wizard = SetupWizard()
+        if not wizard.concluido:
+            # O usuário fechou a janela sem concluir — não faz sentido seguir
+            # em frente, pois os módulos seguintes vão quebrar sem as variáveis.
+            raise SystemExit("Configuração inicial não foi concluída. Encerrando.")
+
+    load_dotenv()

@@ -18,6 +18,19 @@ IGNORELIST = [
     "status: rascunho"
 ]
 
+def detectar_intencao(pergunta):
+    pergunta_lower = pergunta.lower()
+    if "onde" in pergunta_lower:
+        return "Foque na localização"
+    elif "quando" in pergunta_lower:
+        return "Foque no histórico ou cronologia"
+    elif "quem" in pergunta_lower:
+        return "Foque na entidade ou pessoa"
+    elif "como" in pergunta_lower:
+        return "Foque no método ou processo"
+    elif "por que" in pergunta_lower or "porque" in pergunta_lower:
+        return "Foque na causa"
+    return ""
 
 def normalizar_nome(nome: str) -> str:
     """
