@@ -1,35 +1,17 @@
-import os, time
-import re
-import json
+import os
 import asyncio
 import discord
-from pathlib import Path
-from google import genai
-from google.genai import types
 import memory
-from PIL import Image
 from ai_utils import ask_gemini
 import project_utils as pu
 from dotenv import load_dotenv
 load_dotenv()
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-GEMINICLIENT = genai.Client(api_key=GOOGLE_API_KEY)
-
 TOKEN = os.getenv("DISCORD_TOKEN")
 intents = discord.Intents.default()
 intents.message_content = True
 discordclient = discord.Client(intents=intents)
 
-TAG_ALVO = [
-    "<-- TO DO:", "<-- TO DO", "<-- TODO:", "<-- TODO", "<-- todo",
-    "<-- To do:", "<-- to-do:", "<-- to-do", "<-- to do:", "<-- to do",
-    "<-- To Do:", "<-- To Do", "<-- To-Do:", "<-- To-Do", "<-- To-do:", 
-    "<-- To-do", "<-- Todo:"
-]
-IGNORELIST = [
-    "Templates", 
-    "status: rascunho"
-]
+
 def detectar_intencao(pergunta):
     pergunta_lower = pergunta.lower()
     if "onde" in pergunta_lower:
@@ -172,7 +154,7 @@ async def on_message(message):
             
             # Nota: Mantenha a variável ou cliente correto dependendo de como você definiu globalmente.
             # Se você usa a variável global GEMINICLIENT da sua configuração, passe ela aqui.
-            memory.salvar_memoria(guild_id, guild_name, userid, user_name, prompt, resposta, GEMINICLIENT)
+            memory.salvar_memoria(guild_id, guild_name, userid, user_name, prompt, resposta)
             print("Memórias atualizadas com sucesso!")
         else:
             print("Não foi possível processar a resposta do modelo.")

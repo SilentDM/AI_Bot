@@ -3,8 +3,6 @@ import time
 import re
 import glob
 import tiktoken
-from google import genai
-from google.genai import types
 from ai_utils import ask_gemini
 
 MEMORIES_DIR = "memories"

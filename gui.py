@@ -1,7 +1,3 @@
-# --- START OF FILE gui.py ---
-
-import os
-import sys
 import threading
 import time
 import asyncio
@@ -9,8 +5,6 @@ import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
 from main import detectar_intencao, ask_gemini, GEMINICLIENT
 from project_utils import carregar_phaeton
-
-# Import do novo módulo de visualização e arquivos e o gerenciador de memória
 import explorer
 import memory
 

@@ -1,4 +1,4 @@
-import os, sys, explorer, memory, json, re, time
+import os, json, re, time
 import project_utils as pu
 import expander as ex
 from typing import Optional
@@ -12,16 +12,6 @@ DIRETORIOS = pu.carregar_estrutura_phaeton()
 INDICE = pu.gerar_indice()
 print("Iniciando World Builder! Boa Sorte!")
 
-TAG_ALVO = [
-    "<-- TO DO:", "<-- TO DO", "<-- TODO:", "<-- TODO", "<-- todo",
-    "<-- To do:", "<-- to-do:", "<-- to-do", "<-- to do:", "<-- to do",
-    "<-- To Do:", "<-- To Do", "<-- To-Do:", "<-- To-Do", "<-- To-do:", 
-    "<-- To-do", "<-- Todo:"
-]
-IGNORELIST = [
-    "Templates", 
-    "status: rascunho"
-]
 
 def iterationschoice(reason: Optional[str] = "O projeto esteja concluído"):
     CONTEUDO = pu.carregar_phaeton()

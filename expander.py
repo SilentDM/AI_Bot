@@ -1,30 +1,24 @@
 import os, re, time
 from pathlib import Path
-from google import genai  # Utilizando o SDK moderno
 from ai_utils import ask_gemini
+import project_utils as pu
 
 PASTA_PHAETON = os.path.join(os.getcwd(), os.getenv("PASTA_PROJETO", "Phaeton"))
 
-TAG_ALVO = [
-    "<-- TO DO:", "<-- TO DO", "<-- TODO:", "<-- TODO", "<-- todo",
-    "<-- To do:", "<-- to-do:", "<-- to-do", "<-- to do:", "<-- to do",
-    "<-- To Do:", "<-- To Do", "<-- To-Do:", "<-- To-Do", "<-- To-do:", 
-    "<-- To-do", "<-- Todo:"
-]
-IGNORELIST = ["Templates", "status: rascunho"]
+
 
 def obter_arquivos_relacionados(titulo):
     relacionados = []
     titulo = re.sub(r'_v\d+$', '', titulo.lower())
     for arquivo in Path(PASTA_PHAETON).rglob("*.md"):
-        if any(part in IGNORELIST for part in arquivo.parts):
+        if any(part in pu.IGNORELIST for part in arquivo.parts):
             continue
         with open(arquivo, encoding="utf-8") as f:
             conteudo = f.read()
         if (
             arquivo.stem.lower() == titulo
-            or any(tag in conteudo for tag in TAG_ALVO)
-            or any(ignore in conteudo for ignore in IGNORELIST)
+            or any(tag in conteudo for tag in pu.TAG_ALVO)
+            or any(ignore in conteudo for ignore in pu.IGNORELIST)
         ):
             continue
         score = conteudo.lower().count(titulo)
@@ -86,16 +80,10 @@ def carregar_diretrizes_estilo():
                 print(f"Erro ao carregar diretriz {arquivo.name}: {e}")
     return "".join(conteudo_estilo)
 
-
-
 def nome_base(path):
     return re.sub(r'_v\d+$', '', path.stem.lower())
 
 def remover_markdown_fences(texto: str) -> str:
-    """
-    Remove marcações de bloco de código (```markdown ... ```) 
-    que o Gemini costuma adicionar nas pontas da resposta.
-    """
     linhas = texto.strip().splitlines()
     if not linhas:
         return texto
@@ -127,7 +115,7 @@ def processar_arquivos():
             conteudo = "".join(linhas)
             titulo = Path(arquivo).stem
             titulo = re.sub(r'_v\d+$', '', titulo.lower())
-        tag_encontrada = next((tag for tag in TAG_ALVO if tag in conteudo), None)
+        tag_encontrada = next((tag for tag in pu.TAG_ALVO if tag in conteudo), None)
         if tag_encontrada:
             print(f"\n=====\nTag encontrada no arquivo:\n{arquivo.name}\n=====")
             tagx=1
@@ -137,7 +125,7 @@ def processar_arquivos():
                     with open(arquivo_local, "r", encoding="utf-8") as f:
                         conteudo_local = f.read()
                         if (
-                            any(tag in conteudo_local for tag in TAG_ALVO)
+                            any(tag in conteudo_local for tag in pu.TAG_ALVO)
                             or "status: rascunho" in conteudo_local.lower()
                             ):
                             continue
@@ -189,7 +177,7 @@ REGRAS DE RETORNO:
                     novo_arquivo_path = obter_proximo_nome_versao(arquivo)
                     
                     with open(novo_arquivo_path, 'w', encoding='utf-8') as f:
-                        f.write(texto_expandido)
+                        f.write(texto_limpo)
                     
                     print(f"✅ Nova versão gerada com sucesso: {novo_arquivo_path.name}")
                 else:

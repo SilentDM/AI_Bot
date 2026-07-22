@@ -2,13 +2,10 @@
 
 import os
 import sys
-import re
-import glob
 import shutil
 import subprocess
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog, scrolledtext
-from dotenv import env
 
 class PhaetonExplorerFrame(ttk.Frame):
     def __init__(self, parent, log_callback):
@@ -173,7 +170,6 @@ class PhaetonExplorerFrame(ttk.Frame):
     # --- SALVAMENTO AUTOMÁTICO E SELEÇÃO DE ARQUIVOS ---
     def save_current_file(self):
         """Salva as alterações pendentes no arquivo atual."""
-        self.save_current_file()
         self.autosave_timer = None
         if self.current_file and os.path.isfile(self.current_file):
             try:
