@@ -1,4 +1,4 @@
-import os,threading, time
+import os,threading, time, json
 import project_utils as pu
 from pathlib import Path
 from typing import Any, Optional, Type
@@ -32,6 +32,75 @@ DEFAULT_SYSTEM_INSTRUCTION = "You are a helpful assistant that explains things a
 DEFAULT_TEMPERATURE = 0.6  # Changed to a float (the API expects a float, not a string)
 DEFAULT_CONTENTS = "Please repeat: I did not receive a correct prompt, your coding has failed somewhere."
 MAX_TOKENS = 20480
+
+
+import os
+import json
+import time
+from google import genai
+
+import os
+import json
+import time
+from google import genai
+from google.genai import types
+
+def findmodel(file_path="models.json"):
+    # (Lógica de verificação de tempo/arquivo mantida...)
+    if os.path.exists(file_path):
+        is_empty = os.path.getsize(file_path) == 0
+        is_older_than_7_days = (time.time() - os.path.getmtime(file_path)) > (7 * 24 * 60 * 60)
+        if not is_older_than_7_days and not is_empty:
+            return
+
+    client = genai.Client()
+    all_models = client.models.list()
+    working_models = []
+
+    for model in all_models:
+        model_name = model.name
+        max_input_tokens = getattr(model, 'input_token_limit', 0) or 0
+
+        # 1. Testar se o modelo responde (ping básico)
+        start_time = time.time()
+        try:
+            response = client.models.generate_content(
+                model=model_name,
+                contents="ping"
+            )
+            response_time = round(time.time() - start_time, 4)
+        except Exception:
+            # Se o modelo nem responde ao ping, ignora ele
+            continue
+
+        # 2. Testar se o modelo aceita a Tool de busca do Google
+        supports_tools = False
+        try:
+            client.models.generate_content(
+                model=model_name,
+                contents="ping",
+                config=types.GenerateContentConfig(
+                    tools=[{"google_search": {}}]  # Teste de tool
+                )
+            )
+            supports_tools = True
+        except Exception:
+            # Se der erro 400 ou de suporte a tools, marcamos como False
+            supports_tools = False
+
+        working_models.append({
+            "name": model_name,
+            "display_name": getattr(model, "display_name", model_name),
+            "maxinputtokens": max_input_tokens,
+            "responsetime": response_time,
+            "supports_tools": supports_tools  # <--- Nova flag salva
+        })
+
+    # Ordena mantendo os melhores modelos no topo
+    working_models.sort(key=lambda x: (-x['maxinputtokens'], x['responsetime']))
+
+    with open(file_path, "w") as f:
+        json.dump(working_models, f, indent=4)
 
 def load_projeto_images():
     """
@@ -77,8 +146,11 @@ def generate_content_with_fallback(
         final_contents = contents
 
     attempt = 1
+    with open("models.json", "r") as f:
+        data = json.load(f) 
     while attempt <= max_attempts:
-        for model in MODELS_LIST:
+        for model in data:
+            model_name = model["name"]  # Extract the name key here
             try:
                 print(f"🔮 Attempting to generate content using model: {model} (Attempt {attempt}/{max_attempts})...")
                 with open("LastPrompt.txt", "w", encoding="utf-8") as f:
@@ -97,11 +169,11 @@ def generate_content_with_fallback(
             except Exception as e:
                 print(f"⚠️ Error using model {model}: {e}")
                 print("Trying next available model in the fallback chain...")
-        
-        print("\n🛑 All configured models in the fallback chain failed.")
-        if attempt < max_attempts:
-            print("⏳ Waiting for 60 seconds before retrying the fallback chain...")
-        attempt += 1
+            
+            print("\n🛑 All configured models in the fallback chain failed.")
+            if attempt < max_attempts:
+                print("⏳ Waiting for 60 seconds before retrying the fallback chain...")
+            attempt += 1
 
     raise RuntimeError("All models and retry attempts failed to generate content.")
 

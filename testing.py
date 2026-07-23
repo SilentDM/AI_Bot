@@ -1,13 +1,10 @@
 import project_utils as pu
+import ai_utils, os, json
+import ai_gemini as ag
 
-
-info = pu.build_tree()
-info += pu.gerar_indice()
-info += pu.carregar_projeto()
-
-print (info)
-
-
-
+ag.findmodel()
+with open("models.json", "r") as f:
+    data = json.load(f)
+    print(data)
 
 

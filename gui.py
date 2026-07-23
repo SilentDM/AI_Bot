@@ -1,6 +1,4 @@
-import threading
-import time
-import asyncio
+import threading, time, asyncio, explorer, memory, sys
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
 # OBS: se você já aplicou a separação main.py -> dbot.py + setup_env.py combinada
@@ -9,9 +7,9 @@ from tkinter import ttk, messagebox, scrolledtext
 # e use pu.detectar_intencao(...) no lugar de detectar_intencao(...) mais abaixo.
 import ai_gemini as au
 import project_utils as pu
-import explorer
-import memory
+import gui_logger as gl
 
+au.findmodel()
 
 class AoDesktopApp:
     def __init__(self, root):
@@ -24,9 +22,8 @@ class AoDesktopApp:
 
         self.current_font_size = 11
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
-
         self.setup_dark_style()
-
+        
         # Estados internos das engines de background.
         # Continuam existindo independente de qual página está visível na tela.
         self.discord_running = False
@@ -287,8 +284,10 @@ class AoDesktopApp:
     # ------------------------------------------------------------------
     def _build_log_page(self, parent):
         frame = ttk.Frame(parent)
-        self._page_header(frame, "📋 Log de Atividade",
-                           "Histórico técnico de tudo que está acontecendo em segundo plano.")
+        sys.stdout = gl.GuiOutput(self.log_activity)
+        sys.stdout = gl.GuiOutput(self.log_activity)
+        sys.stderr = gl.GuiOutput(self.log_activity)
+        self._page_header(frame, "📋 Log de Atividade","Histórico técnico de tudo que está acontecendo em segundo plano.")
         self.log_display = scrolledtext.ScrolledText(
             frame, wrap=tk.WORD, state=tk.DISABLED, font=("Consolas", 9),
             bg="#1e1e1e", fg="#cccccc", insertbackground="white",

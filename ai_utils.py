@@ -1,6 +1,5 @@
 import os
 from dotenv import load_dotenv
-
 load_dotenv()
 
 # AI_PROVIDER decide, em UM ÚNICO LUGAR, qual implementação de IA o programa
@@ -17,6 +16,8 @@ if AI_PROVIDER == "pro":
     from ai_pro import ask_ai as _ask_ai_impl
 else:
     from ai_gemini import ask_ai as _ask_ai_impl
+
+
 
 
 def ask_ai(contents=None, system_instruction=None, temperature=None, response_schema=None):
