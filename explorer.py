@@ -1,10 +1,11 @@
-import os
-import sys
-import shutil
-import subprocess
+import os, sys, shutil, subprocess, threading
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog, scrolledtext
 import project_utils as pu
+import expander
+import gui as gu
+import expander as ex
+import wbuilder
 
 class ExplorerFrame(ttk.Frame):
     def __init__(self, parent, log_callback):
@@ -40,7 +41,7 @@ class ExplorerFrame(ttk.Frame):
         self.editor = scrolledtext.ScrolledText(
             self.editor_frame, 
             wrap=tk.WORD, 
-            font=("Consolas", 10), 
+            font=("Consolas", 12), 
             undo=True,
             bg="#1e1e1e",
             fg="#e3e3e3",
@@ -75,11 +76,8 @@ class ExplorerFrame(ttk.Frame):
         self.tree.bind("<Button-2>", self.show_context_menu) # macOS
         
         # Sincronização inicial do diretório
-        self.refresh_tree()
-        
+        self.refresh_tree()       
 
-        
-        
     def on_key_release(self, event):
         # Cancela o temporizador anterior se houver nova digitação
         if self.autosave_timer:
@@ -203,19 +201,21 @@ class ExplorerFrame(ttk.Frame):
             return
             
         novo_caminho = item_values[0]
-        
+
         # Se for o mesmo arquivo que já está aberto, não faz nada
         if self.current_file and os.path.abspath(self.current_file) == os.path.abspath(novo_caminho):
             return
             # Cancela qualquer salvamento temporizado pendente para evitar gravação cruzada
+        arquivo_anterior = self.current_file
         if self.autosave_timer:
             self.after_cancel(self.autosave_timer)
             self.autosave_timer = None
             
-        # 1. Salva automaticamente o arquivo anterior
         self.save_current_file()
         
-        # 2. Carrega as informações do novo arquivo selecionado
+        if arquivo_anterior:
+            self.process_saved_file(arquivo_anterior) 
+        
         if os.path.isfile(novo_caminho):
             self.current_file = novo_caminho
             self.editor.config(state=tk.NORMAL)
@@ -237,6 +237,18 @@ class ExplorerFrame(ttk.Frame):
             self.editor.delete("1.0", tk.END)
             self.editor.insert("1.0", f"--- Directory Selected: {os.path.basename(novo_caminho)} ---")
             self.editor.config(state=tk.DISABLED)
+        
+    def process_saved_file(self, path):
+        try:
+            with open(path,"r",encoding="utf-8") as f:
+                texto = f.read()
+            if any(tag in texto for tag in pu.TAG_ALVO):
+                self.log_callback(f"TODO encontrado em {os.path.basename(path)}")
+                #threading.Thread(target=ex.processar_arquivo_unico,args=(path,),daemon=True).start()
+                threading.Thread(target=wbuilder.improvefile,args=(path,),daemon=True).start()
+        except Exception as e:
+            self.log_callback(f"Erro analisando TODO: {e}")
+        
 
     # --- DUPLO CLIQUE ---
     def on_double_click(self, event):

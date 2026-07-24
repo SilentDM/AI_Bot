@@ -7,8 +7,9 @@ import difflib
 PASTA_PROJETO = os.getenv("PASTA_PROJETO", "Phaeton")
 CAMINHO_PROJETO = os.path.join(os.getcwd(), PASTA_PROJETO)
 PASTA_ESTILO = os.getenv("PASTA_ESTILO", "Style")
-CAMINHO_ESTILO = os.path.join(os.getcwd(), PASTA_ESTILO)
-
+CAMINHO_ESTILO = (Path.cwd()/PASTA_ESTILO)
+PASTA_LOGS = Path.cwd() / "logs"
+PASTA_LOGS.mkdir(exist_ok=True,parents=True)
 TAG_ALVO = [
     "<-- TO DO:", "<-- TO DO", "<-- TODO:", "<-- TODO", "<-- todo",
     "<-- To do:", "<-- to-do:", "<-- to-do", "<-- to do:", "<-- to do",
@@ -19,6 +20,9 @@ IGNORELIST = [
     "Templates", 
     "status: rascunho"
 ]
+
+def log_path(nome):
+    return PASTA_LOGS / nome
 
 def detectar_intencao(pergunta):
     pergunta_lower = pergunta.lower()
@@ -35,14 +39,6 @@ def detectar_intencao(pergunta):
     return ""
 
 def normalizar_nome(nome: str) -> str:
-    """
-    Normaliza um nome de arquivo/pasta para comparação:
-    - remove acentos (Ruína -> Ruina)
-    - deixa tudo minúsculo
-    - remove plural simples em 's' no final (aproximação simples, não é perfeita)
-    - remove extensão .md, se houver
-    Isso permite comparar "Segredos" com "Segredo", "Ruínas" com "Ruina", etc.
-    """
     nome = Path(nome).stem  # remove extensão, se houver
     nome = unicodedata.normalize("NFKD", nome).encode("ASCII", "ignore").decode("ASCII")
     nome = nome.lower().strip()
@@ -50,7 +46,7 @@ def normalizar_nome(nome: str) -> str:
         nome = nome[:-1]
     return nome
 
-def existe_nome_parecido(nome_proposto: str, pasta_destino: Path, limiar: float = 0.85):
+def existe_nome_parecido(nome_proposto: str, pasta_destino: Path, limiar: float = 0.65):
     """
     Verifica se já existe, na pasta_destino, algum arquivo ou subpasta com nome
     muito parecido ao nome_proposto (mesmo que não seja idêntico).

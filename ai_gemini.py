@@ -31,7 +31,7 @@ import time
 from google import genai
 from google.genai import types
 
-def findmodel(file_path="models.json"):
+def findmodel(file_path=pu.log_path("models.json")):
     if os.path.exists(file_path):
         is_empty = os.path.getsize(file_path) == 0
         is_older_than_7_days = (time.time() - os.path.getmtime(file_path)) > (7 * 24 * 60 * 60)
@@ -90,7 +90,7 @@ def load_projeto_images():
     parts = []
     pasta_projeto = pu.CAMINHO_PROJETO
     if pasta_projeto.exists():
-        for img_path in pasta_projeto.rglob("*.png"):
+        for img_path in pasta_projeto.rglob("*.png", ".jpg", ".webp", ".jpeg"):
             try:
                 #print(f"🖼️ [Local API] Automatically attaching map/region image: {img_path.name}")
                 with open(img_path, "rb") as f:
@@ -121,7 +121,7 @@ def generate_content_with_fallback(
         final_contents = contents
 
     attempt = 1
-    with open("models.json", "r") as f:
+    with open(pu.log_path("models.json"), "r") as f:
         data = json.load(f) 
     while attempt <= max_attempts:
         for model in data:

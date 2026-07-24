@@ -1,18 +1,12 @@
-import threading, time, asyncio, explorer, memory, sys
+import threading, time, asyncio, explorer, memory, sys, os
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
-# OBS: se você já aplicou a separação main.py -> dbot.py + setup_env.py combinada
-# em mensagens anteriores, troque esta linha por:
-#     from ai_utils import ask_ai
-# e use pu.detectar_intencao(...) no lugar de detectar_intencao(...) mais abaixo.
+import expander as ex
 import ai_gemini as au
 import project_utils as pu
 import gui_logger as gl
 import setup_env as se
 
-
-se.garantir_env()
-au.findmodel()
 
 class AoDesktopApp:
     def __init__(self, root):
@@ -41,6 +35,7 @@ class AoDesktopApp:
         self.current_page = None
 
         self.setup_ui()
+
         self.setup_shortcuts()
         self.change_font_size(0)
 
@@ -74,8 +69,7 @@ class AoDesktopApp:
         self.style.configure('Sash', background='#2d2d2d', bordercolor='#2d2d2d', sashthickness=3)
 
         self.style.configure('TLabelframe', background='#1e1e1e', bordercolor='#2d2d2d', borderwidth=1)
-        self.style.configure('TLabelframe.Label', background='#1e1e1e', foreground='#10b981',
-                              font=('Segoe UI', 10, 'bold'))
+        self.style.configure('TLabelframe.Label', background='#1e1e1e', foreground='#10b981',font=('Segoe UI', 10, 'bold'))
 
         self.style.configure('TButton',
             background='#252526', foreground='#e3e3e3', bordercolor='#2d2d2d',
@@ -86,22 +80,17 @@ class AoDesktopApp:
             foreground=[('active', '#ffffff')]
         )
 
-        self.style.configure('TEntry', fieldbackground='#252526', foreground='#ffffff',
-                              bordercolor='#2d2d2d', lightcolor='#252526', darkcolor='#252526')
+        self.style.configure('TEntry', fieldbackground='#252526', foreground='#ffffff',bordercolor='#2d2d2d', lightcolor='#252526', darkcolor='#252526')
 
-        self.style.configure('Treeview', background='#1e1e1e', foreground='#e3e3e3',
-                              fieldbackground='#1e1e1e', bordercolor='#2d2d2d', borderwidth=1, rowheight=24)
+        self.style.configure('Treeview', background='#1e1e1e', foreground='#e3e3e3',fieldbackground='#1e1e1e', bordercolor='#2d2d2d', borderwidth=1, rowheight=24)
         self.style.map('Treeview',
             background=[('selected', '#0f766e')],
             foreground=[('selected', '#ffffff')]
         )
-        self.style.configure('Heading', background='#121212', foreground='#10b981',
-                              bordercolor='#2d2d2d', font=('Segoe UI', 9, 'bold'))
+        self.style.configure('Heading', background='#121212', foreground='#10b981',bordercolor='#2d2d2d', font=('Segoe UI', 9, 'bold'))
         self.style.map('Heading', background=[('active', '#2d2d2d')])
 
-        self.style.configure('Vertical.TScrollbar', background='#252526', troughcolor='#121212',
-                              bordercolor='#2d2d2d', lightcolor='#252526', darkcolor='#252526',
-                              arrowcolor='#e3e3e3')
+        self.style.configure('Vertical.TScrollbar', background='#252526', troughcolor='#121212',bordercolor='#2d2d2d', lightcolor='#252526', darkcolor='#252526',arrowcolor='#e3e3e3')
         self.style.map('Vertical.TScrollbar', background=[('active', '#2d2d2d')])
 
         # --- Estilos exclusivos dos botões de navegação da sidebar ---
@@ -133,8 +122,7 @@ class AoDesktopApp:
         sidebar.grid(row=0, column=0, sticky="ns")
         sidebar.pack_propagate(False)  # impede que o conteúdo interno force a largura a mudar
 
-        tk.Label(sidebar, text="🜂 Ao Console", bg="#0a0a0a", fg="#10b981",
-                 font=("Segoe UI", 13, "bold")).pack(anchor=tk.W, padx=16, pady=(22, 26))
+        tk.Label(sidebar, text="🜂 Ao Console", bg="#0a0a0a", fg="#10b981",font=("Segoe UI", 13, "bold")).pack(anchor=tk.W, padx=16, pady=(22, 26))
 
         # Cada item: (chave interna da página, texto exibido no botão)
         nav_items = [
@@ -144,8 +132,7 @@ class AoDesktopApp:
             ("log", "📋  Atividade"),
         ]
         for key, label in nav_items:
-            btn = ttk.Button(sidebar, text=label, style="Nav.TButton",
-                              command=lambda k=key: self.switch_page(k))
+            btn = ttk.Button(sidebar, text=label, style="Nav.TButton",command=lambda k=key: self.switch_page(k))
             btn.pack(fill=tk.X, padx=8, pady=2)
             self.nav_buttons[key] = btn
 
@@ -153,20 +140,15 @@ class AoDesktopApp:
         # não importa em qual página o usuário está.
         zoom_frame = tk.Frame(sidebar, bg="#0a0a0a")
         zoom_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=12, pady=(0, 6))
-        tk.Label(zoom_frame, text="Zoom:", bg="#0a0a0a", fg="#888888",
-                 font=("Segoe UI", 8)).pack(side=tk.LEFT)
-        ttk.Button(zoom_frame, text="A-", width=3,
-                   command=lambda: self.change_font_size(-1)).pack(side=tk.LEFT, padx=2)
-        ttk.Button(zoom_frame, text="A+", width=3,
-                   command=lambda: self.change_font_size(1)).pack(side=tk.LEFT, padx=2)
+        tk.Label(zoom_frame, text="Zoom:", bg="#0a0a0a", fg="#888888",font=("Segoe UI", 8)).pack(side=tk.LEFT)
+        ttk.Button(zoom_frame, text="A-", width=3,command=lambda: self.change_font_size(-1)).pack(side=tk.LEFT, padx=2)
+        ttk.Button(zoom_frame, text="A+", width=3,command=lambda: self.change_font_size(1)).pack(side=tk.LEFT, padx=2)
 
         # Status do Discord: é informação global do sistema (não de uma
         # tarefa específica), então fica fixo no rodapé da sidebar,
         # visível em qualquer uma das 4 páginas.
         ttk.Separator(sidebar, orient="horizontal").pack(side=tk.BOTTOM, fill=tk.X, padx=12, pady=8)
-        self.lbl_discord = tk.Label(sidebar, text="Discord: Starting...", bg="#0a0a0a",
-                                     fg="#e3e3e3", font=("Segoe UI", 8, "bold"),
-                                     anchor="w", justify="left", wraplength=175)
+        self.lbl_discord = tk.Label(sidebar, text="Discord: Starting...", bg="#0a0a0a",fg="#e3e3e3", font=("Segoe UI", 8, "bold"),anchor="w", justify="left", wraplength=175)
         self.lbl_discord.pack(side=tk.BOTTOM, fill=tk.X, padx=16, pady=(0, 4))
 
         # --- ÁREA DE CONTEÚDO: as 4 páginas ficam empilhadas aqui ---
@@ -187,10 +169,8 @@ class AoDesktopApp:
         para dar consistência visual entre as 4 abas."""
         header = ttk.Frame(parent)
         header.pack(fill=tk.X, padx=18, pady=(18, 10))
-        ttk.Label(header, text=title, font=("Segoe UI", 14, "bold"),
-                  foreground="#10b981").pack(anchor=tk.W)
-        ttk.Label(header, text=subtitle, font=("Segoe UI", 9),
-                  foreground="#888888").pack(anchor=tk.W, pady=(3, 0))
+        ttk.Label(header, text=title, font=("Segoe UI", 14, "bold"),foreground="#10b981").pack(anchor=tk.W)
+        ttk.Label(header, text=subtitle, font=("Segoe UI", 9),foreground="#888888").pack(anchor=tk.W, pady=(3, 0))
 
     def switch_page(self, name):
         """Traz a página escolhida para frente e atualiza o destaque
@@ -226,8 +206,7 @@ class AoDesktopApp:
         # --- Bloco do Expander ---
         expander_box = ttk.LabelFrame(body, text=" Expander (preenche lacunas marcadas com TO DO) ")
         expander_box.pack(fill=tk.X, pady=(0, 15))
-        self.btn_expander = ttk.Button(expander_box, text="▶  Run Expander Task",
-                                        command=self.start_expander_thread)
+        self.btn_expander = ttk.Button(expander_box, text="▶  Run Expander Task",command=self.start_expander_thread)
         self.btn_expander.pack(fill=tk.X, padx=10, pady=10)
         self.lbl_expander = ttk.Label(expander_box, text="Status: Idle")
         self.lbl_expander.pack(anchor=tk.W, padx=10, pady=(0, 10))
@@ -239,18 +218,19 @@ class AoDesktopApp:
         self.worldbuilder_objective = tk.StringVar(value="Completar o Projeto")
         self.objective_entry = ttk.Entry(wb_box, textvariable=self.worldbuilder_objective)
         self.objective_entry.pack(fill=tk.X, padx=10, pady=5)
-        self.btn_worldbuilder = ttk.Button(wb_box, text="▶  Run WorldBuilder",
-                                            command=self.start_worldbuilder_thread)
+        self.btn_worldbuilder = ttk.Button(wb_box, text="▶  Run WorldBuilder",command=self.start_worldbuilder_thread)
         self.btn_worldbuilder.pack(fill=tk.X, padx=10, pady=(5, 10))
         self.lbl_worldbuilder = ttk.Label(wb_box, text="Status: Idle")
         self.lbl_worldbuilder.pack(anchor=tk.W, padx=10, pady=(0, 10))
+        
+        # --- Bloco do DeleteMemories ---
+        db_box = ttk.LabelFrame(body, text="")
+        db_box.pack(fill=tk.X, pady=(0, 15))
+        self.btn_delete_memories = ttk.Button(db_box,text="X Excluir Memórias",command=self.delete_memories)
+        self.btn_delete_memories.pack(fill=tk.X,padx=10,pady=5)
 
         # Dica visual, lembrando que dá pra navegar livremente enquanto a tarefa roda
-        ttk.Label(body,
-                  text="💡 Você pode ir para outras abas enquanto uma tarefa roda em segundo "
-                       "plano — acompanhe o progresso técnico na aba 'Atividade'.",
-                  foreground="#666666", wraplength=560, justify="left"
-                  ).pack(anchor=tk.W, pady=(20, 0))
+        ttk.Label(body,text="💡 Você pode ir para outras abas enquanto uma tarefa roda em segundo ""plano — acompanhe o progresso técnico na aba 'Atividade'.",foreground="#666666", wraplength=560, justify="left").pack(anchor=tk.W, pady=(20, 0))
         return frame
 
     # ------------------------------------------------------------------
@@ -258,8 +238,7 @@ class AoDesktopApp:
     # ------------------------------------------------------------------
     def _build_chat_page(self, parent):
         frame = ttk.Frame(parent)
-        self._page_header(frame, "💬 Conversa com Ao",
-                           "Fale diretamente com Ao sobre o seu mundo.")
+        self._page_header(frame, "💬 Conversa com Ao", "Fale diretamente com Ao sobre o seu mundo.")
 
         self.chat_display = scrolledtext.ScrolledText(
             frame, wrap=tk.WORD, state=tk.DISABLED, font=("Segoe UI", 10),
@@ -457,7 +436,8 @@ class AoDesktopApp:
         self.btn_expander.config(state=tk.NORMAL)
         self.lbl_expander.config(text=f"Status: {status}", foreground="#e3e3e3")
         self.explorer_pane.refresh_tree()
-
+    
+    
     # ------------------------------------------------------------------
     # ENGINE DE WORLD BUILDER
     # ------------------------------------------------------------------
@@ -507,6 +487,45 @@ class AoDesktopApp:
         self.explorer_pane.refresh_tree()
 
     # ------------------------------------------------------------------
+    # ENGINE DE EXCLUIR MEMORIAS
+    # ------------------------------------------------------------------
+    def delete_memories(self):
+        resposta = messagebox.askyesno("Confirmar","Deseja realmente excluir todas as memórias?")
+        if not resposta:
+            return
+        try:
+            memory.delete_all_memories()
+            self.log_activity("Todas as memórias foram removidas.")
+            messagebox.showinfo("Concluído","Todas as memórias foram excluídas.")
+        except Exception as e:
+            self.log_activity(f"Erro ao excluir memórias: {e}")
+            messagebox.showerror("Erro",str(e))
+
+
+    # ------------------------------------------------------------------
+    # ENGINE DE Pop-Ups - Sem utilização no momento, não está funcionando corretamente
+    # ------------------------------------------------------------------
+    def toast(self, mensagem):
+            popup = tk.Toplevel(self.root)
+            popup.overrideredirect(True)
+            popup.attributes("-topmost",True)
+            popup.configure(bg="#1e1e1e")
+            largura = 350
+            altura = 80
+            x = popup.winfo_screenwidth() - largura - 20
+            y = popup.winfo_screenheight() - altura - 60
+            popup.geometry(f"{largura}x{altura}+{x}+{y}")
+            tk.Label(
+                popup,
+                text=mensagem,
+                bg="#1e1e1e",
+                fg="#10b981",
+                font=("Segoe UI", 10, "bold")
+            ).pack(expand=True)
+            popup.after(2000,popup.destroy)
+
+
+    # ------------------------------------------------------------------
     # FECHAMENTO SEGURO DO APLICATIVO
     # (única definição de on_closing — antes existiam duas na classe,
     # e a segunda sobrescrevia a primeira silenciosamente, fazendo o
@@ -515,19 +534,21 @@ class AoDesktopApp:
     def on_closing(self):
         self.log_activity("Shutting down... saving open files...")
         self.explorer_pane.save_current_file()
-
-        if self.discord_loop and self.discord_loop.is_running():
-            from dbot import discordclient
-            self.log_activity("Closing Discord connection...")
-            future = asyncio.run_coroutine_threadsafe(discordclient.close(), self.discord_loop)
-            try:
+        try:
+            if hasattr(self, "discord_loop") and self.discord_loop and self.discord_loop.is_running():
+                from dbot import discordclient
+                self.log_activity("Closing Discord connection...")
+                future = asyncio.run_coroutine_threadsafe(discordclient.close(), self.discord_loop)
                 future.result(timeout=5)
-            except Exception as e:
-                self.log_activity(f"Warning: Discord close did not finish cleanly: {e}")
-        self.root.destroy()
-
-
+                self.discord_loop.call_soon_threadsafe(self.discord_loop.stop)
+        except Exception as e:
+            self.log_activity(f"Warning: Discord close did not finish cleanly: {e}")
+        finally:
+            self.root.destroy()
+            
 if __name__ == "__main__":
     root = tk.Tk()
     app = AoDesktopApp(root)
+    se.garantir_env()
+    au.findmodel()
     root.mainloop()

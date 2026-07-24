@@ -5,12 +5,12 @@
             "content-type": "application/json; charset=UTF-8",
             "vary": "Origin, X-Origin, Referer",
             "content-encoding": "gzip",
-            "date": "Thu, 23 Jul 2026 19:44:23 GMT",
+            "date": "Fri, 24 Jul 2026 22:41:08 GMT",
             "server": "scaffolding on HTTPServer2",
             "x-xss-protection": "0",
             "x-frame-options": "SAMEORIGIN",
             "x-content-type-options": "nosniff",
-            "server-timing": "gfet4t7; dur=4741",
+            "server-timing": "gfet4t7; dur=2416",
             "alt-svc": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000",
             "transfer-encoding": "chunked"
         },
@@ -28,9 +28,9 @@
                         "function_call": null,
                         "function_response": null,
                         "inline_data": null,
-                        "text": "# Albor Doz\n\n> \"Onde o horizonte é uma promessa de saque e a névoa esconde o que o Império não ousa tocar.\"\n\n----\nstatus: concluído\n----\n\n### A Cidade-Arquipélago de Albor Doz\nAlbor Doz não é uma cidade construída sobre terra firme, mas um organismo vivo e flutuante, um labirinto de cascos de navios capturados, docas improvisadas, plataformas de madeira apodrecida e fortalezas dilapidadas, ancorado entre os recifes traiçoeiros e as névoas perpétuas de Thal'Elyr. A cidade é um emaranhado de gangorras, pontes de corda e passarelas que oscilam conforme a maré, sempre em estado de reconstrução ou expansão. O cheiro de salitre, peixe podre, óleo de baleia e pólvora é onipresente, permeando os mercados barulhentos onde o que é proibido no continente encontra seu preço.\n\n### Dinâmica Social e Hierarquia\nA estrutura social de Albor Doz é regida pela **Lei do Saque**, um código não escrito onde a posição de um indivíduo é determinada por sua capacidade de acumular riquezas e garantir a sobrevivência do seu clã.\n- **Conselho das Quilhas:** O governo é exercido por este conselho, formado pelos capitães dos navios mais bem-sucedidos. A autoridade é mantida pela força bruta e pela distribuição estratégica de despojos.\n- **Cultura:** A lealdade é volátil e a traição é um método comum de ascensão social. No entanto, existe um código de honra implícito que proíbe o ataque a navios da própria frota de Albor Doz ou a destruição de depósitos comuns.\n\n### A Rede de Contrabando: \"O Caminho das Marés\"\nAlbor Doz funciona como o principal centro de distribuição de artefatos proibidos e relíquias do Portão-Vivo no continente sul. A rede de contrabando, conhecida como **\"O Caminho das Marés\"**, opera através de três níveis de influência:\n\n1.  **Os Catadores de Ruínas:** Clãs orcs especializados em mergulhos profundos e exploração de ruínas submersas. Eles utilizam tecnologia de mergulho rudimentar, mas eficaz, para recuperar fragmentos cristalinos que emanam energia primordial.\n2.  **Os Mercadores de Névoa:** A elite de Albor Doz. Eles gerenciam os contatos com emissários imperiais corruptos e agentes de facções independentes. Eles garantem que os artefatos alcancem compradores de alto nível em troca de suprimentos, armas de pólvora e, crucialmente, informações sobre as rotas de patrulha da Vanguarda.\n3.  **O Financiador Oculto:** Rumores persistem sobre uma entidade ou facção que financia a busca desenfreada por relíquias do Portão-Vivo entre os piratas. Suspeita-se que este financiador esteja ligado a cultos que buscam usar os fragmentos para \"abrir\" o Portão-Vivo, transformando Albor Doz em um peão involuntário em um jogo cósmico que ameaça a realidade.\n\n### Relação com a Vanguarda\nA Vanguarda vê Albor Doz como um tumor necessário. Enquanto a rede de contrabando fornece informações valiosas sobre movimentos de inimigos (como os Ssurrans ou cultistas de Mythos), ela também é o maior vetor de corrupção e desestabilização das rotas imperiais. A missão da Vanguarda não é apenas desmantelar a rede, mas identificar quem está por trás do financiamento da busca pelas relíquias. Os orcs, por sua vez, jogam um jogo perigoso: eles vendem informações para a Vanguarda enquanto, simultaneamente, vendem os artefatos que a Vanguarda deveria estar protegendo, mantendo a cidade em um equilíbrio precário entre a utilidade e a aniquilação.\n\n### Locais de Interesse\n- **As Docas do Mercado Negro:** Onde o comércio de artefatos de Mythos ocorre sob o olhar atento dos Capitães de Casco.\n- **O Salão das Marés:** Local de encontro dos líderes de clãs, onde as disputas são resolvidas em duelos ou através de negociações brutais.\n- **O Estaleiro dos Esquecidos:** Uma área isolada onde navios são modificados com tecnologia arcana recuperada, tornando-os capazes de navegar em águas onde a realidade é instável.\n\n### Perigos\nAlém da traição constante, Albor Doz é assombrada pela influência do **Abyssal Lagiacrus**, o Titã das Profundezas. A rede de contrabando, ao extrair relíquias do fundo do mar, inadvertidamente atrai a atenção do titã, cujas maremotos ocasionais servem como um lembrete violento de que a cidade flutua sobre um abismo que não deseja ser perturbado.",
+                        "text": "# Aventura_O_Misterio_de_Cristal_Fjord\n> Este arquivo foi criado automaticamente pelo WorldBuilder.\n----\nstatus: rascunho\n----\n- **Título do Evento:** O Despertar da Corrente Subterrânea\n- **Local:** Mina de Gema-Estelar Profunda, Subúrbios (Pés da Montanha)\n- **Gatilho:** Os mineradores da Irmandade da Profundidade relatam que os sussurros descritos no Rumor \"O Sussurro das Profundezas\" intensificaram-se, causando alucinações e surtos de violência entre os trabalhadores. O Superintendente de Escavações, Borin Deepdelve, suspendeu temporariamente as operações no setor 4, mas três mineradores goliaths permanecem desaparecidos nas galerias inferiores.\n- **Desenvolvimento:** Os personagens são contratados por Fimble Cogsworth, preocupado com a queda na produção de Gema-Estelar, ou por Kaelen Gutterson, para resgatar os mineradores perdidos e investigar a origem dos sons. Nas galerias inferiores, a temperatura cai drasticamente. Os túneis apresentam cristais excessivamente brilhantes e marcas de unhas arranhadas na rocha maciça. Os mineradores desaparecidos são encontrados catatônicos, repetindo frases em uma língua desconhecida.\n- **Confronto:** Um dos mineradores sofreu mutação física devido à exposição prolongada à energia do selo enfraquecido e ataca o grupo, utilizando força sobre-humana e resistência ao frio. No local, há uma fenda na rocha de onde escapa um vapor rarefeito e gélido que induz paralisia leve e visões de olhos sem pálpebras.\n- **Consequência:** Selar a fenda com explosivos controlados cessa temporariamente os sussurros, mas gera um relatório de incidente que aumenta a paranoia do Prefeito Graklin Glimmergem e alarma os emissários de Faldur Kham, que percebem a instabilidade geológica da região.",
                         "thought": null,
-                        "thought_signature": "EjQKMgERTTIPduCff9X9a8hNvKN0TUCP3smfs_wjxLffp8mva9rlxCebq-gS4Q0Y8CSrwDkZ",
+                        "thought_signature": "EjQKMgERTTIPnen-eM97n-qx7BBJwXX5YU7lPhftd2rzxfpCKt-_8444nalM8KVH7XRYDsO3",
                         "video_metadata": null,
                         "tool_call": null,
                         "tool_response": null,
@@ -52,25 +52,25 @@
         }
     ],
     "create_time": null,
-    "model_version": "gemini-3.1-flash-lite",
+    "model_version": "gemini-3.5-flash-lite",
     "prompt_feedback": null,
-    "response_id": "FG9iavZ0truq2w-04fbBCQ",
+    "response_id": "AupjaoXYGd6iqtsPm970uQI",
     "usage_metadata": {
         "cache_tokens_details": null,
         "cached_content_token_count": null,
-        "candidates_token_count": 1112,
+        "candidates_token_count": 451,
         "candidates_tokens_details": null,
-        "prompt_token_count": 86644,
+        "prompt_token_count": 8767,
         "prompt_tokens_details": [
             {
                 "modality": "TEXT",
-                "token_count": 86644
+                "token_count": 8767
             }
         ],
         "thoughts_token_count": null,
         "tool_use_prompt_token_count": null,
         "tool_use_prompt_tokens_details": null,
-        "total_token_count": 87756,
+        "total_token_count": 9218,
         "traffic_type": null
     },
     "model_status": null,

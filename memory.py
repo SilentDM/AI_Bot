@@ -1,9 +1,6 @@
-import os
-import time
-import re
-import glob
-import tiktoken
+import os, time, re, glob, tiktoken
 import ai_utils as au
+from pathlib import Path
 
 MEMORIES_DIR = "memories"
 enc = tiktoken.get_encoding("cl100k_base")
@@ -117,7 +114,7 @@ def carregar_memorias(guild_id, guild_name, userid, user_name):
     except FileNotFoundError:
         return ""
 
-def salvar_memoria(guild_id, guild_name, userid, user_name, prompt, resposta):
+def salvar_memoria(guild_id, guild_name, userid, user_name, prompt, resposta):    
     """Salva a interação atual, aplicando a expiração por idade e resumo por token."""
     arquivo_existente = _buscar_arquivo_existente(guild_id, userid)
     caminho_ideal = _obter_caminho_alvo(guild_id, guild_name, userid, user_name)
@@ -163,3 +160,10 @@ def salvar_memoria(guild_id, guild_name, userid, user_name, prompt, resposta):
         if resumo:
             with open(arquivo_final, "w", encoding="utf-8") as f:
                 f.write(f"Resumo de Memórias: {resumo}\n")
+                
+def delete_all_memories():
+    for arquivo in Path(MEMORIES_DIR).rglob("*"):
+        if arquivo.is_file():
+            arquivo.unlink()
+            print(f"Deletando:{arquivo.name}")
+    

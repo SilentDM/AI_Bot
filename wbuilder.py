@@ -199,7 +199,7 @@ def enactchoices(actions):
         tipo = action["type"]
         path = action.get("path", "")
         objective = action.get("objective", "")
-        with open("changelog.jsonl","a",encoding="utf-8") as f:
+        with open(pu.log_path("changelog.jsonl"),"a",encoding="utf-8") as f:
             registro = {
                 "timestamp": pu.currentdate(),
                 "action": tipo,
@@ -220,7 +220,6 @@ def enactchoices(actions):
         elif tipo == "ImproveFile":
             improvefile(action["path"], action.get("objective", ""))
     print("Enactchoices Concluído!")
-
 
 def createfolder(path, reason):
     print(f"Vamos criar uma pasta: {path}, por que {reason}")
@@ -289,7 +288,7 @@ status: rascunho
         print(f"❌ Erro ao criar arquivo {path}: {e}")
         return False
 
-def improvefile(path, reason):
+def improvefile(path, reason="Melhorar o arquivo!"):
     print(f"Vamos melhorar o arquivo: {path}")
     print(f"Motivo: {reason}")
     arquivo = resolver_caminho(path)   # <-- normaliza o caminho recebido

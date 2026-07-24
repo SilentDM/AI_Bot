@@ -28,10 +28,10 @@ def obter_arquivos_relacionados(titulo):
     )
     
     relacionados = relacionados[:10]
-    
-    print("\n==== Arquivos relacionados encontrados:====")
-    for name, _, score in relacionados:
-        print(f"{name}: {score} ocorrências")
+    if relacionados:
+        print("\n==== Arquivos relacionados encontrados:====")
+        for name, _, score in relacionados:
+            print(f"{name}: {score} ocorrências")
     
     return "\n\n".join(
         conteudo for _, conteudo, _ in relacionados
@@ -39,31 +39,16 @@ def obter_arquivos_relacionados(titulo):
 
 def obter_proximo_nome_versao(caminho_original):
     diretorio = caminho_original.parent
-    nome_base = re.sub(
-        r'_v\d+$',
-        '',
-        caminho_original.stem
-    )
+    nome_base = re.sub(r'_v\d+$','',caminho_original.stem)
     extensao = caminho_original.suffix
     maior_versao = 0
-    for arquivo in diretorio.glob(
-        f"{nome_base}_v*{extensao}"
-    ):
-        match = re.search(
-            r'_v(\d+)$',
-            arquivo.stem
-        )
+    for arquivo in diretorio.glob(f"{nome_base}_v*{extensao}"):
+        match = re.search(r'_v(\d+)$',arquivo.stem)
         if match:
-            maior_versao = max(
-                maior_versao,
-                int(match.group(1))
-            )
+            maior_versao = max(maior_versao,int(match.group(1)))
     nova_versao = maior_versao + 1
-    return (
-        diretorio /
-        f"{nome_base}_v{nova_versao}{extensao}"
-    )
-
+    return (diretorio /f"{nome_base}_v{nova_versao:02d}{extensao}")
+    
 def carregar_diretrizes_estilo():
     """Carrega e unifica as diretrizes de estilo contidas na pasta designada."""
     pasta_estilo = pu.CAMINHO_ESTILO
@@ -94,6 +79,86 @@ def remover_markdown_fences(texto: str) -> str:
         linhas.pop()
         
     return "\n".join(linhas).strip()
+
+def processar_arquivo_unico(path):
+    estilo_contexto = carregar_diretrizes_estilo()
+    instrucoes_globais = f"""
+Você é um Mestre de Mesa (DM) de D&D experiente e escritor de fantasia sombria (Dark Fantasy).
+Seu objetivo é preencher lacunas de desenvolvimento do cenário de {pu.PASTA_PROJETO}.
+# Diretrizes e Regras Adicionais do Projeto:
+{estilo_contexto}
+"""
+    arquivo=Path(path)
+    with open(arquivo, 'r', encoding='utf-8') as f:
+        linhas = f.readlines()
+        conteudo = "".join(linhas)
+        titulo = arquivo.stem
+        titulo = re.sub(r'_v\d+$', '', titulo.lower())
+    tag_encontrada = next((tag for tag in pu.TAG_ALVO if tag in conteudo), None)
+    if tag_encontrada:
+        print(f"\n=====\nTag encontrada no arquivo:\n{arquivo.name}\n=====")
+        tagx=1
+        info_locais = ""
+        for arquivo_local in arquivo.parent.glob("*.md"):
+            if nome_base(arquivo_local) != nome_base(arquivo):
+                with open(arquivo_local, "r", encoding="utf-8") as f:
+                    conteudo_local = f.read()
+                    if (
+                        any(tag in conteudo_local for tag in pu.TAG_ALVO)
+                        or "status: rascunho" in conteudo_local.lower()
+                        ):
+                        continue
+                    else:
+                        with open(arquivo_local, "r", encoding="utf-8") as f:
+                            info_locais += f.read() + "\n\n"
+        info_importante = obter_arquivos_relacionados(titulo)
+        prompt_conteudo = f"""
+Por favor, analise as informações abaixo para preencher as lacunas marcadas no arquivo de destino.
+INFORMAÇÕES LOCAIS DO AMBIENTE (Arquivos da mesma pasta para consistência):
+{info_locais}
+
+INFORMAÇÕES IMPORTANTES RELACIONADAS:
+{info_importante}
+
+CONTEÚDO ORIGINAL DO ARQUIVO ATUAL ({arquivo.name}):
+{conteudo}
+
+TAREFA:
+No conteúdo do arquivo atual, identifique a linha que começa com a variação de To-Do '{tag_encontrada}'.
+Substitua essa linha pelo conteúdo expandido de forma criativa, mantendo total coesão com a história local e as diretrizes de {pu.PASTA_PROJETO}.
+
+REGRAS DE RETORNO:
+1. Retorne o texto completo do arquivo original, incluindo a modificação feita.
+2. Preserve rigorosamente a formatação Markdown existente.
+3. Não acrescente prefácios, comentários explicativos ou notas sobre o que você modificou. Retorne apenas o conteúdo final do arquivo editado.
+"""
+        try:
+            # Opcional: Registrar o prompt gerado para fins de depuração
+            with open(pu.log_path("Prompts.txt"), 'w', encoding='utf-8') as f:
+                f.write(f"Alterando Arquivo: {arquivo.name}\n")
+                f.write(prompt_conteudo + '\n')
+                
+            # Substituição da chamada nativa pela função estruturada ask_ai
+            # Graças ao ask_ai, a verificação de fallbacks de modelos e limites de taxa é herdada automaticamente.
+            texto_expandido = au.ask_ai(
+                contents=prompt_conteudo,
+                system_instruction=instrucoes_globais,
+                temperature=0.7 # Temperatura criativa e coerente
+            )
+            
+            if texto_expandido:
+                texto_limpo = remover_markdown_fences(texto_expandido)
+                novo_arquivo_path = obter_proximo_nome_versao(arquivo)
+                
+                with open(novo_arquivo_path, 'w', encoding='utf-8') as f:
+                    f.write(texto_limpo)
+                
+                print(f"✅ Nova versão gerada com sucesso: {novo_arquivo_path.name}")
+            else:
+                print(f"⚠️ O retorno do modelo para {arquivo.name} foi vazio.")
+            
+        except Exception as e:
+            print(f"❌ Erro ao processar {arquivo.name}: {e}")
 
 def processar_arquivos():
     tagx=0
@@ -157,7 +222,7 @@ REGRAS DE RETORNO:
 
             try:
                 # Opcional: Registrar o prompt gerado para fins de depuração
-                with open("Prompts.txt", 'w', encoding='utf-8') as f:
+                with open(pu.log_path("Prompts.txt"), 'w', encoding='utf-8') as f:
                     f.write(f"Alterando Arquivo: {arquivo.name}\n")
                     f.write(prompt_conteudo + '\n')
                     
