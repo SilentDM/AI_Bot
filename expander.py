@@ -66,13 +66,13 @@ def obter_proximo_nome_versao(caminho_original):
 
 def carregar_diretrizes_estilo():
     """Carrega e unifica as diretrizes de estilo contidas na pasta designada."""
-    pasta_estilo = Path(os.getenv("PASTA_ESTILO", "Style"))
+    pasta_estilo = pu.CAMINHO_ESTILO
     conteudo_estilo = []
     if pasta_estilo.exists() and pasta_estilo.is_dir():
         for arquivo in sorted(pasta_estilo.glob("*.md")):
             try:
                 with open(arquivo, "r", encoding="utf-8") as f:
-                    conteudo_estilo.append(f"# DIRETRIZ ({arquivo.name}):{f.read()}")
+                    conteudo_estilo.append(f"\n# DIRETRIZ ({arquivo.name}):\n{f.read()}")
             except Exception as e:
                 print(f"Erro ao carregar diretriz {arquivo.name}: {e}")
     return "".join(conteudo_estilo)

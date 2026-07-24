@@ -8,7 +8,10 @@ from tkinter import ttk, messagebox, scrolledtext
 import ai_gemini as au
 import project_utils as pu
 import gui_logger as gl
+import setup_env as se
 
+
+se.garantir_env()
 au.findmodel()
 
 class AoDesktopApp:

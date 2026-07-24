@@ -43,20 +43,15 @@ class SetupWizard:
     def _montar_estilo(self):
         style = ttk.Style()
         style.theme_use("clam")
-        style.configure(".", background="#121212", foreground="#e3e3e3",
-                         fieldbackground="#1e1e1e", font=("Segoe UI", 10))
+        style.configure(".", background="#121212", foreground="#e3e3e3",fieldbackground="#1e1e1e", font=("Segoe UI", 10))
         style.configure("TButton", background="#252526", foreground="#e3e3e3", padding=6)
         style.map("TButton", background=[("active", "#333333")])
         style.configure("TEntry", fieldbackground="#252526", foreground="#ffffff")
         style.configure("TCombobox", fieldbackground="#252526", foreground="#ffffff")
-        style.map("TCombobox", fieldbackground=[("readonly", "#252526")],
-                   foreground=[("readonly", "#ffffff")])
-        style.configure("Titulo.TLabel", background="#121212", foreground="#10b981",
-                         font=("Segoe UI", 13, "bold"))
-        style.configure("Descricao.TLabel", background="#121212", foreground="#aaaaaa",
-                         font=("Segoe UI", 9), wraplength=460, justify="left")
-        style.configure("Passo.TLabel", background="#121212", foreground="#666666",
-                         font=("Segoe UI", 8))
+        style.map("TCombobox", fieldbackground=[("readonly", "#252526")],foreground=[("readonly", "#ffffff")])
+        style.configure("Titulo.TLabel", background="#121212", foreground="#10b981",font=("Segoe UI", 13, "bold"))
+        style.configure("Descricao.TLabel", background="#121212", foreground="#aaaaaa",font=("Segoe UI", 9), wraplength=460, justify="left")
+        style.configure("Passo.TLabel", background="#121212", foreground="#666666",font=("Segoe UI", 8))
 
     def _montar_layout(self):
         container = ttk.Frame(self.root)
@@ -107,21 +102,21 @@ class SetupWizard:
         """
         passos = [
             ("PASTA_PROJETO", "Pasta do Projeto",
-             "Nome da pasta onde o seu mundo/lore será construído.\n"
-             "Ela será criada automaticamente se não existir.",
-             True, "texto", "Phaeton", None),
+            "Nome da pasta onde o seu mundo/lore será construído.\n"
+            "Ela será criada automaticamente se não existir.",
+            True, "texto", "Phaeton", None),
 
             ("PASTA_ESTILO", "Pasta de Estilo",
-             "Nome da pasta com diretrizes de estilo de escrita (opcional,\n"
-             "usada pelo Expander para guiar o tom dos textos gerados).",
-             False, "texto", "Style", None),
+            "Nome da pasta com diretrizes de estilo de escrita (opcional,\n"
+            "usada pelo Expander para guiar o tom dos textos gerados).",
+            False, "texto", "Style", None),
 
             ("AI_PROVIDER", "Qual IA você vai usar?",
-             "Escolha o motor de IA que vai gerar as respostas e o conteúdo do mundo.",
-             True, "dropdown", "gemini", [
-                 ("gemini", "Gemini (gratuito, chave do Google)"),
-                 ("pro", "IA Pro (chave de outro provedor)"),
-             ]),
+            "Escolha o motor de IA que vai gerar as respostas e o conteúdo do mundo.",
+            True, "dropdown", "gemini", [
+                ("gemini", "Gemini (gratuito, chave do Google)"),
+                ("pro", "IA Pro (chave de outro provedor)"),
+            ]),
         ]
 
         # --- Passo condicional: a chave certa, de acordo com o provedor escolhido acima ---

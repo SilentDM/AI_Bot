@@ -1,16 +1,3 @@
-"""
-Implementação do provedor de IA "Pro" — usa uma chave de API de terceiros
-(ex: a conta paga do seu amigo) em vez do Gemini gratuito.
-
-Este arquivo precisa expor uma função ask_ai() com a MESMA assinatura de
-ai_gemini.py, para que ai_utils.py (o roteador) consiga alternar entre os
-dois provedores sem que nenhum outro módulo do programa precise saber a
-diferença.
-
-⚠️ AINDA NÃO IMPLEMENTADO: falta saber qual serviço/SDK seu amigo usa
-(OpenAI, Anthropic Claude, outro) para escrever a chamada real à API.
-Assim que isso for definido, o corpo de ask_ai() abaixo será preenchido.
-"""
 import os
 from typing import Any, Optional, Type
 from pydantic import BaseModel
@@ -42,6 +29,5 @@ def ask_ai(
     wbuilder.py depende disso para o ActionPlan.
     """
     raise NotImplementedError(
-        "Provedor 'pro' ainda não implementado. Defina qual API seu amigo "
-        "usa (OpenAI, Anthropic, outro) para completar este arquivo."
+        "Provedor 'pro' ainda não implementado. Defina qual API vai completar este arquivo."
     )

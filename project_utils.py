@@ -6,6 +6,8 @@ import difflib
 
 PASTA_PROJETO = os.getenv("PASTA_PROJETO", "Phaeton")
 CAMINHO_PROJETO = os.path.join(os.getcwd(), PASTA_PROJETO)
+PASTA_ESTILO = os.getenv("PASTA_ESTILO", "Style")
+CAMINHO_ESTILO = os.path.join(os.getcwd(), PASTA_ESTILO)
 
 TAG_ALVO = [
     "<-- TO DO:", "<-- TO DO", "<-- TODO:", "<-- TODO", "<-- todo",

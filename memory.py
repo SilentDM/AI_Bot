@@ -57,11 +57,7 @@ def trim_incomplete_sentences(texto):
 
     return resultado
 
-def criar_resumo_google(memorias: str) -> str:
-    """
-    Consolida dezenas de interações passadas em um resumo compacto e direto,
-    focado em economizar espaço de contexto (tokens).
-    """
+def criar_resumo(memorias: str) -> str:
     instrucao_sistema = (
         "Você é um assistente especializado em condensar históricos de RPG de forma extremamente objetiva.\n"
         "Seu objetivo é extrair apenas os fatos consolidados, decisões tomadas, itens adquiridos e "
@@ -163,7 +159,7 @@ def salvar_memoria(guild_id, guild_name, userid, user_name, prompt, resposta):
         print(f"Memória de {user_name} excedeu o tamanho máximo. Gerando resumo...")
         
         # Chamada da função de resumo atualizada
-        resumo = criar_resumo_google(conteudo)
+        resumo = criar_resumo(conteudo)
         if resumo:
             with open(arquivo_final, "w", encoding="utf-8") as f:
                 f.write(f"Resumo de Memórias: {resumo}\n")

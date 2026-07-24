@@ -20,24 +20,10 @@ GEMINICLIENT = genai.Client(api_key=GOOGLE_API_KEY)
 
 _api_lock = threading.Lock()
 
-# Adjusted to use standard active Gemini models
-MODELS_LIST = [
-    "gemini-3.1-flash-lite",
-    "gemini-3.5-flash",
-    "gemini-3.5-flash-lite",
-    "gemini-3.6-flash"    
-]
-
 DEFAULT_SYSTEM_INSTRUCTION = "You are a helpful assistant that explains things and creates what is requested."
 DEFAULT_TEMPERATURE = 0.6  # Changed to a float (the API expects a float, not a string)
 DEFAULT_CONTENTS = "Please repeat: I did not receive a correct prompt, your coding has failed somewhere."
 MAX_TOKENS = 20480
-
-
-import os
-import json
-import time
-from google import genai
 
 import os
 import json
@@ -46,15 +32,13 @@ from google import genai
 from google.genai import types
 
 def findmodel(file_path="models.json"):
-    # (Lógica de verificação de tempo/arquivo mantida...)
     if os.path.exists(file_path):
         is_empty = os.path.getsize(file_path) == 0
         is_older_than_7_days = (time.time() - os.path.getmtime(file_path)) > (7 * 24 * 60 * 60)
         if not is_older_than_7_days and not is_empty:
             return
 
-    client = genai.Client()
-    all_models = client.models.list()
+    all_models = GEMINICLIENT.models.list()
     working_models = []
 
     for model in all_models:
@@ -64,7 +48,7 @@ def findmodel(file_path="models.json"):
         # 1. Testar se o modelo responde (ping básico)
         start_time = time.time()
         try:
-            response = client.models.generate_content(
+            response = GEMINICLIENT.models.generate_content(
                 model=model_name,
                 contents="ping"
             )
@@ -76,7 +60,7 @@ def findmodel(file_path="models.json"):
         # 2. Testar se o modelo aceita a Tool de busca do Google
         supports_tools = False
         try:
-            client.models.generate_content(
+            GEMINICLIENT.models.generate_content(
                 model=model_name,
                 contents="ping",
                 config=types.GenerateContentConfig(
@@ -103,10 +87,6 @@ def findmodel(file_path="models.json"):
         json.dump(working_models, f, indent=4)
 
 def load_projeto_images():
-    """
-    Looks for all .png files in the directory, reads them as bytes,
-    and returns them as a list of genai.types.Part objects.
-    """
     parts = []
     pasta_projeto = pu.CAMINHO_PROJETO
     if pasta_projeto.exists():
@@ -130,13 +110,8 @@ def generate_content_with_fallback(
     config: types.GenerateContentConfig, 
     max_attempts: int = 3
 ) -> Any:
-    """
-    Tries to generate content using a list of fallback models.
-    If all models fail, it waits and retries up to max_attempts times.
-    """
-    # Prepare contents with images if present
     images = ""
-    #images = load_projeto_images()
+    #images = load_projeto_images() #Não há necessidade de imagens no momento, mas o código foi testado e está funcionando. Vai ser inserido como opção extra no futuro.
     if images:
         if isinstance(contents, list):
             final_contents = list(contents) + images
@@ -156,7 +131,7 @@ def generate_content_with_fallback(
                 with open("LastPrompt.txt", "w", encoding="utf-8") as f:
                     f.write(f"Contents:\n{contents}\nModel:\n{model}\nConfig:\n{config}")
                 response = GEMINICLIENT.models.generate_content(
-                    model=model,
+                    model=model_name,
                     contents=final_contents,
                     config=config
                 )
@@ -171,8 +146,7 @@ def generate_content_with_fallback(
                 print("Trying next available model in the fallback chain...")
             
             print("\n🛑 All configured models in the fallback chain failed.")
-            if attempt < max_attempts:
-                print("⏳ Waiting for 60 seconds before retrying the fallback chain...")
+        if attempt < max_attempts:
             attempt += 1
 
     raise RuntimeError("All models and retry attempts failed to generate content.")
@@ -183,13 +157,6 @@ def ask_ai(
     temperature: Optional[float] = None,
     response_schema: Optional[Type[BaseModel]] = None
 ) -> str:
-    """
-    Unified entrypoint for Gemini API requests.
-    Supports structured output if a Pydantic model is provided via response_schema.
-    """
-    
-
-    # Use default fallbacks if arguments are missing
     if not system_instruction:
         system_instruction = DEFAULT_SYSTEM_INSTRUCTION
     if temperature is None:
