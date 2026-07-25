@@ -1,11 +1,12 @@
 import os,threading, time, json
-import project_utils as pu
+import engine.project_utils as pu
 from typing import Any, Optional, Type
 from pydantic import BaseModel
 from google import genai
 from google.genai import types
-import gemini.cache_gemini as cg
-
+import core.cache_gemini as cg
+from dotenv import load_dotenv
+load_dotenv(pu.PROJECT_ROOT / ".env")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 _faltando = []
 if not GOOGLE_API_KEY:
@@ -40,14 +41,17 @@ def findmodel(file_path=pu.log_path("models.json")):
             return
     print("Lista de modelos disponíveis NOT OK! Criando nova lista!")
     all_models = GEMINICLIENT.models.list()
+    print("all models ok!")
     working_models = []
 
     for model in all_models:
         model_name = model.name
         max_input_tokens = getattr(model, 'input_token_limit', 0) or 0
         support_image = "IMAGE" in (getattr(model, "input_modalities", []) or [])
-
-        if "Gemini" in model_name:
+        print(f"Testando modelo: {model_name}")
+        if "gemini" not in model_name:
+            continue
+        else:
             start_time = time.time()
             try:
                 GEMINICLIENT.models.generate_content(
@@ -87,11 +91,18 @@ def findmodel(file_path=pu.log_path("models.json")):
             time.sleep(1)
 
             # Sort models: Most input tokens first, then fastest response time
-            working_models.sort(key=lambda x: (-x['maxinputtokens'], x['responsetime']))
+            working_models.sort(
+                key=lambda x: (
+                    not x.get("supports_tools", False),
+                    not x.get("supports_images", False),
+                    -x.get("maxinputtokens", 0),
+                    x.get("responsetime", 9999)
+                )
+            )
 
-            with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(working_models, f, indent=4)
-            print("Lista de modelos disponíveis Criada!")
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(working_models, f, indent=4)
+        print("Lista de modelos disponíveis Criada!")
 
 def load_projeto_images():
     parts = []
@@ -115,8 +126,18 @@ def load_projeto_images():
 
 def generate_content_with_fallback(contents: Any, config: types.GenerateContentConfig, max_attempts: int = 3) -> Any:
     attempt = 1
-    with open(pu.log_path("models.json"), "r") as f:
-        data = json.load(f) 
+    try:
+        with open(pu.log_path("models.json"),"r",encoding="utf-8") as f:
+            data = json.load(f)
+        if not data:
+            raise ValueError("models.json está vazio")
+    except Exception as e:
+        print(f"Problema com models.json: {e}")
+        print("Recriando lista de modelos...")
+        findmodel()
+        with open(pu.log_path("models.json"),"r",encoding="utf-8") as f:
+            data = json.load(f)
+        
     while attempt <= max_attempts:
         for model in data:
             model_name = model["name"]  # Extract the name key here

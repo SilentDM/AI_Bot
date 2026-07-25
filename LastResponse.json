@@ -5,12 +5,12 @@
             "content-type": "application/json; charset=UTF-8",
             "vary": "Origin, X-Origin, Referer",
             "content-encoding": "gzip",
-            "date": "Sat, 25 Jul 2026 03:05:41 GMT",
+            "date": "Sat, 25 Jul 2026 22:15:55 GMT",
             "server": "scaffolding on HTTPServer2",
             "x-xss-protection": "0",
             "x-frame-options": "SAMEORIGIN",
             "x-content-type-options": "nosniff",
-            "server-timing": "gfet4t7; dur=5609",
+            "server-timing": "gfet4t7; dur=2650",
             "alt-svc": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000",
             "transfer-encoding": "chunked"
         },
@@ -28,9 +28,9 @@
                         "function_call": null,
                         "function_response": null,
                         "inline_data": null,
-                        "text": "Saudações, *Local_Admin*! Uma escolha esplêndida. Construir a fundação geográfica antes de erguer as torres e as masmorras é o trabalho de um verdadeiro arquiteto de mundos. Se queremos que a **Cidade Mecânica de Korth-Valum** e o titã **Dire Miralis** sob o vulcão **Garug** façam sentido e tenham peso narrativo, o solo de **Irylith** precisa ser perigoso, vivo e geograficamente palpável.\n\nLembrando das nossas regras sagradas: **jamais alterarei informações já definidas** no nosso grimório. Vou apenas expandir, conectar e dar relevo ao que já existe sobre Irylith (a cordilheira de montanhas no oceano, a noite eterna sob as cinzas de Garug, o enclave dracônico do sul, etc.).\n\nAqui está uma proposta estruturada para expandir a **Geografia de Irylith**, seguindo o nosso template de regiões e locais, para preencher o vazio ao redor de Garug:\n\n---\n\n# Proposta de Expansão: A Geografia e os Domínios de Irylith\n\n## 1. Visão Geral da Região\nIrylith não é apenas um arquipélago vulcânico; é uma fratura titânica onde a crosta de Phaeton cede diretamente ao oceano sul. A região é permanentemente encoberta por um dossel de cinzas e fumaça espessa expelida por **Garug**, o maior vulcão do planeta. Aqui, o sol é apenas uma mancha rubra e difusa — um fenômeno conhecido localmente como a **Noite Eterna de Irylith**. As ilhas são íngremes, formadas por rocha basáltica negra, rios de lava que deságuam assobiando no mar e vales úmidos onde a flora sobrevive através da bioluminescência e do calor geotérmico.\n\n## 2. Subdivisões Geográficas (Os Marcos de Irylith)\n\n*   **A Caldeira de Garug (O Coração Ígneo):** O epicentro da atividade tectônica. Uma montanha colossal que se erguja por quilômetros acima das nuvens de cinzas. Suas encostas são estéreis, dominadas pelos santuários dos *Druidas do Fogo* e pelos covis do *Enclave Dracônico do Sul*. Ninguém se aproxima do topo sem correr o risco de ser consumido por rajadas de plasma vulcânico ou pela presença de Dire Miralis.\n*   **O Arquipélago das Sombras Chupadas (As Ilhas Oceânicas):** Uma cadeia de ilhas montanhosas que caem a prique no mar. Nelas, a luz do dia mal dura duas horas antes de ser engolida pela penumbra das cinzas. É o território dos vilarejos de monstros adaptados ao calor (kobolds, goblins vulcânicos) e de onde partem as rotas mais perigosas para o arquipélago pirata vizinho de Thal'Elyr.\n*   **A Fossa de Obsidiana (O Abismo Marinho):** O canal oceânico que separa as ilhas vulcânicas do continente sul. As águas aqui são fumegantes em alguns pontos, negras como tinta e habitadas por predadores abissais que seguem a trilha de calor do vulcão. É também onde correntes submersas escondem as entradas secundárias para as ruínas e laboratórios esquecidos de Korth-Valum.\n*   **Os Vales de Cinza Férteis:** Pequenos bolsões abrigados entre as escarpas das montanhas onde a fuligem vulcânica, misturada com chuvas minerais, criou um solo de fertilidade brutal. É aqui que os monstros e tribos isoladas cultivam fungos gigantes e plantas termófilas para sobreviver.\n\n---\n\n### O que faremos com isso agora?\nCom essa base geográfica estabelecida, a região de Irylith deixa de ser apenas \"um vulcão no mapa\" e passa a ser um território hostil, atmosférico e interconectado, pronto para receber a *Cidade Mecânica (Korth-Valum)* nas suas fundações subterrâneas e justificar a presença dos *Sentinelas de Latão* patrulhando as fronteiras de cinzas.\n\nDiga-me, *Local_Admin*: \n1. Salvamos essa expansão geográfica de Irylith no nosso grimório (em um novo arquivo `Geografia_de_Irylith_v1.md` sob `4.Regions\\South_Continent\\Irylith`)? \n2. Ou prefere ajustar algum detalhe antes de gravarmos na pedra? Os dados estão prontos!",
+                        "text": "Olá! Ao aqui. Teste recebido e compreendido. Estou pronto para criar aventuras e histórias, ou para o que mais você precisar. O que posso fazer por você?",
                         "thought": null,
-                        "thought_signature": "EjQKMgERTTIPwkEUPfs6JzvhhK5fw2Bd8vCfdu3TK1qUUjM-62tIm9NeGdTI1lUHeu2y490m",
+                        "thought_signature": null,
                         "video_metadata": null,
                         "tool_call": null,
                         "tool_response": null,
@@ -43,7 +43,17 @@
             "finish_message": null,
             "token_count": null,
             "finish_reason": "STOP",
-            "grounding_metadata": null,
+            "grounding_metadata": {
+                "image_search_queries": null,
+                "grounding_chunks": null,
+                "grounding_supports": null,
+                "retrieval_metadata": null,
+                "search_entry_point": null,
+                "web_search_queries": null,
+                "google_maps_widget_context_token": null,
+                "retrieval_queries": null,
+                "source_flagging_uris": null
+            },
             "avg_logprobs": null,
             "index": 0,
             "logprobs_result": null,
@@ -52,30 +62,25 @@
         }
     ],
     "create_time": null,
-    "model_version": "gemini-3.5-flash-lite",
+    "model_version": "gemini-2.5-flash",
     "prompt_feedback": null,
-    "response_id": "_ydkaobUOuuCmtkP4pzguAo",
+    "response_id": "mTVlarLuB--vqtsPo_XGgAg",
     "usage_metadata": {
-        "cache_tokens_details": [
-            {
-                "modality": "TEXT",
-                "token_count": 85920
-            }
-        ],
-        "cached_content_token_count": 85920,
-        "candidates_token_count": 1049,
+        "cache_tokens_details": null,
+        "cached_content_token_count": null,
+        "candidates_token_count": 36,
         "candidates_tokens_details": null,
-        "prompt_token_count": 89327,
+        "prompt_token_count": 95018,
         "prompt_tokens_details": [
             {
                 "modality": "TEXT",
-                "token_count": 89327
+                "token_count": 95018
             }
         ],
-        "thoughts_token_count": null,
+        "thoughts_token_count": 57,
         "tool_use_prompt_token_count": null,
         "tool_use_prompt_tokens_details": null,
-        "total_token_count": 90376,
+        "total_token_count": 95111,
         "traffic_type": null
     },
     "model_status": null,

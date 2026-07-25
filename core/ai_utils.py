@@ -9,9 +9,9 @@ AI_PROVIDER = os.getenv("AI_PROVIDER", "gemini").strip().lower()
 # importássemos os dois sempre, o programa exigiria as DUAS chaves mesmo
 # quando só uma está sendo usada.
 if AI_PROVIDER == "pro":
-    from ai_pro import ask_ai as _ask_ai_impl
+    from core.ai_pro import ask_ai as _ask_ai_impl
 else:
-    from gemini.ai_gemini import ask_ai as _ask_ai_impl
+    from core.ai_gemini import ask_ai as _ask_ai_impl
 
 
 

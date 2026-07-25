@@ -1,11 +1,12 @@
 import os
 import tkinter as tk
+import engine.project_utils as pu
 from tkinter import ttk, messagebox
 from pathlib import Path
 from dotenv import load_dotenv
 
-ENV_PATH = Path(".env")
-
+ENV_PATH = Path(pu.PROJECT_ROOT / ".env")
+load_dotenv(pu.PROJECT_ROOT / ".env")
 
 class SetupWizard:
     """
@@ -271,4 +272,4 @@ def garantir_env():
         if not wizard.concluido:
             raise SystemExit("Configuração inicial não foi concluída. Encerrando.")
 
-    load_dotenv()
+    

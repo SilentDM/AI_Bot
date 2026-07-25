@@ -1,11 +1,12 @@
-import threading, time, asyncio, explorer, memory, sys
+import threading, time, asyncio, ui.explorer as explorer, core.memory as memory, sys
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
-import expander as ex
-import gemini.ai_gemini as au
-import project_utils as pu
-import gui_logger as gl
-import setup_env as se
+import engine.expander as ex
+import core.ai_gemini as ag
+import engine.project_utils as pu
+import ui.gui_logger as gl
+import ui.setup_env as se
+import core.cache_gemini as cg
 
 
 class AoDesktopApp:
@@ -44,6 +45,8 @@ class AoDesktopApp:
         self.switch_page("editor")
 
         self.start_discord_bot_thread()
+        se.garantir_env()
+        ag.findmodel()
 
     # ------------------------------------------------------------------
     # ESTILO VISUAL (dark mode compartilhado por toda a interface)
@@ -211,6 +214,8 @@ class AoDesktopApp:
         self.btn_expander.pack(fill=tk.X, padx=10, pady=10)
         self.lbl_expander = ttk.Label(expander_box, text="Status: Idle")
         self.lbl_expander.pack(anchor=tk.W, padx=10, pady=(0, 10))
+        self.btn_rebuild_context = ttk.Button(expander_box,text="Rebuild World Context",command=self.rebuild_world_context)
+        self.btn_rebuild_context.pack(fill=tk.X,padx=10,pady=5)
 
         # --- Bloco do WorldBuilder ---
         wb_box = ttk.LabelFrame(body, text=" WorldBuilder (planeja e executa expansão autônoma) ")
@@ -268,9 +273,8 @@ class AoDesktopApp:
     def _build_log_page(self, parent):
         frame = ttk.Frame(parent)
         sys.stdout = gl.GuiOutput(self.log_activity)
-        sys.stdout = gl.GuiOutput(self.log_activity)
         sys.stderr = gl.GuiOutput(self.log_activity)
-        self._page_header(frame, "📋 Log de Atividade","Histórico técnico de tudo que está acontecendo em segundo plano.")
+        self._page_header(frame, "Log de Atividade","Histórico técnico de tudo que está acontecendo em segundo plano.")
         self.log_display = scrolledtext.ScrolledText(
             frame, wrap=tk.WORD, state=tk.DISABLED, font=("Consolas", 9),
             bg="#1e1e1e", fg="#cccccc", insertbackground="white",
@@ -351,7 +355,7 @@ class AoDesktopApp:
                 conteudo_prompt += f"--- HISTÓRICO RECENTE DE CONVERSAS ---\n{memorias}\n\n"
             conteudo_prompt += f"--- MENSAGEM DO USUÁRIO ---\n{prompt}"
 
-            resposta = au.ask_ai(
+            resposta = ag.ask_ai(
                 contents=conteudo_prompt,
                 system_instruction=system_instruction,
                 temperature=0.6,
@@ -416,7 +420,7 @@ class AoDesktopApp:
 
     def run_expander_task(self):
         try:
-            import expander
+            import engine.expander as expander
             expander.processar_arquivos()
             self.log_activity("Expansion process completed.")
             self.finished_expander_ui_update("Task Finished")
@@ -433,6 +437,17 @@ class AoDesktopApp:
         self.lbl_expander.config(text=f"Status: {status}", foreground="#e3e3e3")
         self.explorer_pane.refresh_tree()
     
+    def rebuild_world_context(self):
+        threading.Thread(target=self._rebuild_world_context_worker,daemon=True).start()
+    
+    def _rebuild_world_context_worker(self):
+        try:
+            self.log_activity("Reconstruindo contexto!")
+            contexto = (cg.force_rebuild_world_context())
+            self.log_activity(f"Contexto Recriado:\n{contexto['id']}")
+            self.root.after(0,lambda: self.toast("World Context atualizado!"))
+        except Exception as e:
+            self.log_activity(f"Falha em Reconstruir Contexto: {e}")
     
     # ------------------------------------------------------------------
     # ENGINE DE WORLD BUILDER
@@ -456,7 +471,7 @@ class AoDesktopApp:
 
     def run_worldbuilder_task(self):
         try:
-            import wbuilder
+            import engine.wbuilder as wbuilder
             self.log_activity("Starting autonomous WorldBuilder...")
             objective = self.worldbuilder_objective_value
 
@@ -518,7 +533,7 @@ class AoDesktopApp:
                 fg="#10b981",
                 font=("Segoe UI", 10, "bold")
             ).pack(expand=True)
-            popup.after(2000,popup.destroy)
+            popup.after(5000,popup.destroy)
 
 
     # ------------------------------------------------------------------
@@ -545,6 +560,6 @@ class AoDesktopApp:
 if __name__ == "__main__":
     root = tk.Tk()
     app = AoDesktopApp(root)
-    se.garantir_env()
-    au.findmodel()
     root.mainloop()
+    
+        

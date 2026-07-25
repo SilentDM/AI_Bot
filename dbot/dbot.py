@@ -1,8 +1,8 @@
 import os
 import asyncio
-from ai_utils import ask_ai
-import memory
-import project_utils as pu
+from core.ai_utils import ask_ai
+import core.memory as memory
+import engine.project_utils as pu
 from dotenv import load_dotenv
 
 load_dotenv()

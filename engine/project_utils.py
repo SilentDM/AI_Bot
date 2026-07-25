@@ -9,6 +9,7 @@ CAMINHO_PROJETO = os.path.join(os.getcwd(), PASTA_PROJETO)
 PASTA_ESTILO = os.getenv("PASTA_ESTILO", "Style")
 CAMINHO_ESTILO = (Path.cwd()/PASTA_ESTILO)
 PASTA_LOGS = Path.cwd() / "logs"
+PROJECT_ROOT = Path(__file__).resolve().parent
 PASTA_LOGS.mkdir(exist_ok=True,parents=True)
 TAG_ALVO = [
     "<-- TO DO:", "<-- TO DO", "<-- TODO:", "<-- TODO", "<-- todo",

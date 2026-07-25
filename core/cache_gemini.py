@@ -1,8 +1,17 @@
-import project_utils as pu
-import gemini.ai_gemini as ag
+import engine.project_utils as pu
+import core.ai_gemini as ag
 from google.genai import types
 import json, os, time
 
+def force_rebuild_world_context():
+    arquivo = pu.log_path("Gemini_cache_id.json")
+    try:
+        if arquivo.exists():
+            print("Deletando o contexto criado!")
+            arquivo.unlink()
+    except Exception as e:
+        print(f"Erro removendo arquivo:{e}")
+    return prepare_world_context()
 
 def prepare_world_context(ttl_hours=12):
     arquivo = pu.log_path("Gemini_cache_id.json")
@@ -35,8 +44,17 @@ def prepare_world_context(ttl_hours=12):
 
     # 3. Attempt Explicit Context Caching (For Billing-Enabled Accounts)
     print("Attempting to create Gemini Context Cache...")
-    with open(pu.log_path("models.json"), "r", encoding="utf-8") as f:
-        data = json.load(f) 
+    try:
+        with open(pu.log_path("models.json"),"r",encoding="utf-8") as f:
+            data = json.load(f)
+        if not data:
+            raise ValueError("models.json está vazio")
+    except Exception as e:
+        print(f"Problema com models.json: {e}")
+        print("Recriando lista de modelos...")
+        ag.findmodel()
+        with open(pu.log_path("models.json"),"r",encoding="utf-8") as f:
+            data = json.load(f)
 
     for model in data:
         model_name = model["name"]

@@ -1,7 +1,7 @@
 import os, json, re, time
-import project_utils as pu
-import ai_utils as au
-import expander as ex
+import engine.project_utils as pu
+import core.ai_utils as au
+import engine.expander as ex
 from typing import Optional
 from pathlib import Path
 from pydantic import BaseModel
@@ -143,24 +143,10 @@ Não utilize markdown.
 """
 
         corpo_usuario = f"""
-Utilize o projeto carregado no cache.
+Analise a estrutura atual do projeto no cache.
+Objetivo do Mestre: {reason}
 
-Critérios:
-
-- Regiões
-- Cidades
-- Facções
-- NPCs
-- História
-- Potencial para aventuras
-
-Objetivo:
-
-{reason}
-
-Quantas iterações ainda são necessárias?
-
-Responda apenas um número.
+Crie o plano de ação no formato JSON estruturado com as próximas etapas prioritárias.
 """
 
         try:    

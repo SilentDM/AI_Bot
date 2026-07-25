@@ -1,7 +1,7 @@
 import os, re
 from pathlib import Path
-import ai_utils as au
-import project_utils as pu
+import core.ai_utils as au
+import engine.project_utils as pu
 
 def obter_arquivos_relacionados(titulo):
     relacionados = []

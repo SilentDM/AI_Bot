@@ -1,11 +1,11 @@
 import os, sys, shutil, subprocess, threading
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog, scrolledtext
-import project_utils as pu
-import expander
-import gui as gu
-import expander as ex
-import wbuilder
+import engine.project_utils as pu
+import engine.expander as expander
+import ui.gui as gu
+import engine.expander as ex
+import engine.wbuilder as wbuilder
 
 class ExplorerFrame(ttk.Frame):
     def __init__(self, parent, log_callback):
@@ -244,7 +244,7 @@ class ExplorerFrame(ttk.Frame):
                 texto = f.read()
             if any(tag in texto for tag in pu.TAG_ALVO):
                 self.log_callback(f"TODO encontrado em {os.path.basename(path)}")
-                #threading.Thread(target=ex.processar_arquivo_unico,args=(path,),daemon=True).start()
+                self.root.after(0,lambda: self.toast("Expander encontrou Tag, executando!"))
                 threading.Thread(target=wbuilder.improvefile,args=(path,),daemon=True).start()
         except Exception as e:
             self.log_callback(f"Erro analisando TODO: {e}")

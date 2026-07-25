@@ -1,5 +1,5 @@
 import os, time, re, glob, tiktoken
-import ai_utils as au
+import core.ai_utils as au
 from pathlib import Path
 
 MEMORIES_DIR = "memories"
