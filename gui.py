@@ -2,7 +2,7 @@ import threading, time, asyncio, explorer, memory, sys, os
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
 import expander as ex
-import ai_gemini as au
+import gemini.ai_gemini as au
 import project_utils as pu
 import gui_logger as gl
 import setup_env as se
@@ -11,6 +11,7 @@ import setup_env as se
 class AoDesktopApp:
     def __init__(self, root):
         self.root = root
+        self.user_name = "SilentDM"
         self.root.title("Ao Multiverse Console")
         self.root.geometry("1300x700")
         self.root.minsize(1050, 550)
@@ -328,7 +329,7 @@ class AoDesktopApp:
             guild_id = "desktop_env"
             guild_name = "Desktop_Console"
             userid = "999999"
-            user_name = "Local_Admin"
+            user_name = self.user_name
 
             persona = (
                 "- Você é um mestre de mesa chamado Ao, focado em aventuras de D&D.\n"
@@ -340,7 +341,6 @@ class AoDesktopApp:
                 "- Pode criar histórias e lugares fictícios, mas não altere informações já definidas, exceto se isso for pedido diretamente;\n"
             )
 
-            info = pu.carregar_projeto()
             extra = pu.detectar_intencao(prompt)
             memorias = memory.carregar_memorias(guild_id, guild_name, userid, user_name)
 
@@ -348,8 +348,6 @@ class AoDesktopApp:
 
             system_instruction = f"{persona}\n\n{regras}"
             conteudo_prompt = ""
-            if info:
-                conteudo_prompt += f"--- CONTEXTO ATUAL DO MUNDO ({pu.PASTA_PROJETO}) ---\n{info}\n\n"
             if extra:
                 conteudo_prompt += f"--- CONTEXTO ADICIONAL DE INTENÇÃO ---\n{extra}\n\n"
             if memorias:
@@ -359,7 +357,8 @@ class AoDesktopApp:
             resposta = au.ask_ai(
                 contents=conteudo_prompt,
                 system_instruction=system_instruction,
-                temperature=0.65
+                temperature=0.65,
+                use_world_context=True
             )
 
             if resposta:
@@ -374,8 +373,8 @@ class AoDesktopApp:
                 self.root.after(0, lambda: self.append_to_chat("System", "No response received. Check terminal."))
 
         except Exception as e:
-            self.log_activity(f"Error building chat execution: {e}")
-            self.root.after(0, lambda: self.append_to_chat("System", f"Execution error: {e}"))
+            self.root.after(0,lambda err=str(e):
+                self.append_to_chat("System",f"Execution error: {err}"))
 
     # ------------------------------------------------------------------
     # ENGINE DE DISCORD

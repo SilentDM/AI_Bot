@@ -65,9 +65,6 @@ if DISCORD_ENABLED:
             # O system_instruction ideal do Gemini une a persona e as regras
             instrucao_sistema = f"{persona}\n\n{regras}"
             
-            info = pu.carregar_projeto()
-            print("Info Dinâmica Carregada!")
-            
             extra = pu.detectar_intencao(prompt)   
             if extra:
                 print("Intenção definida!")
@@ -83,9 +80,6 @@ if DISCORD_ENABLED:
             # 2. Reunindo tudo o que é contexto para o 'contents'
             conteudo_input = ""
             
-            if info:
-                conteudo_input += f"--- CONTEXTO ATUAL DO MUNDO ({pu.PASTA_PROJETO}) ---\n{info}\n\n"
-                
             if memorias:
                 conteudo_input += f"--- HISTÓRICO RECENTE DE CONVERSAS ---\n{memorias}\n\n"
                 
@@ -101,7 +95,8 @@ if DISCORD_ENABLED:
                 resposta = ask_ai(
                     contents=conteudo_input,
                     system_instruction=instrucao_sistema,
-                    temperature=0.65
+                    temperature=0.65,
+                    use_world_context=True
                 )
             except Exception as e:
                 print(f"❌ Erro ao processar: {e}")

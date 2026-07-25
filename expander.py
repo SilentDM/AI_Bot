@@ -113,7 +113,7 @@ Seu objetivo é preencher lacunas de desenvolvimento do cenário de {pu.PASTA_PR
                             info_locais += f.read() + "\n\n"
         info_importante = obter_arquivos_relacionados(titulo)
         prompt_conteudo = f"""
-Por favor, analise as informações abaixo para preencher as lacunas marcadas no arquivo de destino.
+Por favor, analise as informações completas armazenadas no cache e as informações locais e importantes abaixo para preencher as lacunas marcadas no arquivo de destino.
 INFORMAÇÕES LOCAIS DO AMBIENTE (Arquivos da mesma pasta para consistência):
 {info_locais}
 
@@ -143,7 +143,8 @@ REGRAS DE RETORNO:
             texto_expandido = au.ask_ai(
                 contents=prompt_conteudo,
                 system_instruction=instrucoes_globais,
-                temperature=0.7 # Temperatura criativa e coerente
+                temperature=0.7,
+                use_world_context=True
             )
             
             if texto_expandido:
@@ -231,7 +232,8 @@ REGRAS DE RETORNO:
                 texto_expandido = au.ask_ai(
                     contents=prompt_conteudo,
                     system_instruction=instrucoes_globais,
-                    temperature=0.7 # Temperatura criativa e coerente
+                    temperature=0.7,
+                    use_world_context=True
                 )
                 
                 if texto_expandido:

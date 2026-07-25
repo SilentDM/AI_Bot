@@ -5,12 +5,12 @@
             "content-type": "application/json; charset=UTF-8",
             "vary": "Origin, X-Origin, Referer",
             "content-encoding": "gzip",
-            "date": "Fri, 24 Jul 2026 22:41:08 GMT",
+            "date": "Sat, 25 Jul 2026 03:05:41 GMT",
             "server": "scaffolding on HTTPServer2",
             "x-xss-protection": "0",
             "x-frame-options": "SAMEORIGIN",
             "x-content-type-options": "nosniff",
-            "server-timing": "gfet4t7; dur=2416",
+            "server-timing": "gfet4t7; dur=5609",
             "alt-svc": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000",
             "transfer-encoding": "chunked"
         },
@@ -28,9 +28,9 @@
                         "function_call": null,
                         "function_response": null,
                         "inline_data": null,
-                        "text": "# Aventura_O_Misterio_de_Cristal_Fjord\n> Este arquivo foi criado automaticamente pelo WorldBuilder.\n----\nstatus: rascunho\n----\n- **Título do Evento:** O Despertar da Corrente Subterrânea\n- **Local:** Mina de Gema-Estelar Profunda, Subúrbios (Pés da Montanha)\n- **Gatilho:** Os mineradores da Irmandade da Profundidade relatam que os sussurros descritos no Rumor \"O Sussurro das Profundezas\" intensificaram-se, causando alucinações e surtos de violência entre os trabalhadores. O Superintendente de Escavações, Borin Deepdelve, suspendeu temporariamente as operações no setor 4, mas três mineradores goliaths permanecem desaparecidos nas galerias inferiores.\n- **Desenvolvimento:** Os personagens são contratados por Fimble Cogsworth, preocupado com a queda na produção de Gema-Estelar, ou por Kaelen Gutterson, para resgatar os mineradores perdidos e investigar a origem dos sons. Nas galerias inferiores, a temperatura cai drasticamente. Os túneis apresentam cristais excessivamente brilhantes e marcas de unhas arranhadas na rocha maciça. Os mineradores desaparecidos são encontrados catatônicos, repetindo frases em uma língua desconhecida.\n- **Confronto:** Um dos mineradores sofreu mutação física devido à exposição prolongada à energia do selo enfraquecido e ataca o grupo, utilizando força sobre-humana e resistência ao frio. No local, há uma fenda na rocha de onde escapa um vapor rarefeito e gélido que induz paralisia leve e visões de olhos sem pálpebras.\n- **Consequência:** Selar a fenda com explosivos controlados cessa temporariamente os sussurros, mas gera um relatório de incidente que aumenta a paranoia do Prefeito Graklin Glimmergem e alarma os emissários de Faldur Kham, que percebem a instabilidade geológica da região.",
+                        "text": "Saudações, *Local_Admin*! Uma escolha esplêndida. Construir a fundação geográfica antes de erguer as torres e as masmorras é o trabalho de um verdadeiro arquiteto de mundos. Se queremos que a **Cidade Mecânica de Korth-Valum** e o titã **Dire Miralis** sob o vulcão **Garug** façam sentido e tenham peso narrativo, o solo de **Irylith** precisa ser perigoso, vivo e geograficamente palpável.\n\nLembrando das nossas regras sagradas: **jamais alterarei informações já definidas** no nosso grimório. Vou apenas expandir, conectar e dar relevo ao que já existe sobre Irylith (a cordilheira de montanhas no oceano, a noite eterna sob as cinzas de Garug, o enclave dracônico do sul, etc.).\n\nAqui está uma proposta estruturada para expandir a **Geografia de Irylith**, seguindo o nosso template de regiões e locais, para preencher o vazio ao redor de Garug:\n\n---\n\n# Proposta de Expansão: A Geografia e os Domínios de Irylith\n\n## 1. Visão Geral da Região\nIrylith não é apenas um arquipélago vulcânico; é uma fratura titânica onde a crosta de Phaeton cede diretamente ao oceano sul. A região é permanentemente encoberta por um dossel de cinzas e fumaça espessa expelida por **Garug**, o maior vulcão do planeta. Aqui, o sol é apenas uma mancha rubra e difusa — um fenômeno conhecido localmente como a **Noite Eterna de Irylith**. As ilhas são íngremes, formadas por rocha basáltica negra, rios de lava que deságuam assobiando no mar e vales úmidos onde a flora sobrevive através da bioluminescência e do calor geotérmico.\n\n## 2. Subdivisões Geográficas (Os Marcos de Irylith)\n\n*   **A Caldeira de Garug (O Coração Ígneo):** O epicentro da atividade tectônica. Uma montanha colossal que se erguja por quilômetros acima das nuvens de cinzas. Suas encostas são estéreis, dominadas pelos santuários dos *Druidas do Fogo* e pelos covis do *Enclave Dracônico do Sul*. Ninguém se aproxima do topo sem correr o risco de ser consumido por rajadas de plasma vulcânico ou pela presença de Dire Miralis.\n*   **O Arquipélago das Sombras Chupadas (As Ilhas Oceânicas):** Uma cadeia de ilhas montanhosas que caem a prique no mar. Nelas, a luz do dia mal dura duas horas antes de ser engolida pela penumbra das cinzas. É o território dos vilarejos de monstros adaptados ao calor (kobolds, goblins vulcânicos) e de onde partem as rotas mais perigosas para o arquipélago pirata vizinho de Thal'Elyr.\n*   **A Fossa de Obsidiana (O Abismo Marinho):** O canal oceânico que separa as ilhas vulcânicas do continente sul. As águas aqui são fumegantes em alguns pontos, negras como tinta e habitadas por predadores abissais que seguem a trilha de calor do vulcão. É também onde correntes submersas escondem as entradas secundárias para as ruínas e laboratórios esquecidos de Korth-Valum.\n*   **Os Vales de Cinza Férteis:** Pequenos bolsões abrigados entre as escarpas das montanhas onde a fuligem vulcânica, misturada com chuvas minerais, criou um solo de fertilidade brutal. É aqui que os monstros e tribos isoladas cultivam fungos gigantes e plantas termófilas para sobreviver.\n\n---\n\n### O que faremos com isso agora?\nCom essa base geográfica estabelecida, a região de Irylith deixa de ser apenas \"um vulcão no mapa\" e passa a ser um território hostil, atmosférico e interconectado, pronto para receber a *Cidade Mecânica (Korth-Valum)* nas suas fundações subterrâneas e justificar a presença dos *Sentinelas de Latão* patrulhando as fronteiras de cinzas.\n\nDiga-me, *Local_Admin*: \n1. Salvamos essa expansão geográfica de Irylith no nosso grimório (em um novo arquivo `Geografia_de_Irylith_v1.md` sob `4.Regions\\South_Continent\\Irylith`)? \n2. Ou prefere ajustar algum detalhe antes de gravarmos na pedra? Os dados estão prontos!",
                         "thought": null,
-                        "thought_signature": "EjQKMgERTTIPnen-eM97n-qx7BBJwXX5YU7lPhftd2rzxfpCKt-_8444nalM8KVH7XRYDsO3",
+                        "thought_signature": "EjQKMgERTTIPwkEUPfs6JzvhhK5fw2Bd8vCfdu3TK1qUUjM-62tIm9NeGdTI1lUHeu2y490m",
                         "video_metadata": null,
                         "tool_call": null,
                         "tool_response": null,
@@ -54,23 +54,28 @@
     "create_time": null,
     "model_version": "gemini-3.5-flash-lite",
     "prompt_feedback": null,
-    "response_id": "AupjaoXYGd6iqtsPm970uQI",
+    "response_id": "_ydkaobUOuuCmtkP4pzguAo",
     "usage_metadata": {
-        "cache_tokens_details": null,
-        "cached_content_token_count": null,
-        "candidates_token_count": 451,
+        "cache_tokens_details": [
+            {
+                "modality": "TEXT",
+                "token_count": 85920
+            }
+        ],
+        "cached_content_token_count": 85920,
+        "candidates_token_count": 1049,
         "candidates_tokens_details": null,
-        "prompt_token_count": 8767,
+        "prompt_token_count": 89327,
         "prompt_tokens_details": [
             {
                 "modality": "TEXT",
-                "token_count": 8767
+                "token_count": 89327
             }
         ],
         "thoughts_token_count": null,
         "tool_use_prompt_token_count": null,
         "tool_use_prompt_tokens_details": null,
-        "total_token_count": 9218,
+        "total_token_count": 90376,
         "traffic_type": null
     },
     "model_status": null,

@@ -15,12 +15,12 @@ AI_PROVIDER = os.getenv("AI_PROVIDER", "gemini").strip().lower()
 if AI_PROVIDER == "pro":
     from ai_pro import ask_ai as _ask_ai_impl
 else:
-    from ai_gemini import ask_ai as _ask_ai_impl
+    from gemini.ai_gemini import ask_ai as _ask_ai_impl
 
 
 
 
-def ask_ai(contents=None, system_instruction=None, temperature=None, response_schema=None):
+def ask_ai(contents=None, system_instruction=None, temperature=None, response_schema=None, use_world_context=True):
     """
     Ponto único de entrada para QUALQUER parte do programa que precise
     perguntar algo para a IA (memory.py, wbuilder.py, expander.py, dbot.py, gui.py).
@@ -35,5 +35,6 @@ def ask_ai(contents=None, system_instruction=None, temperature=None, response_sc
         contents=contents,
         system_instruction=system_instruction,
         temperature=temperature,
-        response_schema=response_schema
+        response_schema=response_schema,
+        use_world_context=use_world_context
     )

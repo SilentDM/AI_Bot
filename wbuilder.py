@@ -7,9 +7,6 @@ from pathlib import Path
 from pydantic import BaseModel
 from typing import Literal, List
 
-CONTEUDO = pu.carregar_projeto()
-DIRETORIOS = pu.carregar_estrutura_projeto()
-INDICE = pu.gerar_indice()
 print("Iniciando World Builder! Boa Sorte!")
 
 def resolver_caminho(path_str):
@@ -41,9 +38,6 @@ def resolver_caminho(path_str):
 
 def iterationschoice(reason: Optional[str] = "O projeto esteja concluído"):
     print("Iterations Iniciado!")
-    CONTEUDO = pu.carregar_projeto()
-    DIRETORIOS = pu.carregar_estrutura_projeto()
-    INDICE = pu.gerar_indice()
     numero=1
     instrucao_sistema = f"""
 Você é um especialista em worldbuilding para RPG.
@@ -52,26 +46,32 @@ Analise o estado atual do projeto e estime quantas iterações de expansão são
 Responda apenas um número inteiro entre 1 e 10.
 """
     corpo_usuario = f"""
-Projeto:
-{DIRETORIOS}\n
-{INDICE}\n
-{CONTEUDO}\n
+Utilize o projeto carregado no cache.
 
 Critérios:
+
 - Regiões
 - Cidades
 - Facções
 - NPCs
 - História
 - Potencial para aventuras
+
+Objetivo:
+
+{reason}
+
 Quantas iterações ainda são necessárias?
+
+Responda apenas um número.
 """
     try:
 
         resposta = au.ask_ai(
             contents=corpo_usuario,
             system_instruction=instrucao_sistema,
-            temperature=0.35
+            temperature=0.35,
+            use_world_context=True
         )
         match = re.search(r"\d+", str(resposta))
         if not match:
@@ -95,9 +95,6 @@ class ActionPlan(BaseModel):
 
 def taskplanner(maxiterations: int = 1, reason: Optional[str] = "O projeto esteja concluído"):
     print(f"O iterationschoice retornou que vamos precisar de {maxiterations} iterações! Vamos começar o Taskplanner!")
-    CONTEUDO = pu.carregar_projeto()
-    DIRETORIOS = pu.carregar_estrutura_projeto()
-    INDICE = pu.gerar_indice()
     while maxiterations>0:
         instrucao_sistema = f"""
 Você é um especialista em worldbuilding para RPG.
@@ -146,21 +143,24 @@ Não utilize markdown.
 """
 
         corpo_usuario = f"""
-Estrutura:
-{DIRETORIOS}
-
-Índice:
-{INDICE}
-
-Projeto:
-{CONTEUDO}
+Utilize o projeto carregado no cache.
 
 Critérios:
-- Quantidade de regiões documentadas.
-- Quantidade de cidades documentadas.
-- Possibilidade de conduzir aventuras sem gerar novas informações.
 
-Liste no máximo 15 ações prioritárias.
+- Regiões
+- Cidades
+- Facções
+- NPCs
+- História
+- Potencial para aventuras
+
+Objetivo:
+
+{reason}
+
+Quantas iterações ainda são necessárias?
+
+Responda apenas um número.
 """
 
         try:    
@@ -168,7 +168,8 @@ Liste no máximo 15 ações prioritárias.
             contents=corpo_usuario,
             system_instruction=instrucao_sistema,
             temperature=0.4,
-            response_schema=ActionPlan
+            response_schema=ActionPlan,
+            use_world_context=True
             )
             plano = ActionPlan.model_validate_json(resposta)
 
@@ -301,8 +302,6 @@ def improvefile(path, reason="Melhorar o arquivo!"):
         print(f"❌ O caminho informado não é um arquivo, ação ignorada: {arquivo}")
         return False
 
-    CONTEUDO = pu.carregar_projeto()
-
     try:
         with open(arquivo, "r", encoding="utf-8") as f:
             arquivoatual = f.read()
@@ -322,12 +321,8 @@ Mantenha consistência com o restante do mundo.
     prompt_conteudo = f"""
 OBJETIVO:
 {reason}
-PROJETO COMPLETO:
-{CONTEUDO}
-Estrutura:
-{DIRETORIOS}
-Índice:
-{INDICE}
+O PROJETO COMPLETO está no cache para ser analisado!
+
 CONTEÚDO ORIGINAL:
 {arquivoatual}
 

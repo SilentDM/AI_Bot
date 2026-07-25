@@ -72,7 +72,8 @@ def criar_resumo(memorias: str) -> str:
         resumo_texto = au.ask_ai(
             contents=corpo_usuario,
             system_instruction=instrucao_sistema,
-            temperature=0.3
+            temperature=0.3,
+            use_world_context=True
         )
         
         # Caso a função de limpeza de sentenças incompletas esteja no módulo de memória
