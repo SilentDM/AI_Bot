@@ -50,7 +50,6 @@ if DISCORD_ENABLED:
             persona = (
                 "[Personalidade]\n"
                 "- Você é Ao, o criador do universo. Está aqui para responder dúvidas, com gentileza e sabedoria.\n"
-                "- Trate o usuário falando com você como alguém importante e que você esteja orgulhoso do interesse.\n"
                 "- Evite comentar assuntos que estão descritos como segredos ou secretos.\n"
                 "- Você pode gerar e criar histórias para aqueles que desejam, mas jamais altere informações já definidas.\n"
             )
@@ -87,7 +86,7 @@ if DISCORD_ENABLED:
             conteudo_input += f"--- MENSAGEM DO USUÁRIO ({user_name}) ---\n{prompt}"
             
             if extra:
-                conteudo_input += f"\n{extra}\n"
+                conteudo_input += f" {extra}\n"
             
             # 3. Chamando o novo ask_ai
             # Definimos a temperatura em 0.65 para permitir flexibilidade sem quebrar as regras.
@@ -99,7 +98,7 @@ if DISCORD_ENABLED:
                     use_world_context=True
                 )
             except Exception as e:
-                print(f"❌ Erro ao processar: {e}")
+                print(f"Erro ao processar: {e}")
                 resposta = "Me perdoe, mortal, estou ocupado com outros afazeres cósmicos!"
                 
             if resposta:
@@ -149,7 +148,7 @@ else:
     # tentativa acidental de uso sem checar DISCORD_ENABLED primeiro falhe
     # de forma clara (AttributeError em None) em vez de silenciosamente.
     discordclient = None
-    print("ℹ️ DISCORD_TOKEN não configurado — o bot do Discord está desativado.")
+    print("DISCORD_TOKEN não configurado — o bot do Discord está desativado.")
 
 if __name__ == "__main__":
     discordclient.run(TOKEN)

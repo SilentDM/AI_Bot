@@ -275,7 +275,6 @@ class ExplorerFrame(ttk.Frame):
 
     # --- MENU DE CONTEXTO E OPERAÇÕES DE ARQUIVOS ---
     def show_context_menu(self, event):
-        """Renderiza o menu pop-up de opções ao clicar com o botão direito."""
         iid = self.tree.identify_row(event.y)
         if iid:
             self.tree.selection_set(iid)
@@ -290,57 +289,57 @@ class ExplorerFrame(ttk.Frame):
             
             # Opções dinâmicas com base na seleção
             if os.path.isdir(caminho):
-                self.context_menu.add_command(label="📄 New File...", command=lambda: self.create_new_file(caminho))
-                self.context_menu.add_command(label="📁 New Folder...", command=lambda: self.create_new_folder(caminho))
+                self.context_menu.add_command(label="Novo Arquivo", command=lambda: self.create_new_file(caminho))
+                self.context_menu.add_command(label="Nova Pasta", command=lambda: self.create_new_folder(caminho))
                 self.context_menu.add_separator()
                 
-            self.context_menu.add_command(label="✏️ Rename...", command=lambda: self.rename_item(caminho))
-            self.context_menu.add_command(label="❌ Delete", command=lambda: self.delete_item(caminho))
+            self.context_menu.add_command(label="✏️ Renomear...", command=lambda: self.rename_item(caminho))
+            self.context_menu.add_command(label="❌ Deletar", command=lambda: self.delete_item(caminho))
             
             self.context_menu.post(event.x_root, event.y_root)
 
     def create_new_file(self, parent_dir):
-        nome = simpledialog.askstring("New File", "Enter the markdown filename (e.g., history.md):", parent=self)
+        nome = simpledialog.askstring("Novo Arquivo", "Coloque o nome do Arquivo (exemplo: Historia.md):", parent=self)
         if nome:
             if not nome.endswith(".md"):
                 nome += ".md"
             caminho_arquivo = os.path.join(parent_dir, nome)
             if os.path.exists(caminho_arquivo):
-                messagebox.showerror("Error", "A file with this name already exists.")
+                messagebox.showerror("Erro", "Um arquivo com esse nome já existe.")
                 return
             try:
                 with open(caminho_arquivo, "w", encoding="utf-8") as f:
-                    f.write(f"# {nome.replace('.md', '').title()}\n\n<-- TODO: Write down details here.")
-                self.log_callback(f"Created file: {nome}")
+                    f.write(f"# {nome.replace('.md', '').title()}\n\n<-- TODO: Crie informações para {nome.replace('.md', '').title()}.")
+                self.log_callback(f"Arquivo criado: {nome}")
                 self.refresh_tree()
                 self.select_path_in_tree(caminho_arquivo)
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to create file: {e}")
 
     def create_new_folder(self, parent_dir):
-        nome = simpledialog.askstring("New Folder", "Enter the folder name:", parent=self)
+        nome = simpledialog.askstring("Nova Pasta", "Coloque o nome da pasta:", parent=self)
         if nome:
             caminho_pasta = os.path.join(parent_dir, nome)
             if os.path.exists(caminho_pasta):
-                messagebox.showerror("Error", "A folder with this name already exists.")
+                messagebox.showerror("Erro", "Já existe uma pasta com esse nome.")
                 return
             try:
                 os.makedirs(caminho_pasta, exist_ok=True)
-                self.log_callback(f"Created folder: {nome}")
+                self.log_callback(f"Pasta Criada: {nome}")
                 self.refresh_tree()
                 self.select_path_in_tree(caminho_pasta)
             except Exception as e:
-                messagebox.showerror("Error", f"Failed to create folder: {e}")
+                messagebox.showerror("Erro", f"Falhou ao criar a pasta: {e}")
 
     def rename_item(self, caminho):
         diretorio_pai = os.path.dirname(caminho)
         nome_antigo = os.path.basename(caminho)
         
-        novo_nome = simpledialog.askstring("Rename", f"Enter new name for {nome_antigo}:", initialvalue=nome_antigo, parent=self)
+        novo_nome = simpledialog.askstring("Renomear", f"Entre novo nome para {nome_antigo}:", initialvalue=nome_antigo, parent=self)
         if novo_nome and novo_nome != nome_antigo:
             novo_caminho = os.path.join(diretorio_pai, novo_nome)
             if os.path.exists(novo_caminho):
-                messagebox.showerror("Error", "Target path already exists.")
+                messagebox.showerror("Erro", "Esse nome já existe.")
                 return
             try:
                 # Se for o arquivo atualmente aberto no editor, fecha-o antes de renomear
@@ -350,19 +349,19 @@ class ExplorerFrame(ttk.Frame):
                     self.current_file = None
                     
                 os.rename(caminho, novo_caminho)
-                self.log_callback(f"Renamed: {nome_antigo} -> {novo_nome}")
+                self.log_callback(f"Renomeado: {nome_antigo} -> {novo_nome}")
                 self.refresh_tree()
                 
                 # Se estava aberto, seleciona o arquivo renomeado e carrega seu novo caminho
                 if esta_aberto:
                     self.select_path_in_tree(novo_caminho)
             except Exception as e:
-                messagebox.showerror("Error", f"Failed to rename: {e}")
+                messagebox.showerror("Erro", f"Falha ao Renomear: {e}")
 
     def delete_item(self, caminho):
         nome = os.path.basename(caminho)
         confirmacao = messagebox.askyesno(
-            "Confirm Delete", f"Are you sure you want to delete '{nome}'?\nThis cannot be undone.", parent=self
+            "Confirma Excluir", f"Tem certeza que quer deletar '{nome}'?\nNão dá para desfazer!.", parent=self
         )
         if confirmacao:
             try:

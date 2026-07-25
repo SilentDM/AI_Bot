@@ -1,12 +1,8 @@
 import os
-from dotenv import load_dotenv
-load_dotenv()
-
 # AI_PROVIDER decide, em UM ÚNICO LUGAR, qual implementação de IA o programa
 # inteiro vai usar. Valores esperados: "gemini" (padrão/gratuito) ou "pro"
 # (chave de outro provedor, ex: a conta paga de um amigo).
 AI_PROVIDER = os.getenv("AI_PROVIDER", "gemini").strip().lower()
-
 # Importamos SÓ o módulo do provedor escolhido. Isso é importante porque
 # cada módulo de provedor faz sua própria checagem de chave obrigatória
 # no momento do import (ex: ai_gemini.py exige GOOGLE_API_KEY). Se

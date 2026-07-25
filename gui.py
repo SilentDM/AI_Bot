@@ -1,4 +1,4 @@
-import threading, time, asyncio, explorer, memory, sys, os
+import threading, time, asyncio, explorer, memory, sys
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
 import expander as ex
@@ -127,10 +127,10 @@ class AoDesktopApp:
 
         # Cada item: (chave interna da página, texto exibido no botão)
         nav_items = [
-            ("editor", "📝  Edição de Mundo"),
-            ("worldbuilder", "🌍  WorldBuilder"),
-            ("chat", "💬  Conversa com Ao"),
-            ("log", "📋  Atividade"),
+            ("editor", "Edição do Mundo"),
+            ("worldbuilder", "WorldBuilder"),
+            ("chat", "Converse com Ao"),
+            ("log", "Atividades"),
         ]
         for key, label in nav_items:
             btn = ttk.Button(sidebar, text=label, style="Nav.TButton",command=lambda k=key: self.switch_page(k))
@@ -189,7 +189,7 @@ class AoDesktopApp:
     # ------------------------------------------------------------------
     def _build_editor_page(self, parent):
         frame = ttk.Frame(parent)
-        self._page_header(frame, "📝 Edição de Mundo","Explore, edite e organize os arquivos do seu projeto.")
+        self._page_header(frame, "Edição de Mundo","Explore, edite e organize os arquivos do seu projeto.")
         self.explorer_pane = explorer.ExplorerFrame(frame, self.log_activity)
         self.explorer_pane.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 15))
         return frame
@@ -199,7 +199,7 @@ class AoDesktopApp:
     # ------------------------------------------------------------------
     def _build_worldbuilder_page(self, parent):
         frame = ttk.Frame(parent)
-        self._page_header(frame, "🌍 WorldBuilder & Expander","Dispare tarefas de expansão automática do seu mundo em segundo plano.")
+        self._page_header(frame, "WorldBuilder & Expander","Dispare tarefas de expansão automática do seu mundo em segundo plano.")
 
         body = ttk.Frame(frame)
         body.pack(fill=tk.BOTH, expand=True, padx=15, pady=5)
@@ -231,7 +231,7 @@ class AoDesktopApp:
         self.btn_delete_memories.pack(fill=tk.X,padx=10,pady=5)
 
         # Dica visual, lembrando que dá pra navegar livremente enquanto a tarefa roda
-        ttk.Label(body,text="💡 Você pode ir para outras abas enquanto uma tarefa roda em segundo ""plano — acompanhe o progresso técnico na aba 'Atividade'.",foreground="#666666", wraplength=560, justify="left").pack(anchor=tk.W, pady=(20, 0))
+        ttk.Label(body,text="Você pode ir para outras abas enquanto uma tarefa roda em segundo ""plano — acompanhe o progresso técnico na aba 'Atividade'.",foreground="#666666", wraplength=560, justify="left").pack(anchor=tk.W, pady=(20, 0))
         return frame
 
     # ------------------------------------------------------------------
@@ -341,23 +341,20 @@ class AoDesktopApp:
                 "- Pode criar histórias e lugares fictícios, mas não altere informações já definidas, exceto se isso for pedido diretamente;\n"
             )
 
-            extra = pu.detectar_intencao(prompt)
             memorias = memory.carregar_memorias(guild_id, guild_name, userid, user_name)
 
             self.log_activity("Querying Gemini on dynamic file contents...")
 
             system_instruction = f"{persona}\n\n{regras}"
             conteudo_prompt = ""
-            if extra:
-                conteudo_prompt += f"--- CONTEXTO ADICIONAL DE INTENÇÃO ---\n{extra}\n\n"
             if memorias:
                 conteudo_prompt += f"--- HISTÓRICO RECENTE DE CONVERSAS ---\n{memorias}\n\n"
-            conteudo_prompt += f"--- MENSAGEM DO USUÁRIO ({user_name}) ---\n{prompt}"
+            conteudo_prompt += f"--- MENSAGEM DO USUÁRIO ---\n{prompt}"
 
             resposta = au.ask_ai(
                 contents=conteudo_prompt,
                 system_instruction=system_instruction,
-                temperature=0.65,
+                temperature=0.6,
                 use_world_context=True
             )
 
