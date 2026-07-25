@@ -174,7 +174,7 @@ def generate_content_with_fallback(contents: Any, config: types.GenerateContentC
                 )
                 
                 if response and response.text:
-                    with open("LastResponse.json", "w", encoding="utf-8") as file:
+                    with open(pu.log_path("LastResponse.json"), "w", encoding="utf-8") as file:
                         file.write(response.model_dump_json(indent=4))
                     print(f"🔮 Attempting model: \n"
                         f"{model_name} | "

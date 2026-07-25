@@ -1,11 +1,11 @@
-import threading, time, asyncio, ui.explorer as explorer, core.memory as memory, sys
+import threading, time, asyncio, sys
+from . import explorer as ex
+import core.memory as memory
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
-import engine.expander as ex
 import core.ai_gemini as ag
-import engine.project_utils as pu
-import ui.gui_logger as gl
-import ui.setup_env as se
+from . import gui_logger as gl
+from . import setup_env as se
 import core.cache_gemini as cg
 
 
@@ -193,7 +193,7 @@ class AoDesktopApp:
     def _build_editor_page(self, parent):
         frame = ttk.Frame(parent)
         self._page_header(frame, "Edição de Mundo","Explore, edite e organize os arquivos do seu projeto.")
-        self.explorer_pane = explorer.ExplorerFrame(frame, self.log_activity)
+        self.explorer_pane = ex.ExplorerFrame(frame, self.log_activity)
         self.explorer_pane.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 15))
         return frame
 
@@ -557,9 +557,11 @@ class AoDesktopApp:
         finally:
             self.root.destroy()
             
-if __name__ == "__main__":
+def main():
     root = tk.Tk()
     app = AoDesktopApp(root)
     root.mainloop()
     
+if __name__ == "__main__":
+    main()
         
