@@ -326,7 +326,7 @@ Retorne apenas o conteúdo final do arquivo.
 
         with open(novo_arquivo_path, "w", encoding="utf-8") as f:
             f.write(texto_limpo)
-
+        ex.arquivar_versao_antiga(arquivo)
         print(f"✅ Nova versão criada: {novo_arquivo_path.name}")
         return True
     except Exception as e:

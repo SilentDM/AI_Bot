@@ -3,7 +3,7 @@ import engine.project_utils as pu
 from typing import Any, Optional, Type
 from pydantic import BaseModel
 from google import genai
-from google.genai import types
+from google.genai import types, errors
 import core.cache_gemini as cg
 from dotenv import load_dotenv
 load_dotenv(pu.PROJECT_ROOT / ".env")
@@ -24,6 +24,17 @@ DEFAULT_SYSTEM_INSTRUCTION = "You are a helpful assistant that explains things a
 DEFAULT_TEMPERATURE = 0.6  # Changed to a float (the API expects a float, not a string)
 DEFAULT_CONTENTS = "Please repeat: I did not receive a correct prompt, your coding has failed somewhere."
 MAX_TOKENS = 20480
+
+def _is_rate_limit_error(e: Exception) -> bool:
+    """Detecta se a exceção é referente a estouro de limite de taxa (HTTP 429 / Quota)."""
+    err_str = str(e).lower()
+    if isinstance(e, errors.APIError):
+        if getattr(e, "code", None) == 429:
+            return True
+    return any(
+        kw in err_str
+        for kw in ["429", "resource_exhausted", "quota", "rate limit", "too many requests"]
+    )
 
 def findmodel(file_path=pu.log_path("models.json")):
     # 1. Check cache freshness
@@ -121,10 +132,10 @@ def load_projeto_images():
                     )
                 )
             except Exception as e:
-                print(f"⚠️ Error loading image {img_path.name}: {e}")
+                print(f"Erro carregando imagem: {img_path.name}: {e}")
     return parts
 
-def generate_content_with_fallback(contents: Any, config: types.GenerateContentConfig, max_attempts: int = 3) -> Any:
+def generate_content_with_fallback(contents: Any, config: types.GenerateContentConfig, max_rate_limit_retries: int = 3) -> Any:
     attempt = 1
     try:
         with open(pu.log_path("models.json"),"r",encoding="utf-8") as f:
@@ -138,60 +149,56 @@ def generate_content_with_fallback(contents: Any, config: types.GenerateContentC
         with open(pu.log_path("models.json"),"r",encoding="utf-8") as f:
             data = json.load(f)
         
-    while attempt <= max_attempts:
-        for model in data:
-            model_name = model["name"]  # Extract the name key here
-            print(f"🔮 Attempting to generate content using model: {model}!")
-            if model.get("supports_images", False):
-                print("Esse modelo suporta imagens!")
-                images = load_projeto_images()
-                if images:
-                    if isinstance(contents, list):
-                        final_contents = list(contents) + images
-                    else:
-                        final_contents = [contents] + images
+
+    for model in data:
+        model_name = model["name"]  # Extract the name key here
+        print(f"🔮 Attempting to generate content using model: {model}!")
+        if model.get("supports_images", False):
+            print("Esse modelo suporta imagens!")
+            images = load_projeto_images()
+            if images:
+                if isinstance(contents, list):
+                    final_contents = list(contents) + images
                 else:
-                    final_contents = contents
+                    final_contents = [contents] + images
             else:
                 final_contents = contents
-    
-            config_to_use = config.model_copy(deep=True)
-            if model.get("supports_tools", False):
-                config_to_use.tools = [
-                    types.Tool(google_search=types.GoogleSearch())
-                ]
-            else:
-                config_to_use.tools = []
-                print(f"🔒 Tools unavailable for {model_name}")
+        else:
+            final_contents = contents
+
+        config_to_use = config.model_copy(deep=True)
+        if model.get("supports_tools", False):
+            config_to_use.tools = [
+                types.Tool(google_search=types.GoogleSearch())
+            ]
+        else:
+            config_to_use.tools = []
+            print(f"🔒 Tools unavailable for {model_name}")
+        
+        for rate_attempt in range(1, max_rate_limit_retries + 1):
             try:
-                print(f"🔮 (Attempt {attempt}/{max_attempts})...")
-                with open("LastPrompt.txt", "w", encoding="utf-8") as f:
-                    f.write(f"Contents:\n{contents}\nModel:\n{model}\nConfig:\n{config_to_use}")
                 response = GEMINICLIENT.models.generate_content(
                     model=model_name,
                     contents=final_contents,
                     config=config_to_use
                 )
-                
-                if response and response.text:
-                    with open(pu.log_path("LastResponse.json"), "w", encoding="utf-8") as file:
-                        file.write(response.model_dump_json(indent=4))
-                    print(f"🔮 Attempting model: \n"
-                        f"{model_name} | "
-                        f"Tools: {model.get('supports_tools', False)} | "
-                        f"Tokens: {model.get('maxinputtokens')} | "
-                        f"Response Time: {model.get('responsetime')}"
-                    )
-                    return response                    
-            except Exception as e:
-                print(f"⚠️ Error using model {model}: {e}")
-                print("Trying next available model in the fallback chain...")
-            
-            print("\n🛑 All configured models in the fallback chain failed.")
-        if attempt < max_attempts:
-            attempt += 1
 
-    raise RuntimeError("All models and retry attempts failed to generate content.")
+                if response and response.text:
+                    return response
+
+            except Exception as e:
+                if _is_rate_limit_error(e):
+                    wait_time = 2 ** rate_attempt  # 2s, 4s, 8s...
+                    print(f"Rate Limit atingido no modelo {model_name}. Aguardando {wait_time}s (Tentativa {rate_attempt}/{max_rate_limit_retries})...")
+                    time.sleep(wait_time)
+                else:
+                    # Se for outro tipo de erro (ex: modelo descontinuado), interrompe retentativas desse modelo
+                    print(f"⚠️ Erro no modelo {model_name}: {e}")
+                    break
+        
+        print(f"🔄 Passando para o próximo modelo da cadeia de fallback...")
+
+    raise RuntimeError("Todos os modelos e tentativas de fallback falharam em gerar conteúdo.")
 
 def ask_ai(
     contents: Any = None, 

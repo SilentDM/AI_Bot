@@ -1,2 +1,2 @@
 Set WshShell = CreateObject("WScript.Shell")
-WshShell.Run "pythonw gui.py", 0, False
+WshShell.Run "pythonw main.py", 0, False

@@ -1,7 +1,36 @@
-import os, re
+import os, re, shutil
 from pathlib import Path
 import core.ai_utils as au
 import engine.project_utils as pu
+
+def arquivar_versao_antiga(caminho_original):
+    """
+    Move a versão antiga/original de um arquivo para a pasta logs/history/,
+    preservando a estrutura de subpastas.
+    """
+    try:
+        caminho_original = Path(caminho_original)
+        if not caminho_original.exists():
+            return
+
+        # Pasta de histórico dentro dos logs do projeto
+        pasta_historico = pu.PASTA_LOGS / "history"
+
+        # Mantém a mesma estrutura de subpastas do projeto dentro de logs/history
+        try:
+            relativo = caminho_original.relative_to(pu.CAMINHO_PROJETO)
+            destino_dir = pasta_historico / relativo.parent
+        except ValueError:
+            destino_dir = pasta_historico
+
+        destino_dir.mkdir(parents=True, exist_ok=True)
+        destino_arquivo = destino_dir / caminho_original.name
+
+        # Mover o arquivo original para o histórico
+        shutil.move(str(caminho_original), str(destino_arquivo))
+        print(f"📦 Versão antiga arquivada em: {destino_arquivo}")
+    except Exception as e:
+        print(f"⚠️ Erro ao arquivar versão antiga ({caminho_original.name}): {e}")
 
 def obter_arquivos_relacionados(titulo):
     relacionados = []
@@ -153,7 +182,7 @@ REGRAS DE RETORNO:
                 
                 with open(novo_arquivo_path, 'w', encoding='utf-8') as f:
                     f.write(texto_limpo)
-                
+                arquivar_versao_antiga(arquivo)
                 print(f"✅ Nova versão gerada com sucesso: {novo_arquivo_path.name}")
             else:
                 print(f"⚠️ O retorno do modelo para {arquivo.name} foi vazio.")
@@ -242,7 +271,7 @@ REGRAS DE RETORNO:
                     
                     with open(novo_arquivo_path, 'w', encoding='utf-8') as f:
                         f.write(texto_limpo)
-                    
+                    arquivar_versao_antiga(arquivo)
                     print(f"✅ Nova versão gerada com sucesso: {novo_arquivo_path.name}")
                 else:
                     print(f"⚠️ O retorno do modelo para {arquivo.name} foi vazio.")

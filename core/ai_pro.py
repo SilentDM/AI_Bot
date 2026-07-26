@@ -1,33 +1,23 @@
+# Exemplo básico para ai_pro.py usando OpenAI
 import os
-from typing import Any, Optional, Type
-from pydantic import BaseModel
-from dotenv import load_dotenv
+from openai import OpenAI
 
-load_dotenv()
 PRO_API_KEY = os.getenv("PRO_API_KEY")
-_faltando = []
-if not PRO_API_KEY:
-    _faltando.append("PRO_API_KEY")
-if _faltando:
-    raise SystemExit(
-        f"Erro de configuração: variável(is) ausente(s) no .env: {', '.join(_faltando)}.\n"
-        f"Verifique se o arquivo .env existe na raiz do projeto e contém essas chaves.\n"
-        f"(Esta checagem só roda quando AI_PROVIDER=pro está ativo em ai_utils.py)"
-    )
+client = OpenAI(api_key=PRO_API_KEY) if PRO_API_KEY else None
 
+def ask_ai(contents, system_instruction=None, temperature=0.7, response_schema=None, **kwargs):
+    messages = []
+    if system_instruction:
+        messages.append({"role": "system", "content": system_instruction})
+    messages.append({"role": "user", "content": str(contents)})
+    
+    kwargs_call = {
+        "model": "gpt-4o-mini",
+        "messages": messages,
+        "temperature": temperature,
+    }
+    if response_schema:
+        kwargs_call["response_format"] = response_schema
 
-def ask_ai(
-    contents: Any = None,
-    system_instruction: Optional[str] = None,
-    temperature: Optional[float] = None,
-    response_schema: Optional[Type[BaseModel]] = None
-) -> str:
-    """
-    Implementação do provedor Pro. Precisa devolver uma string de resposta,
-    igual ai_gemini.ask_ai() devolve — inclusive suportando response_schema
-    (saída estruturada em JSON) se o provedor escolhido permitir, já que
-    wbuilder.py depende disso para o ActionPlan.
-    """
-    raise NotImplementedError(
-        "Provedor 'pro' ainda não implementado. Defina qual API vai completar este arquivo."
-    )
+    response = client.beta.chat.completions.parse(**kwargs_call)
+    return response.choices[0].message.content

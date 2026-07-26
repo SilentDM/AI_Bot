@@ -3,21 +3,23 @@ import tkinter as tk
 import engine.project_utils as pu
 from tkinter import ttk, messagebox
 from pathlib import Path
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 
-ENV_PATH = Path(pu.PROJECT_ROOT / ".env")
-load_dotenv(pu.PROJECT_ROOT / ".env")
+# Tenta localizar o arquivo .env de forma dinâmica (mesma lógica que o python-dotenv usa)
+_found_env = find_dotenv()
+if _found_env:
+    ENV_PATH = Path(_found_env).resolve()
+else:
+    ENV_PATH = (pu.PROJECT_ROOT / ".env").resolve()
+
+# Carrega as variáveis de ambiente
+load_dotenv(ENV_PATH)
+
 
 class SetupWizard:
     """
     Janela de configuração inicial (primeira execução).
     Pede, em sequência, cada informação necessária para o .env.
-
-    Os passos NÃO são uma lista fixa: depois que o usuário escolhe qual
-    provedor de IA vai usar (Gemini gratuito ou "Pro"), o próximo passo
-    muda dinamicamente para pedir a chave certa — nunca as duas juntas.
-    Por isso _passos() é um MÉTODO (recalculado a cada navegação), e não
-    uma lista fixa definida uma única vez.
     """
 
     def __init__(self):
@@ -39,20 +41,20 @@ class SetupWizard:
         self.root.mainloop()
 
     # ------------------------------------------------------------------
-    # VISUAL (mesma paleta dark do resto do programa)
+    # VISUAL (Dark Mode)
     # ------------------------------------------------------------------
     def _montar_estilo(self):
         style = ttk.Style()
         style.theme_use("clam")
-        style.configure(".", background="#121212", foreground="#e3e3e3",fieldbackground="#1e1e1e", font=("Segoe UI", 10))
+        style.configure(".", background="#121212", foreground="#e3e3e3", fieldbackground="#1e1e1e", font=("Segoe UI", 10))
         style.configure("TButton", background="#252526", foreground="#e3e3e3", padding=6)
         style.map("TButton", background=[("active", "#333333")])
         style.configure("TEntry", fieldbackground="#252526", foreground="#ffffff")
         style.configure("TCombobox", fieldbackground="#252526", foreground="#ffffff")
-        style.map("TCombobox", fieldbackground=[("readonly", "#252526")],foreground=[("readonly", "#ffffff")])
-        style.configure("Titulo.TLabel", background="#121212", foreground="#10b981",font=("Segoe UI", 13, "bold"))
-        style.configure("Descricao.TLabel", background="#121212", foreground="#aaaaaa",font=("Segoe UI", 9), wraplength=460, justify="left")
-        style.configure("Passo.TLabel", background="#121212", foreground="#666666",font=("Segoe UI", 8))
+        style.map("TCombobox", fieldbackground=[("readonly", "#252526")], foreground=[("readonly", "#ffffff")])
+        style.configure("Titulo.TLabel", background="#121212", foreground="#10b981", font=("Segoe UI", 13, "bold"))
+        style.configure("Descricao.TLabel", background="#121212", foreground="#aaaaaa", font=("Segoe UI", 9), wraplength=460, justify="left")
+        style.configure("Passo.TLabel", background="#121212", foreground="#666666", font=("Segoe UI", 8))
 
     def _montar_layout(self):
         container = ttk.Frame(self.root)
@@ -68,12 +70,10 @@ class SetupWizard:
         self.lbl_descricao = ttk.Label(container, style="Descricao.TLabel")
         self.lbl_descricao.pack(anchor=tk.W, pady=(0, 15))
 
-        # Campo de texto/senha (usado quando o passo NÃO é um dropdown)
         self.entry_var = tk.StringVar()
         self.entry = ttk.Entry(container, textvariable=self.entry_var, font=("Segoe UI", 11))
         self.entry.bind("<Return>", lambda e: self._avancar())
 
-        # Dropdown (usado quando o passo É uma escolha entre opções, ex: provedor de IA)
         self.combo = ttk.Combobox(container, state="readonly", font=("Segoe UI", 11))
         self._opcoes_atuais = []
 
@@ -90,17 +90,9 @@ class SetupWizard:
         self.btn_avancar.pack(side=tk.RIGHT)
 
     # ------------------------------------------------------------------
-    # DEFINIÇÃO DOS PASSOS (dinâmica — depende de respostas anteriores)
+    # PASSO A PASSO
     # ------------------------------------------------------------------
     def _passos(self):
-        """
-        Retorna a lista de passos ATUAL, considerando o que já foi
-        respondido até agora. Cada item é uma tupla:
-        (chave_env, título, descrição, obrigatório, tipo, valor_padrão, opções)
-
-        tipo: "texto" | "senha" | "dropdown"
-        opções: só usado quando tipo == "dropdown" -> lista de (valor_interno, rótulo_exibido)
-        """
         passos = [
             ("PASTA_PROJETO", "Pasta do Projeto",
             "Nome da pasta onde o seu mundo/lore será construído.\n"
@@ -120,36 +112,29 @@ class SetupWizard:
             ]),
         ]
 
-        # --- Passo condicional: a chave certa, de acordo com o provedor escolhido acima ---
         provedor = self.valores.get("AI_PROVIDER", "gemini")
         if provedor == "pro":
             passos.append((
                 "PRO_API_KEY", "Chave da IA Pro",
-                "Cole aqui a chave de API do provedor 'Pro' que você vai usar\n"
-                "(ex: a chave da conta paga do seu amigo). OBRIGATÓRIO.",
+                "Cole aqui a chave de API do provedor 'Pro' que você vai usar.\nOBRIGATÓRIO.",
                 True, "senha", "", None
             ))
         else:
             passos.append((
                 "GOOGLE_API_KEY", "Chave da API do Gemini",
-                "Cole aqui sua chave gratuita da API do Google Gemini.\n"
-                "Este campo é OBRIGATÓRIO — o programa não funciona sem ele.",
+                "Cole aqui sua chave gratuita da API do Google Gemini.\nOBRIGATÓRIO.",
                 True, "senha", "", None
             ))
 
         passos.append((
             "DISCORD_TOKEN", "Token do Discord (opcional)",
             "Cole aqui o token do seu bot do Discord.\n"
-            "Deixe em branco se você não for usar o bot do Discord —\n"
-            "essa parte do programa fica automaticamente desativada.",
+            "Deixe em branco se não for utilizar o bot.",
             False, "senha", "", None
         ))
 
         return passos
 
-    # ------------------------------------------------------------------
-    # NAVEGAÇÃO ENTRE OS PASSOS
-    # ------------------------------------------------------------------
     def _mostrar_passo(self, indice):
         passos = self._passos()
         self.passo_atual = indice
@@ -199,9 +184,6 @@ class SetupWizard:
 
         self._salvar_passo_atual()
 
-        # IMPORTANTE: recalculamos os passos DEPOIS de salvar, porque a
-        # resposta que acabou de ser salva (ex: qual provedor de IA) pode
-        # ter mudado quais passos vêm a seguir.
         passos_atualizados = self._passos()
         if self.passo_atual < len(passos_atualizados) - 1:
             self._mostrar_passo(self.passo_atual + 1)
@@ -213,8 +195,6 @@ class SetupWizard:
         chave, titulo, descricao, obrigatorio, tipo, padrao, opcoes = passos[self.passo_atual]
         if tipo == "dropdown":
             rotulo_escolhido = self.combo.get()
-            # Converte o rótulo visível (ex: "Gemini (gratuito...)")
-            # de volta para o valor interno gravado no .env (ex: "gemini")
             valor_interno = next((v for v, r in opcoes if r == rotulo_escolhido), padrao)
             self.valores[chave] = valor_interno
         else:
@@ -229,9 +209,6 @@ class SetupWizard:
             self.root.destroy()
             raise SystemExit("Configuração inicial cancelada pelo usuário.")
 
-    # ------------------------------------------------------------------
-    # FINALIZAÇÃO: GRAVA O .env
-    # ------------------------------------------------------------------
     def _finalizar(self):
         linhas = [
             f"AI_PROVIDER={self.valores.get('AI_PROVIDER', 'gemini')}",
@@ -240,7 +217,6 @@ class SetupWizard:
             f"PASTA_ESTILO={self.valores.get('PASTA_ESTILO', 'Style')}",
         ]
 
-        # Grava só a chave do provedor que foi de fato escolhido.
         if self.valores.get("AI_PROVIDER") == "pro":
             linhas.append(f"PRO_API_KEY={self.valores.get('PRO_API_KEY', '')}")
         else:
@@ -260,16 +236,18 @@ class SetupWizard:
 def garantir_env():
     """
     Garante que o arquivo .env exista com as configurações necessárias.
-    Se não existir, abre o assistente gráfico (SetupWizard) — só acontece
-    na primeira execução do programa.
-
-    IMPORTANTE: esta função deve ser chamada bem no início de qualquer script
-    de entrada (gui.py, dbot.py), ANTES de importar ai_utils, project_utils, etc.
-    Esses módulos leem variáveis de ambiente assim que são importados.
+    Usa busca inteligente por find_dotenv() para sincronizar com o resto da aplicação.
     """
-    if not ENV_PATH.exists():
+    # Checa tanto pela função inteligente do dotenv quanto pelos caminhos do projeto
+    found_path = find_dotenv()
+    env_existe = (
+        bool(found_path and Path(found_path).exists())
+        or ENV_PATH.exists()
+        or (pu.PROJECT_ROOT / ".env").exists()
+        or (Path.cwd() / ".env").exists()
+    )
+
+    if not env_existe:
         wizard = SetupWizard()
         if not wizard.concluido:
             raise SystemExit("Configuração inicial não foi concluída. Encerrando.")
-
-    
