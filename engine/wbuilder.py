@@ -96,6 +96,9 @@ class ActionPlan(BaseModel):
 def taskplanner(maxiterations: int = 1, reason: Optional[str] = "O projeto esteja concluído"):
     print(f"O iterationschoice retornou que vamos precisar de {maxiterations} iterações! Vamos começar o Taskplanner!")
     while maxiterations>0:
+        if pu.is_cancelled():
+            print("\n🛑 Processamento do Expander interrompido pelo usuário!")
+            return
         instrucao_sistema = f"""
 Você é um especialista em worldbuilding para RPG.
 Analise o projeto e identifique quais ações são necessárias para:
@@ -173,6 +176,9 @@ Crie o plano de ação no formato JSON estruturado com as próximas etapas prior
             enactchoices(actions)
             print("1 iteração concluída!")
             maxiterations -= 1
+            if pu.is_cancelled():
+                print("\n🛑 Processamento do Expander interrompido pelo usuário!")
+                return
         except Exception as e:
             print(f"Erro na resposta do TaskPlanner: {e}")
             print("1 iteração concluída!")
@@ -183,6 +189,9 @@ Crie o plano de ação no formato JSON estruturado com as próximas etapas prior
 def enactchoices(actions):
     print("Enactchoices Iniciado!")
     for action in actions:
+        if pu.is_cancelled():
+            print("\n🛑 Processamento do Expander interrompido pelo usuário!")
+            return
         tipo = action["type"]
         path = action.get("path", "")
         objective = action.get("objective", "")

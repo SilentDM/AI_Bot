@@ -1,8 +1,7 @@
-import os, re, json
+import os, re, json, threading, unicodedata, difflib
 from pathlib import Path
 from datetime import datetime
-import unicodedata
-import difflib
+
 
 PASTA_PROJETO = os.getenv("PASTA_PROJETO", "Phaeton")
 CAMINHO_PROJETO = os.path.join(os.getcwd(), PASTA_PROJETO)
@@ -22,6 +21,70 @@ IGNORELIST = [
     "status: rascunho"
 ]
 
+STOP_WORDS = {
+    "de", "da", "do", "das", "dos", "em", "no", "na", "nos", "nas", 
+    "o", "a", "os", "as", "e", "the", "of", "and", "in", "on", "para", "com"
+}
+
+def normalizar_nome(nome: str) -> str:
+    """Normaliza o nome removendo extensão, sufixos de versão, acentos e separadores."""
+    nome = Path(nome).stem  # Remove extensão .md se houver
+    nome = re.sub(r'_v\d+$', '', nome, flags=re.IGNORECASE)  # Remove sufixos como _v01
+    nome = unicodedata.normalize("NFKD", nome).encode("ASCII", "ignore").decode("ASCII")
+    nome = nome.lower().strip()
+    # Substitui separadores comuns (underlines, hífens, pontos) por espaços
+    nome = re.sub(r'[_\-+.]', ' ', nome)
+    nome = re.sub(r'\s+', ' ', nome).strip()
+    return nome
+
+def extrair_palavras_chave(nome: str):
+    """Retorna o nome normalizado completo e uma lista com suas palavras-chave relevantes."""
+    norm = normalizar_nome(nome)
+    palavras = norm.split()
+    
+    # Filtra palavras curtas (<=2 letras) e stop words (de, da, do...)
+    # Também remove 's' do final para tratar singular/plural simples
+    palavras_relevantes = []
+    for p in palavras:
+        if len(p) > 2 and p not in STOP_WORDS:
+            if p.endswith('s') and len(p) > 3:
+                p = p[:-1]
+            palavras_relevantes.append(p)
+            
+    return norm, palavras_relevantes
+
+def existe_nome_parecido(nome_proposto: str, pasta_destino: Path, limiar: float = 0.65):
+    """
+    Verifica se já existe na pasta_destino um arquivo/pasta com nome igual,
+    parecido, contido ou compartilhando palavras-chave principais.
+    Retorna o nome do item existente se encontrar, ou None caso contrário.
+    """
+    if not pasta_destino.exists():
+        return None
+
+    alvo_norm, alvo_kw = extrair_palavras_chave(nome_proposto)
+
+    for item in pasta_destino.iterdir():
+        existente_norm, existente_kw = extrair_palavras_chave(item.name)
+
+        # 1. Comparação Direta por Porcentagem de Similaridade (ex: Segredo vs Segreod)
+        similaridade = difflib.SequenceMatcher(None, alvo_norm, existente_norm).ratio()
+        if similaridade >= limiar:
+            return item.name
+
+        # 2. Inclusão por Substring (ex: "Eras" em "Eras_de_Phaeton" ou vice-versa)
+        if len(existente_norm) >= 3 and len(alvo_norm) >= 3:
+            if existente_norm in alvo_norm or alvo_norm in existente_norm:
+                return item.name
+
+        # 3. Interseção de Palavras-Chave Principais (ex: "Eras" compartilhada como token)
+        for kw_alvo in alvo_kw:
+            for kw_existente in existente_kw:
+                if kw_alvo == kw_existente or kw_alvo in kw_existente or kw_existente in kw_alvo:
+                    return item.name
+
+    return None
+
 def log_path(nome):
     return PASTA_LOGS / nome
 
@@ -38,36 +101,6 @@ def detectar_intencao(pergunta):
     elif "por que" in pergunta_lower or "porque" in pergunta_lower:
         return "Foque na causa"
     return ""
-
-def normalizar_nome(nome: str) -> str:
-    nome = Path(nome).stem  # remove extensão, se houver
-    nome = unicodedata.normalize("NFKD", nome).encode("ASCII", "ignore").decode("ASCII")
-    nome = nome.lower().strip()
-    if nome.endswith("s") and len(nome) > 3:
-        nome = nome[:-1]
-    return nome
-
-def existe_nome_parecido(nome_proposto: str, pasta_destino: Path, limiar: float = 0.65):
-    """
-    Verifica se já existe, na pasta_destino, algum arquivo ou subpasta com nome
-    muito parecido ao nome_proposto (mesmo que não seja idêntico).
-    Retorna o nome existente parecido, ou None se não encontrar nada.
-
-    'limiar' vai de 0 a 1: quanto mais perto de 1, mais exigente é a exigência
-    de parecença (0.85 já pega coisas como "Segredos" vs "Segredo").
-    """
-    if not pasta_destino.exists():
-        return None
-
-    alvo = normalizar_nome(nome_proposto)
-
-    for item in pasta_destino.iterdir():
-        existente = normalizar_nome(item.name)
-        similaridade = difflib.SequenceMatcher(None, alvo, existente).ratio()
-        if similaridade >= limiar:
-            return item.name
-
-    return None
 
 def currentdate():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -190,3 +223,18 @@ def carregar_projeto():
         conteudo_total.append(f"\n==== {f_path.name} ====\n{content}\n")
         
     return "\n\n".join(conteudo_total)
+
+# Sinalizador global de cancelamento
+_CANCEL_EVENT = threading.Event()
+
+def request_cancellation():
+    """Dispara a solicitação de parada para todas as threads em execução."""
+    _CANCEL_EVENT.set()
+
+def reset_cancellation():
+    """Reseta o sinalizador antes de iniciar uma nova tarefa."""
+    _CANCEL_EVENT.clear()
+
+def is_cancelled() -> bool:
+    """Verifica se o usuário pediu para interromper a execução."""
+    return _CANCEL_EVENT.is_set()

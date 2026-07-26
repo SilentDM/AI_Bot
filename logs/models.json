@@ -4,15 +4,7 @@
         "display_name": "Gemini 2.5 Flash",
         "maxinputtokens": 1048576,
         "responsetime": 0.658,
-        "supports_tools": true,
-        "supports_images": false
-    },
-    {
-        "name": "models/gemini-robotics-er-1.6-preview",
-        "display_name": "Gemini Robotics-ER 1.6 Preview",
-        "maxinputtokens": 131072,
-        "responsetime": 1.2733,
-        "supports_tools": true,
+        "supports_tools": false,
         "supports_images": false
     },
     {
@@ -77,6 +69,14 @@
         "maxinputtokens": 1048576,
         "responsetime": 6.5344,
         "supports_tools": false,
+        "supports_images": false
+    },
+    {
+        "name": "models/gemini-robotics-er-1.6-preview",
+        "display_name": "Gemini Robotics-ER 1.6 Preview",
+        "maxinputtokens": 131072,
+        "responsetime": 1.2733,
+        "supports_tools": true,
         "supports_images": false
     }
 ]

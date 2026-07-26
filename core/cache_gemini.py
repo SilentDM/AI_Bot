@@ -20,7 +20,7 @@ def prepare_world_context(ttl_hours=12):
     if arquivo.exists():
         ultima_mod = os.path.getmtime(arquivo)
         idade_horas = (time.time() - ultima_mod) / 3600
-        if idade_horas <= 24:
+        if idade_horas <= 12:  # Ajustado para bater com ttl_hours
             with open(arquivo, "r", encoding="utf-8") as f:
                 dados = json.load(f)
             print(f"Using existing {dados.get('type', 'cache')}: {dados['id']}")
@@ -73,17 +73,18 @@ def prepare_world_context(ttl_hours=12):
             registro = {
                 "type": "cache",
                 "id": cache.name,
+                "model": model_name,  # 👈 NOVO: Guarda o modelo criador do cache
                 "created": pu.currentdate()
             }
             with open(arquivo, "w", encoding="utf-8") as f:
-                json.dump(registro, f, ensure_ascii=False, indent=4) # Fixed json.dump
+                json.dump(registro, f, ensure_ascii=False, indent=4)
             return registro
 
         except Exception as e:
             print(f"{model_name} does not support cache: {e}")
 
     # 4. Fallback: Files API (If all models fail due to Free Tier limit=0)
-    print("ℹContext Caching unavailable on this API tier. Falling back to Files API(Free).")
+    print("ℹ Context Caching unavailable on this API tier. Falling back to Files API(Free).")
     
     bundle_path = pu.log_path("world_bundle.txt")
     with open(bundle_path, "w", encoding="utf-8") as f:

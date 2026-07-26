@@ -28,9 +28,9 @@ def arquivar_versao_antiga(caminho_original):
 
         # Mover o arquivo original para o histórico
         shutil.move(str(caminho_original), str(destino_arquivo))
-        print(f"📦 Versão antiga arquivada em: {destino_arquivo}")
+        print(f"Versão antiga arquivada em: {destino_arquivo}")
     except Exception as e:
-        print(f"⚠️ Erro ao arquivar versão antiga ({caminho_original.name}): {e}")
+        print(f"Erro ao arquivar versão antiga ({caminho_original.name}): {e}")
 
 def obter_arquivos_relacionados(titulo):
     relacionados = []
@@ -191,97 +191,22 @@ REGRAS DE RETORNO:
             print(f"❌ Erro ao processar {arquivo.name}: {e}")
 
 def processar_arquivos():
-    tagx=0
-    estilo_contexto = carregar_diretrizes_estilo()
-    instrucoes_globais = f"""
-    Você é um Mestre de Mesa (DM) de D&D experiente e escritor de fantasia sombria (Dark Fantasy).
-    Seu objetivo é preencher lacunas de desenvolvimento do cenário de {pu.PASTA_PROJETO}.
-    # Diretrizes e Regras Adicionais do Projeto:
-    {estilo_contexto}
-    """
-
     caminho_projeto = Path(pu.PASTA_PROJETO)
+    encontrou_tag = False
+    
     for arquivo in caminho_projeto.rglob("*.md"):
+        if pu.is_cancelled():
+            print("\n🛑 Processamento do Expander interrompido pelo usuário!")
+            return
         with open(arquivo, 'r', encoding='utf-8') as f:
-            linhas = f.readlines()
-            conteudo = "".join(linhas)
-            titulo = Path(arquivo).stem
-            titulo = re.sub(r'_v\d+$', '', titulo.lower())
-        tag_encontrada = next((tag for tag in pu.TAG_ALVO if tag in conteudo), None)
-        if tag_encontrada:
-            print(f"\n=====\nTag encontrada no arquivo:\n{arquivo.name}\n=====")
-            tagx=1
-            info_locais = ""
-            for arquivo_local in arquivo.parent.glob("*.md"):
-                if nome_base(arquivo_local) != nome_base(arquivo):
-                    with open(arquivo_local, "r", encoding="utf-8") as f:
-                        conteudo_local = f.read()
-                        if (
-                            any(tag in conteudo_local for tag in pu.TAG_ALVO)
-                            or "status: rascunho" in conteudo_local.lower()
-                            ):
-                            continue
-                        else:
-                            with open(arquivo_local, "r", encoding="utf-8") as f:
-                                info_locais += f.read() + "\n\n"
+            conteudo = f.read()
             
-            info_importante = obter_arquivos_relacionados(titulo)
+        if any(tag in conteudo for tag in pu.TAG_ALVO):
+            encontrou_tag = True
+            processar_arquivo_unico(arquivo)
             
-            # Contexto de dados específicos do arquivo a ser modificado
-            prompt_conteudo = f"""
-Por favor, analise as informações abaixo para preencher as lacunas marcadas no arquivo de destino.
-
-INFORMAÇÕES LOCAIS DO AMBIENTE (Arquivos da mesma pasta para consistência):
-{info_locais}
-
-INFORMAÇÕES IMPORTANTES RELACIONADAS:
-{info_importante}
-
-CONTEÚDO ORIGINAL DO ARQUIVO ATUAL ({arquivo.name}):
-{conteudo}
-
-TAREFA:
-No conteúdo do arquivo atual, identifique a linha que começa com a variação de To-Do '{tag_encontrada}'.
-Substitua essa linha pelo conteúdo expandido de forma criativa, mantendo total coesão com a história local e as diretrizes de {pu.PASTA_PROJETO}.
-
-REGRAS DE RETORNO:
-1. Retorne o texto completo do arquivo original, incluindo a modificação feita.
-2. Preserve rigorosamente a formatação Markdown existente.
-3. Não acrescente prefácios, comentários explicativos ou notas sobre o que você modificou. Retorne apenas o conteúdo final do arquivo editado.
-"""
-
-            try:
-                # Opcional: Registrar o prompt gerado para fins de depuração
-                with open(pu.log_path("Prompts.txt"), 'w', encoding='utf-8') as f:
-                    f.write(f"Alterando Arquivo: {arquivo.name}\n")
-                    f.write(prompt_conteudo + '\n')
-                    
-                # Substituição da chamada nativa pela função estruturada ask_ai
-                # Graças ao ask_ai, a verificação de fallbacks de modelos e limites de taxa é herdada automaticamente.
-                texto_expandido = au.ask_ai(
-                    contents=prompt_conteudo,
-                    system_instruction=instrucoes_globais,
-                    temperature=0.7,
-                    use_world_context=True
-                )
-                
-                if texto_expandido:
-                    texto_limpo = remover_markdown_fences(texto_expandido)
-                    novo_arquivo_path = obter_proximo_nome_versao(arquivo)
-                    
-                    with open(novo_arquivo_path, 'w', encoding='utf-8') as f:
-                        f.write(texto_limpo)
-                    arquivar_versao_antiga(arquivo)
-                    print(f"✅ Nova versão gerada com sucesso: {novo_arquivo_path.name}")
-                else:
-                    print(f"⚠️ O retorno do modelo para {arquivo.name} foi vazio.")
-                
-            except Exception as e:
-                print(f"❌ Erro ao processar {arquivo.name}: {e}")
-                
-    if tagx==0:
-        print("Nenhuama tag encontrada")
-        return
+    if not encontrou_tag:
+        print("Nenhuma tag encontrada.")
 
 if __name__ == "__main__":
     processar_arquivos()

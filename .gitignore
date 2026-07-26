@@ -199,3 +199,4 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 LastResponse.json
+/logs/history

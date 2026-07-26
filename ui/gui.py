@@ -240,11 +240,17 @@ class AoDesktopApp:
 
     def _build_worldbuilder_page(self, parent):
         frame = ttk.Frame(parent)
-        self._page_header(frame, "WorldBuilder & Expander", "Dispare tarefas de expansão automática do seu mundo em segundo plano.")
-
+        self._page_header(frame, "WorldBuilder & Expander", "Dispare ou interrompa tarefas de expansão automática do seu mundo.")
         body = ttk.Frame(frame)
         body.pack(fill=tk.BOTH, expand=True, padx=15, pady=5)
 
+        # BARRA DE EMERGÊNCIA (Botão Parar)
+        stop_box = ttk.LabelFrame(body, text=" Controle de Emergência ")
+        stop_box.pack(fill=tk.X, pady=(0, 15))
+        self.btn_stop = ttk.Button(stop_box, text="⛔ PARAR EXECUÇÃO ATUAL", command=self.stop_all_tasks)
+        self.btn_stop.pack(fill=tk.X, padx=10, pady=10)
+        
+        # Expander Box
         expander_box = ttk.LabelFrame(body, text=" Expander (preenche lacunas marcadas com TO DO) ")
         expander_box.pack(fill=tk.X, pady=(0, 15))
         self.btn_expander = ttk.Button(expander_box, text="▶  Executar Tarefa do Expander", command=self.start_expander_thread)
@@ -253,7 +259,8 @@ class AoDesktopApp:
         self.lbl_expander.pack(anchor=tk.W, padx=10, pady=(0, 10))
         self.btn_rebuild_context = ttk.Button(expander_box, text="Reconstruir Contexto do Mundo", command=self.rebuild_world_context)
         self.btn_rebuild_context.pack(fill=tk.X, padx=10, pady=5)
-
+        
+        # WorldBuilder Box
         wb_box = ttk.LabelFrame(body, text=" WorldBuilder (planeja e executa expansão autônoma) ")
         wb_box.pack(fill=tk.X)
         ttk.Label(wb_box, text="Objetivo:").pack(anchor=tk.W, padx=10, pady=(10, 0))
@@ -265,6 +272,7 @@ class AoDesktopApp:
         self.lbl_worldbuilder = ttk.Label(wb_box, text="Status: Inativo")
         self.lbl_worldbuilder.pack(anchor=tk.W, padx=10, pady=(0, 10))
 
+        # Memories Box
         db_box = ttk.LabelFrame(body, text=" Gerenciamento ")
         db_box.pack(fill=tk.X, pady=(15, 0))
         self.btn_delete_memories = ttk.Button(db_box, text="❌ Excluir Todas as Memórias", command=self.delete_memories)
@@ -410,7 +418,7 @@ class AoDesktopApp:
         if self.expander_running:
             messagebox.showwarning("Aviso", "O Expander já está em execução.")
             return
-
+        pu.reset_cancellation()
         self.expander_running = True
         self.btn_expander.config(state=tk.DISABLED)
         self.lbl_expander.config(text="Status: Executando...", foreground="#60a5fa")
@@ -462,7 +470,7 @@ class AoDesktopApp:
         if self.worldbuilder_running:
             messagebox.showwarning("Aviso", "O WorldBuilder já está em execução.")
             return
-
+        pu.reset_cancellation()
         self.worldbuilder_running = True
         self.btn_worldbuilder.config(state=tk.DISABLED)
         self.lbl_worldbuilder.config(text="Status: Executando...", foreground="#60a5fa")
@@ -577,6 +585,16 @@ class AoDesktopApp:
             print(f"Encerramento do Discord: {e}")
         finally:
             self.root.destroy()
+
+    # ------------------------------------------------------------------
+    # PARAR EXECUÇÕES
+    # ------------------------------------------------------------------
+    def stop_all_tasks(self):
+        """Solicita a interrupção imediata de qualquer tarefa rodando em background."""
+        pu.request_cancellation()
+        self.log_activity("🛑 Solicitação de interrupção enviada pelo usuário...")
+        self.toast("🛑 Interrompendo tarefas em execução...")
+
 
 def main():
     root = tk.Tk()

@@ -1,11 +1,8 @@
-import os, time, re, glob, tiktoken
+import os, time, re, glob
 import core.ai_utils as au
 from pathlib import Path
 
 MEMORIES_DIR = "memories"
-enc = tiktoken.get_encoding("cl100k_base")
-
-# Garante que a pasta memories exista no caminho do projeto
 os.makedirs(MEMORIES_DIR, exist_ok=True)
 
 def sanitize_name(name):
@@ -152,8 +149,8 @@ def salvar_memoria(guild_id, guild_name, userid, user_name, prompt, resposta):
         conteudo = f.read()
 
     # 'enc' deve ser o seu codificador de tokens configurado previamente (ex: tiktoken)
-    tamanho = len(enc.encode(conteudo))
-    if tamanho > 20480:
+    tamanho_estimado_tokens = len(conteudo) // 4
+    if tamanho_estimado_tokens > 20480:
         print(f"Memória de {user_name} excedeu o tamanho máximo. Gerando resumo...")
         
         # Chamada da função de resumo atualizada

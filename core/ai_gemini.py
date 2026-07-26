@@ -24,6 +24,7 @@ DEFAULT_SYSTEM_INSTRUCTION = "You are a helpful assistant that explains things a
 DEFAULT_TEMPERATURE = 0.6  # Changed to a float (the API expects a float, not a string)
 DEFAULT_CONTENTS = "Please repeat: I did not receive a correct prompt, your coding has failed somewhere."
 MAX_TOKENS = 20480
+_last_call_time = 0
 
 def _is_rate_limit_error(e: Exception) -> bool:
     """Detecta se a exceção é referente a estouro de limite de taxa (HTTP 429 / Quota)."""
@@ -111,34 +112,13 @@ def findmodel(file_path=pu.log_path("models.json")):
                 )
             )
 
-        with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(working_models, f, indent=4)
-        print("Lista de modelos disponíveis Criada!")
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(working_models, f, indent=4)
+    print("Lista de modelos disponíveis Criada!")
 
-def load_projeto_images():
-    parts = []
-    pasta_projeto = pu.CAMINHO_PROJETO
-    if pasta_projeto.exists():
-        print("Carregando Imagens para o projeto!")
-        for img_path in pasta_projeto.rglob("*.png", ".jpg", ".webp", ".jpeg"):
-            try:
-                #print(f"🖼️ [Local API] Automatically attaching map/region image: {img_path.name}")
-                with open(img_path, "rb") as f:
-                    img_data = f.read()
-                parts.append(
-                    types.Part.from_bytes(
-                        data=img_data,
-                        mime_type="image/png"
-                    )
-                )
-            except Exception as e:
-                print(f"Erro carregando imagem: {img_path.name}: {e}")
-    return parts
-
-def generate_content_with_fallback(contents: Any, config: types.GenerateContentConfig, max_rate_limit_retries: int = 3) -> Any:
-    attempt = 1
+def generate_content_with_fallback(contents: Any, config: types.GenerateContentConfig, cache_model: Optional[str] = None) -> Any:
     try:
-        with open(pu.log_path("models.json"),"r",encoding="utf-8") as f:
+        with open(pu.log_path("models.json"), "r", encoding="utf-8") as f:
             data = json.load(f)
         if not data:
             raise ValueError("models.json está vazio")
@@ -146,66 +126,54 @@ def generate_content_with_fallback(contents: Any, config: types.GenerateContentC
         print(f"Problema com models.json: {e}")
         print("Recriando lista de modelos...")
         findmodel()
-        with open(pu.log_path("models.json"),"r",encoding="utf-8") as f:
+        with open(pu.log_path("models.json"), "r", encoding="utf-8") as f:
             data = json.load(f)
-        
 
     for model in data:
-        model_name = model["name"]  # Extract the name key here
-        print(f"🔮 Attempting to generate content using model: {model}!")
-        if model.get("supports_images", False):
-            print("Esse modelo suporta imagens!")
-            images = load_projeto_images()
-            if images:
-                if isinstance(contents, list):
-                    final_contents = list(contents) + images
-                else:
-                    final_contents = [contents] + images
-            else:
-                final_contents = contents
-        else:
-            final_contents = contents
-
+        model_name = model["name"]
+        print(f"Tentando gerar conteúdo no modelo: {model_name}...")
         config_to_use = config.model_copy(deep=True)
+
+        # 🛡️ PROTEÇÃO CONTRA INCOMPATIBILIDADE DE CACHE:
+        # Se o cache foi gerado para outro modelo (ex: Modelo 1), limpamos a propriedade
+        # 'cached_content' no Modelo 2 para evitar que a API rejeite a chamada.
+        if config_to_use.cached_content and cache_model and cache_model != model_name:
+            print(f"Cache {config_to_use.cached_content} pertence ao modelo '{cache_model}'. Removendo cache para tentar com '{model_name}'.")
+            config_to_use.cached_content = None
+
+        # Ferramentas de busca
         if model.get("supports_tools", False):
-            config_to_use.tools = [
-                types.Tool(google_search=types.GoogleSearch())
-            ]
+            config_to_use.tools = [types.Tool(google_search=types.GoogleSearch())]
         else:
             config_to_use.tools = []
-            print(f"🔒 Tools unavailable for {model_name}")
-        
-        for rate_attempt in range(1, max_rate_limit_retries + 1):
-            try:
-                response = GEMINICLIENT.models.generate_content(
-                    model=model_name,
-                    contents=final_contents,
-                    config=config_to_use
-                )
 
-                if response and response.text:
-                    return response
+        try:
+            response = GEMINICLIENT.models.generate_content(
+                model=model_name,
+                contents=contents,
+                config=config_to_use
+            )
 
-            except Exception as e:
-                if _is_rate_limit_error(e):
-                    wait_time = 2 ** rate_attempt  # 2s, 4s, 8s...
-                    print(f"Rate Limit atingido no modelo {model_name}. Aguardando {wait_time}s (Tentativa {rate_attempt}/{max_rate_limit_retries})...")
-                    time.sleep(wait_time)
-                else:
-                    # Se for outro tipo de erro (ex: modelo descontinuado), interrompe retentativas desse modelo
-                    print(f"⚠️ Erro no modelo {model_name}: {e}")
-                    break
+            if response and response.text:
+                return response
+
+        except Exception as e:
+            if _is_rate_limit_error(e):
+                print(f"Rate Limit atingido no modelo {model_name}. Pulando imediatamente para o próximo...")
+        else:
+            print(f"Erro no modelo {model_name}: {e}")
         
         print(f"🔄 Passando para o próximo modelo da cadeia de fallback...")
 
     raise RuntimeError("Todos os modelos e tentativas de fallback falharam em gerar conteúdo.")
+
 
 def ask_ai(
     contents: Any = None, 
     system_instruction: Optional[str] = None, 
     temperature: Optional[float] = None,
     response_schema: Optional[Type[BaseModel]] = None,
-    use_world_context: Optional[bool]=True
+    use_world_context: Optional[bool] = True
 ) -> str:
     if not system_instruction:
         system_instruction = DEFAULT_SYSTEM_INSTRUCTION
@@ -214,19 +182,20 @@ def ask_ai(
     if contents is None:
         contents = DEFAULT_CONTENTS
     
-    # Build configuration arguments
     config_args = {
         "system_instruction": system_instruction,
         "temperature": temperature,
         "max_output_tokens": MAX_TOKENS
     }
 
-    # If a schema is specified, configure the response output format
     if response_schema:
         config_args["response_mime_type"] = "application/json"
         config_args["response_schema"] = response_schema
+        
     config = types.GenerateContentConfig(**config_args)
     contents_to_send = contents
+    cache_model = None
+
     if use_world_context:
         try:
             world_context = cg.prepare_world_context()
@@ -234,16 +203,16 @@ def ask_ai(
             
             if world_context["type"] == "file":
                 uploaded_file = GEMINICLIENT.files.get(name=world_context["id"])
-                contents_to_send = [uploaded_file,contents]
+                contents_to_send = [uploaded_file, contents]
             elif world_context["type"] == "cache":
                 config.cached_content = world_context["id"]
+                cache_model = world_context.get("model")  # 👈 Passa o nome do modelo criador do cache
         except Exception as e:
             print(f"⚠️ World Context unavailable: {e}")
             print("Continuing without cache or file.")
         
     with _api_lock:
-        response = generate_content_with_fallback(contents_to_send, config)
-        time.sleep(15)    
+        response = generate_content_with_fallback(contents_to_send, config, cache_model=cache_model)
         
     return response.text
 
