@@ -200,3 +200,6 @@ cython_debug/
 .cursorindexingignore
 LastResponse.json
 /logs/history
+exports/Livro_do_Cenario_Phaeton.html
+/Templates
+/logs

@@ -112,11 +112,11 @@ def remover_markdown_fences(texto: str) -> str:
 def processar_arquivo_unico(path):
     estilo_contexto = carregar_diretrizes_estilo()
     instrucoes_globais = f"""
-Você é um Mestre de Mesa (DM) de D&D experiente e escritor de fantasia sombria (Dark Fantasy).
-Seu objetivo é preencher lacunas de desenvolvimento do cenário de {pu.PASTA_PROJETO}.
-# Diretrizes e Regras Adicionais do Projeto:
-{estilo_contexto}
-"""
+    Você é um Mestre de Mesa (DM) de D&D experiente e escritor de fantasia sombria (Dark Fantasy).
+    Seu objetivo é preencher lacunas de desenvolvimento do cenário de {pu.PASTA_PROJETO}.
+    # Diretrizes e Regras Adicionais do Projeto:
+    {estilo_contexto}
+    """
     arquivo=Path(path)
     with open(arquivo, 'r', encoding='utf-8') as f:
         linhas = f.readlines()

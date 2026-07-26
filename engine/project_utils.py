@@ -20,11 +20,14 @@ IGNORELIST = [
     "Templates", 
     "status: rascunho"
 ]
+# Sinalizador global de cancelamento
+_CANCEL_EVENT = threading.Event()
 
 STOP_WORDS = {
     "de", "da", "do", "das", "dos", "em", "no", "na", "nos", "nas", 
     "o", "a", "os", "as", "e", "the", "of", "and", "in", "on", "para", "com"
 }
+ARQUIVO_ORDEM_GLOBAL = PASTA_LOGS / "folder_orders.json"
 
 def normalizar_nome(nome: str) -> str:
     """Normaliza o nome removendo extensão, sufixos de versão, acentos e separadores."""
@@ -224,9 +227,6 @@ def carregar_projeto():
         
     return "\n\n".join(conteudo_total)
 
-# Sinalizador global de cancelamento
-_CANCEL_EVENT = threading.Event()
-
 def request_cancellation():
     """Dispara a solicitação de parada para todas as threads em execução."""
     _CANCEL_EVENT.set()
@@ -238,3 +238,67 @@ def reset_cancellation():
 def is_cancelled() -> bool:
     """Verifica se o usuário pediu para interromper a execução."""
     return _CANCEL_EVENT.is_set()
+
+def carregar_mapa_ordens():
+    """Lê o arquivo central de ordenação em logs/folder_orders.json."""
+    if ARQUIVO_ORDEM_GLOBAL.exists():
+        try:
+            with open(ARQUIVO_ORDEM_GLOBAL, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+def salvar_ordem_pasta(caminho_pasta, lista_nomes_itens):
+    """Salva a lista ordenada de uma pasta específica no JSON central da pasta logs."""
+    try:
+        caminho_obj = Path(caminho_pasta).resolve()
+        raiz_obj = Path(CAMINHO_PROJETO).resolve()
+        rel_key = str(caminho_obj.relative_to(raiz_obj))
+    except ValueError:
+        rel_key = "ROOT"
+
+    if rel_key == ".":
+        rel_key = "ROOT"
+
+    mapa = carregar_mapa_ordens()
+    mapa[rel_key] = lista_nomes_itens
+
+    try:
+        with open(ARQUIVO_ORDEM_GLOBAL, "w", encoding="utf-8") as f:
+            json.dump(mapa, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"Erro ao salvar mapa de ordens central: {e}")
+
+def obter_itens_ordenados(caminho_pasta):
+    """Retorna a lista de itens da pasta ordenados de acordo com a preferência salva."""
+    try:
+        todos_itens = [i for i in os.listdir(caminho_pasta) if not i.startswith(".")]
+    except Exception:
+        return []
+
+    try:
+        caminho_obj = Path(caminho_pasta).resolve()
+        raiz_obj = Path(CAMINHO_PROJETO).resolve()
+        rel_key = str(caminho_obj.relative_to(raiz_obj))
+    except ValueError:
+        rel_key = "ROOT"
+
+    if rel_key == ".":
+        rel_key = "ROOT"
+
+    mapa = carregar_mapa_ordens()
+
+    if rel_key in mapa:
+        ordem_salva = mapa[rel_key]
+        
+        # Itens já mapeados ficam na posição gravada; novos arquivos vão para o final
+        def sort_key(nome_item):
+            if nome_item in ordem_salva:
+                return (0, ordem_salva.index(nome_item))
+            return (1, nome_item.lower())
+
+        return sorted(todos_itens, key=sort_key)
+
+    # Caso não tenha ordem gravada ainda, usa ordem alfabética padrão
+    return sorted(todos_itens, key=lambda x: x.lower())

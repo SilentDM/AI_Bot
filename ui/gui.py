@@ -1,8 +1,5 @@
-import threading
-import time
-import asyncio
+import os, threading, time, asyncio, sys
 import ui.explorer as expl
-import sys
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
 import engine.expander as ex
@@ -13,13 +10,14 @@ import ui.gui_logger as gl
 import ui.setup_env as se
 import core.cache_gemini as cg
 import engine.wbuilder as wb
+import engine.compiler as comp
 
 
-class AoDesktopApp:
+class SilentDesktopApp:
     def __init__(self, root):
         self.root = root
         self.user_name = "SilentDM"
-        self.root.title("Ao Multiverse Console")
+        self.root.title("Silent Multiverse Nexus")
         self.root.geometry("1300x700")
         self.root.minsize(1050, 550)
         self.root.state("zoomed")  # Windows
@@ -271,6 +269,13 @@ class AoDesktopApp:
         self.btn_worldbuilder.pack(fill=tk.X, padx=10, pady=(5, 10))
         self.lbl_worldbuilder = ttk.Label(wb_box, text="Status: Inativo")
         self.lbl_worldbuilder.pack(anchor=tk.W, padx=10, pady=(0, 10))
+
+        # Bloco de Exportação do Livro
+        export_box = ttk.LabelFrame(body, text=" Exportação do Cenário ")
+        export_box.pack(fill=tk.X, pady=(15, 0))
+        self.btn_export_book = ttk.Button(export_box, text="Gerar e Abrir Livro do Cenário (HTML/PDF)", command=self.export_sourcebook)
+        self.btn_export_book.pack(fill=tk.X, padx=10, pady=10)
+
 
         # Memories Box
         db_box = ttk.LabelFrame(body, text=" Gerenciamento ")
@@ -544,15 +549,16 @@ class AoDesktopApp:
         self.log_display.config(state=tk.DISABLED)
 
     # ------------------------------------------------------------------
-    # BOT DO DISCORD
+    # BOT DO DISCORD (Clean Shutdown Fix)
     # ------------------------------------------------------------------
     def start_discord_bot_thread(self):
         threading.Thread(target=self.run_discord_bot, daemon=True).start()
 
     def run_discord_bot(self):
+        loop = None
         try:
             self.log_activity("Iniciando bot do Discord em segundo plano...")
-            from bot import discordclient, TOKEN
+            from bot.dbot import discordclient, TOKEN
 
             if not TOKEN:
                 self.root.after(0, lambda: self.lbl_discord.config(text="Discord: Desativado", fg="#888888"))
@@ -565,22 +571,46 @@ class AoDesktopApp:
             self.root.after(0, lambda: self.lbl_discord.config(text="Discord: Online", fg="#10b981"))
             self.log_activity("Instância do Discord online.")
 
+            # discordclient.start() fica rodando aqui até ser fechado por client.close()
             loop.run_until_complete(discordclient.start(TOKEN))
+
         except Exception as e:
             self.log_activity(f"Exceção no Discord: {e}")
             self.root.after(0, lambda: self.lbl_discord.config(text="Discord: Offline/Erro", fg="#ef4444"))
         finally:
-            self.discord_loop = None
+            # LIMPEZA ELEGANTE DE TAREFAS PENDENTES (Elimina o aviso 'Task was destroyed')
+            if loop and not loop.is_closed():
+                try:
+                    # Cancela quaisquer tarefas pendentes do asyncio/aiohttp no loop
+                    pending = asyncio.all_tasks(loop)
+                    for task in pending:
+                        task.cancel()
+
+                    if pending:
+                        loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+
+                    loop.run_until_complete(loop.shutdown_asyncgens())
+                except Exception as e:
+                    print(f"Limpeza de tarefas do Discord: {e}")
+                finally:
+                    loop.close()
+                    self.discord_loop = None
 
     def on_closing(self):
         self.log_activity("Encerrando aplicativo... salvando arquivos...")
         self.explorer_pane.save_current_file()
         try:
             if hasattr(self, "discord_loop") and self.discord_loop and self.discord_loop.is_running():
-                from bot import discordclient
+                from bot.dbot import discordclient
+                # Envia o comando de fechar para o Discord
                 future = asyncio.run_coroutine_threadsafe(discordclient.close(), self.discord_loop)
-                future.result(timeout=5)
-                self.discord_loop.call_soon_threadsafe(self.discord_loop.stop)
+                try:
+                    # Aguarda até 3 segundos para o client fechar conexões graciosamente
+                    future.result(timeout=3)
+                except Exception:
+                    pass
+                # IMPORTANTE: Removido o loop.stop() forçado aqui.
+                # O loop fechará graciosamente no bloco 'finally' do run_discord_bot.
         except Exception as e:
             print(f"Encerramento do Discord: {e}")
         finally:
@@ -595,10 +625,34 @@ class AoDesktopApp:
         self.log_activity("🛑 Solicitação de interrupção enviada pelo usuário...")
         self.toast("🛑 Interrompendo tarefas em execução...")
 
+    # ------------------------------------------------------------------
+    # Compilador para HTML/PDF
+    # ------------------------------------------------------------------
+    def export_sourcebook(self):
+        """Compila o livro do cenário em HTML e abre no navegador nativo do Windows."""
+        def _run_compile():
+            try:
+                self.log_activity("Iniciando compilação do Livro do Cenário...")
+                self.toast("📖 Compilando Livro do Cenário...")
+                
+                caminho_html = comp.compilar_livro_cenario()
+                if caminho_html and caminho_html.exists():
+                    self.log_activity(f"Livro gerado em: {caminho_html.name}")
+                    self.toast("✅ Livro compilado com sucesso! Abrindo...")
+                    # Abre o HTML gerado no navegador nativo do Windows (Edge/Chrome)
+                    os.startfile(str(caminho_html))
+                else:
+                    self.toast("❌ Falha ao compilar o livro.")
+            except Exception as e:
+                self.log_activity(f"Erro na compilação do livro: {e}")
+                self.toast("❌ Erro ao compilar o livro.")
+
+        threading.Thread(target=_run_compile, daemon=True).start()
+
 
 def main():
     root = tk.Tk()
-    app = AoDesktopApp(root)
+    app = SilentDesktopApp(root)
     root.mainloop()
     
 if __name__ == "__main__":

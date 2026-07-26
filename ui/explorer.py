@@ -61,8 +61,10 @@ class ExplorerFrame(ttk.Frame):
         self.editor.config(state=tk.DISABLED)
         self.editor.bind("<KeyRelease>", self.on_key_release)
 
-        # Menu de contexto clássico (Clique direito)
-        self.context_menu = tk.Menu(
+        # -----------------------------------------------------------------
+        # MENU DE CONTEXTO EXCLUSIVO DO EDITOR DE TEXTO (Botão Direito)
+        # -----------------------------------------------------------------
+        self.editor_context_menu = tk.Menu(
             self,
             tearoff=0,
             bg="#1e1e1e",
@@ -72,6 +74,18 @@ class ExplorerFrame(ttk.Frame):
             bd=1,
             relief=tk.FLAT
         )
+
+        self.editor_context_menu.add_command(label="🏷️ Inserir Tag To-Do", command=self.insert_todo_tag)
+        self.editor_context_menu.add_separator()
+        self.editor_context_menu.add_command(label="✂️ Recortar", command=lambda: self.editor.event_generate("<<Cut>>"))
+        self.editor_context_menu.add_command(label="📋 Copiar", command=lambda: self.editor.event_generate("<<Copy>>"))
+        self.editor_context_menu.add_command(label="📥 Colar", command=lambda: self.editor.event_generate("<<Paste>>"))
+        self.editor_context_menu.add_separator()
+        self.editor_context_menu.add_command(label="Selecionar Tudo", command=lambda: self.editor.tag_add("sel", "1.0", "end"))
+
+        # Eventos de clique com o botão direito na caixa de texto
+        self.editor.bind("<Button-3>", self.show_editor_context_menu)  # Windows / Linux
+        self.editor.bind("<Button-2>", self.show_editor_context_menu)  # macOS
 
         # Eventos do Treeview
         self.tree.bind("<<TreeviewSelect>>", self.on_select)
@@ -109,18 +123,37 @@ class ExplorerFrame(ttk.Frame):
             self._drag_path = None
             return
 
-        target_values = self.tree.item(target_iid, "values")
-        if not target_values:
+        src_path = os.path.abspath(self._drag_path)
+        target_path = os.path.abspath(self.tree.item(target_iid, "values")[0])
+
+        src_parent_iid = self.tree.parent(self._drag_item)
+        target_parent_iid = self.tree.parent(target_iid)
+
+        # 1. REORDENAÇÃO NA MESMA PASTA
+        if src_parent_iid == target_parent_iid:
+            target_index = self.tree.index(target_iid)
+            
+            # Reordena visualmente no Tkinter
+            self.tree.move(self._drag_item, src_parent_iid, target_index)
+
+            # Captura os nomes dos itens na nova ordem
+            parent_dir = os.path.dirname(src_path)
+            novos_filhos = []
+            for child_iid in self.tree.get_children(src_parent_iid):
+                child_path = self.tree.item(child_iid, "values")[0]
+                novos_filhos.append(os.path.basename(child_path))
+
+            # Salva centralizado na pasta logs/folder_orders.json
+            pu.salvar_ordem_pasta(parent_dir, novos_filhos)
+            self.toast("📌 Ordem salva em logs!")
+
             self._drag_item = None
             self._drag_path = None
             return
 
-        src_path = os.path.abspath(self._drag_path)
-        target_path = os.path.abspath(target_values[0])
-
+        # 2. MOVER PARA OUTRA PASTA (código normal de mover arquivo)
         dest_dir = target_path if os.path.isdir(target_path) else os.path.dirname(target_path)
 
-        # Impede mover uma pasta para dentro dela mesma
         if os.path.isdir(src_path) and dest_dir.startswith(src_path):
             self.toast("⚠️ Não é possível mover uma pasta para dentro dela mesma.")
             self._drag_item = None
@@ -129,25 +162,19 @@ class ExplorerFrame(ttk.Frame):
 
         dest_path = os.path.join(dest_dir, os.path.basename(src_path))
 
-        if os.path.abspath(src_path) == os.path.abspath(dest_path):
-            self._drag_item = None
-            self._drag_path = None
-            return
+        if os.path.abspath(src_path) != os.path.abspath(dest_path):
+            try:
+                shutil.move(src_path, dest_path)
+                msg = f"📦 Movido '{os.path.basename(src_path)}' para '{os.path.basename(dest_dir)}'"
+                self.log_callback(msg)
+                self.toast(msg)
+                self.refresh_tree()
+                self.select_path_in_tree(dest_path)
+            except Exception as e:
+                messagebox.showerror("Erro ao mover", f"Falha ao mover item: {e}")
 
-        try:
-            shutil.move(src_path, dest_path)
-            nome_item = os.path.basename(src_path)
-            nome_destino = os.path.basename(dest_dir)
-            msg = f"📦 Movido '{nome_item}' para '{nome_destino}'"
-            self.log_callback(msg)
-            self.toast(msg)
-            self.refresh_tree()
-            self.select_path_in_tree(dest_path)
-        except Exception as e:
-            messagebox.showerror("Erro ao mover", f"Falha ao mover item: {e}")
-        finally:
-            self._drag_item = None
-            self._drag_path = None
+        self._drag_item = None
+        self._drag_path = None
 
     # --- AUTO-SAVE E EDIÇÃO ---
     def on_key_release(self, event):
@@ -352,7 +379,7 @@ class ExplorerFrame(ttk.Frame):
             else:  # Linux
                 pasta = os.path.dirname(caminho) if os.path.isfile(caminho) else caminho
                 subprocess.call(['xdg-open', pasta])
-            self.toast(f"📂 Abrindo no explorador de arquivos...")
+            self.toast(f"Abrindo no explorador de arquivos...")
         except Exception as e:
             self.log_callback(f"Erro ao abrir explorador nativo: {e}")
 
@@ -483,7 +510,7 @@ class ExplorerFrame(ttk.Frame):
 
         os.makedirs(pasta_projeto, exist_ok=True)
 
-        root_node = self.tree.insert("", "end", text=f"📁 {nome_pasta}", open=True, values=[pasta_projeto])
+        root_node = self.tree.insert("", "end", text=f"{nome_pasta}", open=True, values=[pasta_projeto])
         self.path_to_item[os.path.abspath(pasta_projeto)] = root_node
 
         self.populate_tree(root_node, pasta_projeto)
@@ -493,7 +520,8 @@ class ExplorerFrame(ttk.Frame):
 
     def populate_tree(self, parent_node, path):
         try:
-            for item in sorted(os.listdir(path)):
+            itens_ordenados = pu.obter_itens_ordenados(path)
+            for item in itens_ordenados:                
                 item_path = os.path.join(path, item)
                 is_dir = os.path.isdir(item_path)
 
@@ -501,9 +529,11 @@ class ExplorerFrame(ttk.Frame):
                     continue
 
                 icon = "📁 " if is_dir else "📄 "
-                node = self.tree.insert(
-                    parent_node, "end", text=f"{icon}{item}", open=False, values=[item_path]
-                )
+                
+                # Remove o .md do final apenas se for arquivo
+                itemclean = item[:-3] if (not is_dir and item.lower().endswith(".md")) else item
+                
+                node = self.tree.insert(parent_node, "end", text=f"{icon}{itemclean}", open=False, values=[item_path])
                 self.path_to_item[os.path.abspath(item_path)] = node
 
                 if is_dir:
@@ -560,3 +590,30 @@ class ExplorerFrame(ttk.Frame):
 
     def update_editor_font(self, font_size):
         self.editor.configure(font=("Consolas", font_size))
+        
+    def show_editor_context_menu(self, event):
+        """Exibe o menu de contexto do editor no local do clique com o botão direito."""
+        if str(self.editor.cget("state")) == "disabled":
+            return
+
+        try:
+            self.editor.focus_set()
+            # Se não houver texto selecionado, move o cursor para a posição exata onde clicou
+            if not self.editor.tag_ranges("sel"):
+                self.editor.mark_set("insert", f"@{event.x},{event.y}")
+        except Exception:
+            pass
+
+        self.editor_context_menu.post(event.x_root, event.y_root)
+
+    def insert_todo_tag(self):
+        """Insere a tag padrão '<-- To do: ' na posição atual do cursor de texto."""
+        if str(self.editor.cget("state")) != "disabled":
+            tag_texto = "<-- To do:"
+            self.editor.insert("insert", tag_texto)
+            self.editor.focus_set()
+            # Agenda o auto-salvamento do arquivo
+            self.on_key_release(None)
+            self.toast("Tag To-Do inserida!")
+        
+    

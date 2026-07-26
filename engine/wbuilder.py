@@ -36,6 +36,35 @@ def resolver_caminho(path_str):
 
     return (raiz / caminho).resolve()
 
+def obter_conteudo_template(nome_template: Optional[str]) -> str:
+    """Busca e retorna o conteúdo do arquivo de template (.md) dentro da pasta Templates."""
+    if not nome_template or nome_template.lower() == "nenhum":
+        return ""
+
+    nome_arquivo = f"{nome_template.lower().strip()}.md"
+
+    # Locais onde a pasta de Templates pode estar localizada
+    locais_possiveis = [
+        Path(pu.CAMINHO_PROJETO) / "Templates" / nome_arquivo,
+        Path(pu.CAMINHO_PROJETO) / "Template" / nome_arquivo,
+        Path.cwd() / "Templates" / nome_arquivo,
+        Path.cwd() / "Template" / nome_arquivo,
+    ]
+
+    for caminho in locais_possiveis:
+        if caminho.exists() and caminho.is_file():
+            try:
+                with open(caminho, "r", encoding="utf-8") as f:
+                    conteudo = f.read().strip()
+                    print(f"📑 Template '{nome_template}' aplicado a partir de: {caminho.name}")
+                    return f"\n\n{conteudo}"
+            except Exception as e:
+                print(f"⚠️ Erro ao ler template {caminho}: {e}")
+                return ""
+
+    print(f"⚠️ Template '{nome_template}' solicitado, mas '{nome_arquivo}' não foi encontrado na pasta Templates.")
+    return ""
+
 def iterationschoice(reason: Optional[str] = "O projeto esteja concluído"):
     print("Iterations Iniciado!")
     numero=1
@@ -49,10 +78,8 @@ Responda apenas um número inteiro entre 1 e 10.
 Utilize o projeto carregado no cache.
 
 Critérios:
-
 - Regiões
 - Cidades
-- Facções
 - NPCs
 - História
 - Potencial para aventuras
@@ -90,6 +117,7 @@ class Action(BaseModel):
     path: str
     priority: int
     objective: str
+    template: Optional[Literal["aventura", "cidade", "local", "npc", "reinado", "nenhum"]] = "nenhum"
 class ActionPlan(BaseModel):
     actions: List[Action]
 
@@ -107,10 +135,18 @@ Analise o projeto e identifique quais ações são necessárias para:
 REGRA IMPORTANTE SOBRE NOMES:
 Antes de sugerir CreateFolder ou CreateFile, verifique cuidadosamente o Índice
 e a Estrutura fornecidos. NÃO crie algo com nome igual, similar, singular/plural,
-ou com pequenas variações de grafia/acentuação de algo que já existe
-(ex: "Segredos" e "Segredo" são a MESMA coisa, "Ruína" e "Ruinas" são a MESMA coisa).
+ou com pequenas variações de grafia/acentuação de algo que já existe.
 Se um conceito já existe com outro nome, use ImproveFile no arquivo existente
 em vez de criar um novo.
+
+REGRA SOBRE TEMPLATES (Apenas para CreateFile):
+Ao sugerir 'CreateFile', escolha obrigatoriamente um dos seguintes valores para o campo 'template':
+- "aventura": para quests, missões, módulos de aventura
+- "cidade": para vilas, povoados, metrópoles e assentamentos
+- "local": para ruínas, dungeons, florestas, cavernas e regiões
+- "npc": para personagens, vilões, aliados e figuras históricas
+- "reinado": para países, reinos, impérios e ducados
+- "nenhum": para conceitos genéricos, facções ou tópicos gerais (padrão)
 
 Você possui apenas três ferramentas:
 
@@ -124,19 +160,20 @@ Formato obrigatório:
     {{
         "type": "CreateFolder",
         "path": "{pu.PASTA_PROJETO}/...",
-        "priority":7,
+        "priority":10,
         "objective": "motivo"
     }},
     {{
         "type": "CreateFile",
         "path": "{pu.PASTA_PROJETO}/.../arquivo.md",
-        "priority":8,        
+        "priority":9,
+        "template":"cidade",
         "objective": "O que deve ter no arquivo"
     }},
     {{
         "type": "ImproveFile",
         "path": "{pu.PASTA_PROJETO}/.../arquivo.md",
-        "priority":10,        
+        "priority":8,        
         "objective": "O que deve ter no arquivo"
     }}
     ]
@@ -195,24 +232,22 @@ def enactchoices(actions):
         tipo = action["type"]
         path = action.get("path", "")
         objective = action.get("objective", "")
+        template = action.get("template", "nenhum")
+        
         with open(pu.log_path("changelog.jsonl"),"a",encoding="utf-8") as f:
             registro = {
                 "timestamp": pu.currentdate(),
                 "action": tipo,
                 "path": path,
+                "template": template,
                 "objective": objective
             }
             f.write(
-                json.dumps(
-                    registro,
-                    ensure_ascii=False
-                )
-                + "\n"
-            )
+                json.dumps(registro,ensure_ascii=False)+ "\n")
         if tipo == "CreateFolder":
             createfolder(action["path"], action.get("objective", ""))
         elif tipo == "CreateFile":
-            createfile(action["path"], action.get("objective", ""))
+            createfile(action["path"], action.get("objective", ""), template)
         elif tipo == "ImproveFile":
             improvefile(action["path"], action.get("objective", ""))
     print("Enactchoices Concluído!")
@@ -244,8 +279,8 @@ def createfolder(path, reason):
         print(f"❌ Erro ao criar pasta: {e}")
         return False
 
-def createfile(path, reason):
-    print(f"Vamos criar um arquivo: {path}, por que {reason}")
+def createfile(path, reason, template="nenhum"):
+    print(f"Vamos criar um arquivo: {path} (Template: {template}), motivo: {reason}")
     try:
         raiz = Path(pu.CAMINHO_PROJETO).resolve()
         arquivo = resolver_caminho(path)
@@ -268,6 +303,7 @@ def createfile(path, reason):
 
         arquivo.parent.mkdir(parents=True, exist_ok=True)
         titulo = re.sub(r"_v\d+$", "", arquivo.stem)
+        conteudo_template = obter_conteudo_template(template)
 
         conteudo = f"""# {titulo}
 > Este arquivo foi criado automaticamente pelo WorldBuilder.
@@ -275,6 +311,7 @@ def createfile(path, reason):
 status: rascunho
 ----
 <-- TO DO: {reason}
+{conteudo_template}
 """
         with open(arquivo, "w", encoding="utf-8") as f:
             f.write(conteudo)
