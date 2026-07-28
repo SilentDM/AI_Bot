@@ -5,10 +5,11 @@ import engine.project_utils as pu
 import engine.wbuilder as wb
 
 class ExplorerFrame(ttk.Frame):
-    def __init__(self, parent, log_callback, toast_callback=None):
+    def __init__(self, parent, log_callback, toast_callback=None, auto_expander_callback=None):
         super().__init__(parent)
         self.log_callback = log_callback
         self.toast_callback = toast_callback
+        self.auto_expander_callback = auto_expander_callback 
         self.current_file = None
         self.path_to_item = {}  # Mapeia caminhos absolutos para os IDs da Treeview
         self.autosave_timer = None
@@ -261,6 +262,8 @@ class ExplorerFrame(ttk.Frame):
             self.editor.config(state=tk.DISABLED)
 
     def process_saved_file(self, path):
+        if self.auto_expander_callback and not self.auto_expander_callback():
+            return
         try:
             with open(path, "r", encoding="utf-8") as f:
                 texto = f.read()
@@ -290,28 +293,66 @@ class ExplorerFrame(ttk.Frame):
                 self.context_menu.add_command(label="📄 Novo Arquivo", command=lambda: self.create_new_file(caminho))
                 self.context_menu.add_command(label="📁 Nova Pasta", command=lambda: self.create_new_folder(caminho))
                 self.context_menu.add_separator()
-
+            # Renomear e Deletar
+            self.context_menu.add_command(label="❌ Deletar", command=lambda: self.delete_item(caminho))
+            self.context_menu.add_command(label="✏️ Renomear", command=lambda: self.rename_item(caminho))
+            self.context_menu.add_separator()
+            
             # Copiar / Recortar / Colar
             self.context_menu.add_command(label="📋 Copiar", command=lambda: self.copy_item(caminho))
             self.context_menu.add_command(label="✂️ Recortar", command=lambda: self.cut_item(caminho))
-
             pode_colar = self.clipboard_item and os.path.exists(self.clipboard_item["path"])
             colar_state = tk.NORMAL if pode_colar else tk.DISABLED
             self.context_menu.add_command(label="📥 Colar", command=lambda: self.paste_item(caminho), state=colar_state)
-
             self.context_menu.add_command(label="📑 Duplicar", command=lambda: self.duplicate_item(caminho))
             self.context_menu.add_separator()
 
-            # Renomear e Deletar
-            self.context_menu.add_command(label="✏️ Renomear...", command=lambda: self.rename_item(caminho))
-            self.context_menu.add_command(label="❌ Deletar", command=lambda: self.delete_item(caminho))
-            self.context_menu.add_separator()
-
             # Abrir no Explorador Nativo do SO
-            self.context_menu.add_command(label="📂 Mostrar no Explorador de Arquivos", command=lambda: self.reveal_in_explorer(caminho))
-
+            self.context_menu.add_command(label="📂 Mostrar no Windows Explorer", command=lambda: self.reveal_in_explorer(caminho))
+            if os.path.isfile(caminho) and caminho.lower().endswith(".md"):
+                self.context_menu.add_separator()
+                self.context_menu.add_command(label="✨ Melhorar com IA (ImproveFile)", command=lambda: self.run_improve_file(caminho))
             self.context_menu.post(event.x_root, event.y_root)
+    
+    def run_improve_file(self, caminho):
+        """Dispara a execução do ImproveFile em segundo plano para um arquivo específico."""
+        nome_arq = os.path.basename(caminho)
 
+        # 1. Pergunta ao usuário qual o objetivo específico para a IA (opcional)
+        motivo = simpledialog.askstring(
+            "Melhorar Arquivo com IA",
+            f"Qual o objetivo da melhoria para '{nome_arq}'?\n(Deixe em branco para uma melhoria geral de coesão e detalhes):",
+            parent=self
+        )
+        if motivo is None:
+            return
+
+        motivo = motivo.strip() or "Melhorar a qualidade, riqueza de detalhes, estilo e coesão do arquivo com o restante do universo."
+
+        # 2. Se o arquivo alterado for o que está aberto no editor, salva antes de processar
+        if self.current_file and os.path.abspath(self.current_file) == os.path.abspath(caminho):
+            self.save_current_file()
+
+        self.toast(f"✨ Executando ImproveFile em '{nome_arq}'...")
+        self.log_callback(f"Iniciando ImproveFile manual para: {nome_arq}")
+
+        # 3. Executa em Thread para não travar a interface visual (Tkinter)
+        def _worker():
+            try:
+                sucesso = wb.improvefile(caminho, reason=motivo)
+                if sucesso:
+                    self.log_callback(f"✅ ImproveFile concluído para: {nome_arq}")
+                    self.toast(f"✅ Nova versão criada para '{nome_arq}'!")
+                    # Atualiza a árvore visual na thread principal da GUI
+                    self.after(0, self.refresh_tree)
+                else:
+                    self.toast(f"⚠️ ImproveFile não gerou alterações para '{nome_arq}'.")
+            except Exception as e:
+                self.log_callback(f"Erro ao executar ImproveFile: {e}")
+                self.toast(f"❌ Erro ao melhorar '{nome_arq}'.")
+
+        threading.Thread(target=_worker, daemon=True).start()
+    
     def copy_item(self, caminho):
         self.clipboard_item = {"path": caminho, "mode": "copy"}
         nome = os.path.basename(caminho)

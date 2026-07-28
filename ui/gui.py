@@ -1,17 +1,19 @@
-import os, threading, time, asyncio, sys
+import os, threading, time, asyncio, sys, json
+import core.ai_gemini as ag
+import core.cache_gemini as cg
+import core.memory as me
+import engine.compiler as comp
+import engine.expander as ex
+import engine.wbuilder as wb
+import engine.project_utils as pu
 import ui.explorer as expl
+import ui.gui_logger as gl
+import ui.settings as st
+import ui.setup_env as se
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
-import engine.expander as ex
-import core.ai_gemini as ag
-import engine.project_utils as pu
-import core.memory as me
-import ui.gui_logger as gl
-import ui.setup_env as se
-import core.cache_gemini as cg
-import engine.wbuilder as wb
-import engine.compiler as comp
 
+SETTINGS_FILE = pu.PASTA_LOGS / "settings.json"
 
 class SilentDesktopApp:
     def __init__(self, root):
@@ -23,6 +25,7 @@ class SilentDesktopApp:
         self.root.state("zoomed")  # Windows
         self.root.configure(bg="#121212")
 
+                
         self.current_font_size = 11
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.setup_dark_style()
@@ -49,6 +52,13 @@ class SilentDesktopApp:
 
         # Executa descoberta de modelos em segundo plano para não travar o startup
         threading.Thread(target=ag.findmodel, daemon=True).start()
+
+    # ------------------------------------------------------------------
+    # SISTEMA DE OPÇÕES
+    # ------------------------------------------------------------------
+    def get_auto_expander_status(self):
+        """Retorna True se o Expander Automático estiver Habilitado nas Opções."""
+        return self.auto_expander_var.get() == "Habilitado"
 
     # ------------------------------------------------------------------
     # SISTEMA DE POPUP TOAST FLUTUANTE
@@ -176,13 +186,14 @@ class SilentDesktopApp:
         sidebar.grid(row=0, column=0, sticky="ns")
         sidebar.pack_propagate(False)
 
-        tk.Label(sidebar, text="🜂 Ao Console", bg="#0a0a0a", fg="#10b981", font=("Segoe UI", 13, "bold")).pack(anchor=tk.W, padx=16, pady=(22, 26))
+        tk.Label(sidebar, text="🜂 Silent Console", bg="#0a0a0a", fg="#10b981", font=("Segoe UI", 13, "bold")).pack(anchor=tk.W, padx=16, pady=(22, 26))
 
         nav_items = [
             ("editor", "Edição do Mundo"),
             ("worldbuilder", "WorldBuilder"),
             ("chat", "Converse com Ao"),
             ("log", "Atividades"),
+            ("options", "Opções"),
         ]
         for key, label in nav_items:
             btn = ttk.Button(sidebar, text=label, style="Nav.TButton", command=lambda k=key: self.switch_page(k))
@@ -201,11 +212,19 @@ class SilentDesktopApp:
 
         content_area = ttk.Frame(root_container)
         content_area.grid(row=0, column=1, sticky="nsew")
+        
+        self.options_pane = st.OptionsFrame(
+            content_area, 
+            self.log_activity, 
+            self.toast, 
+            self._page_header
+        )
 
         self.pages["editor"] = self._build_editor_page(content_area)
         self.pages["worldbuilder"] = self._build_worldbuilder_page(content_area)
         self.pages["chat"] = self._build_chat_page(content_area)
         self.pages["log"] = self._build_log_page(content_area)
+        self.pages["options"] = self.options_pane
 
         for page in self.pages.values():
             page.place(relx=0, rely=0, relwidth=1, relheight=1)
@@ -228,12 +247,16 @@ class SilentDesktopApp:
     # PÁGINAS DA INTERFACE
     # ------------------------------------------------------------------
     def _build_editor_page(self, parent):
-        frame = ttk.Frame(parent)
-        self._page_header(frame, "Edição de Mundo", "Explore, edite e organize os arquivos do seu projeto.")
-        # Passa self.toast como callback para o Explorer
-        self.explorer_pane = expl.ExplorerFrame(frame, self.log_activity, toast_callback=self.toast)
-        self.explorer_pane.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 15))
-        return frame
+            frame = ttk.Frame(parent)
+            self._page_header(frame, "Edição de Mundo", "Explore, edite e organize os arquivos do seu projeto.")
+            self.explorer_pane = expl.ExplorerFrame(
+                frame, 
+                self.log_activity, 
+                toast_callback=self.toast,
+                auto_expander_callback=self.options_pane.is_auto_expander_enabled # 👈 Pega diretamente do painel de opções
+            )
+            self.explorer_pane.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 15))
+            return frame
 
     def _build_worldbuilder_page(self, parent):
         frame = ttk.Frame(parent)
@@ -284,7 +307,7 @@ class SilentDesktopApp:
 
         ttk.Label(body, text="Você pode navegar livremente enquanto uma tarefa roda em segundo plano. Acompanhe os detalhes no Log de Atividade.", foreground="#666666", wraplength=560, justify="left").pack(anchor=tk.W, pady=(20, 0))
         return frame
-
+    
     def _build_chat_page(self, parent):
         frame = ttk.Frame(parent)
         self._page_header(frame, "💬 Conversa com Ao", "Fale diretamente com Ao sobre o seu mundo.")
@@ -647,6 +670,9 @@ class SilentDesktopApp:
                 self.toast("❌ Erro ao compilar o livro.")
 
         threading.Thread(target=_run_compile, daemon=True).start()
+
+
+
 
 
 def main():
