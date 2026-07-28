@@ -13,9 +13,6 @@ if AI_PROVIDER == "pro":
 else:
     from core.ai_gemini import ask_ai as _ask_ai_impl
 
-
-
-
 def ask_ai(contents=None, system_instruction=None, temperature=None, response_schema=None, use_world_context=True):
     """
     Ponto único de entrada para QUALQUER parte do programa que precise

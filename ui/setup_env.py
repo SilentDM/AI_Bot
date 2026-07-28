@@ -5,6 +5,7 @@ from tkinter import ttk, messagebox
 from pathlib import Path
 from dotenv import load_dotenv, find_dotenv
 
+
 # Tenta localizar o arquivo .env de forma dinâmica (mesma lógica que o python-dotenv usa)
 _found_env = find_dotenv()
 if _found_env:

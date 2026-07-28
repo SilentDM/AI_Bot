@@ -16,7 +16,7 @@ import engine.compiler as comp
 class SilentDesktopApp:
     def __init__(self, root):
         self.root = root
-        self.user_name = "SilentDM"
+        self.user_name = "Silent Dungeon Master"
         self.root.title("Silent Multiverse Nexus")
         self.root.geometry("1300x700")
         self.root.minsize(1050, 550)
@@ -46,7 +46,6 @@ class SilentDesktopApp:
         self.switch_page("editor")
 
         self.start_discord_bot_thread()
-        se.garantir_env()
 
         # Executa descoberta de modelos em segundo plano para não travar o startup
         threading.Thread(target=ag.findmodel, daemon=True).start()
@@ -479,7 +478,7 @@ class SilentDesktopApp:
         self.worldbuilder_running = True
         self.btn_worldbuilder.config(state=tk.DISABLED)
         self.lbl_worldbuilder.config(text="Status: Executando...", foreground="#60a5fa")
-        self.toast("▶️ WorldBuilder iniciado...")
+        self.toast("WorldBuilder iniciado...")
         self.log_activity("Iniciando WorldBuilder autônomo...")
 
         self.explorer_pane.save_current_file()

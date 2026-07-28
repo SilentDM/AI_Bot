@@ -1,6 +1,6 @@
 import os
 import asyncio
-from core.ai_utils import ask_ai
+import core.ai_utils as au
 import core.memory as memory
 import engine.project_utils as pu
 from dotenv import load_dotenv
@@ -91,7 +91,7 @@ if DISCORD_ENABLED:
             # 3. Chamando o novo ask_ai
             # Definimos a temperatura em 0.65 para permitir flexibilidade sem quebrar as regras.
             try:
-                resposta = ask_ai(
+                resposta = au.ask_ai(
                     contents=conteudo_input,
                     system_instruction=instrucao_sistema,
                     temperature=0.65,

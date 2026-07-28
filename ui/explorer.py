@@ -60,7 +60,19 @@ class ExplorerFrame(ttk.Frame):
         self.editor.insert("1.0", "--- Selecione um arquivo para visualizar e editar ---")
         self.editor.config(state=tk.DISABLED)
         self.editor.bind("<KeyRelease>", self.on_key_release)
-
+        # -----------------------------------------------------------------
+        # MENU DE CONTEXTO DA ÁRVORE DO EXPLORER (Botão Direito)
+        # -----------------------------------------------------------------
+        self.context_menu = tk.Menu(
+            self,
+            tearoff=0,
+            bg="#1e1e1e",
+            fg="#e3e3e3",
+            activebackground="#0f766e",
+            activeforeground="white",
+            bd=1,
+            relief=tk.FLAT
+        )
         # -----------------------------------------------------------------
         # MENU DE CONTEXTO EXCLUSIVO DO EDITOR DE TEXTO (Botão Direito)
         # -----------------------------------------------------------------
@@ -82,6 +94,9 @@ class ExplorerFrame(ttk.Frame):
         self.editor_context_menu.add_command(label="📥 Colar", command=lambda: self.editor.event_generate("<<Paste>>"))
         self.editor_context_menu.add_separator()
         self.editor_context_menu.add_command(label="Selecionar Tudo", command=lambda: self.editor.tag_add("sel", "1.0", "end"))
+
+
+
 
         # Eventos de clique com o botão direito na caixa de texto
         self.editor.bind("<Button-3>", self.show_editor_context_menu)  # Windows / Linux

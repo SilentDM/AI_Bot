@@ -1,8 +1,6 @@
 import os, re, json, threading, unicodedata, difflib
 from pathlib import Path
 from datetime import datetime
-
-
 PASTA_PROJETO = os.getenv("PASTA_PROJETO", "Phaeton")
 CAMINHO_PROJETO = os.path.join(os.getcwd(), PASTA_PROJETO)
 PASTA_ESTILO = os.getenv("PASTA_ESTILO", "Style")

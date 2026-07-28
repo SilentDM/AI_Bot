@@ -61,7 +61,7 @@ def findmodel(file_path=pu.log_path("models.json")):
         max_input_tokens = getattr(model, 'input_token_limit', 0) or 0
         support_image = "IMAGE" in (getattr(model, "input_modalities", []) or [])
         print(f"Testando modelo: {model_name}")
-        if "gemini" not in model_name:
+        if "gemini" not in model_name.lower() or "embedding" in model_name.lower():
             continue
         else:
             start_time = time.time()
@@ -96,7 +96,7 @@ def findmodel(file_path=pu.log_path("models.json")):
                 "maxinputtokens": max_input_tokens,
                 "responsetime": response_time,
                 "supports_tools": supports_tools,
-                "supports_images": support_image  # Fixed lowercase casing
+                "supports_images": support_image  
             })
 
             # Brief pause to respect Free Tier RPM limits during model discovery
@@ -160,13 +160,12 @@ def generate_content_with_fallback(contents: Any, config: types.GenerateContentC
         except Exception as e:
             if _is_rate_limit_error(e):
                 print(f"Rate Limit atingido no modelo {model_name}. Pulando imediatamente para o próximo...")
-        else:
-            print(f"Erro no modelo {model_name}: {e}")
+            else:
+                print(f"Erro no modelo {model_name}: {e}")
         
         print(f"🔄 Passando para o próximo modelo da cadeia de fallback...")
 
     raise RuntimeError("Todos os modelos e tentativas de fallback falharam em gerar conteúdo.")
-
 
 def ask_ai(
     contents: Any = None, 
