@@ -1,17 +1,17 @@
 [
     {
-        "name": "models/gemini-2.5-flash",
-        "display_name": "Gemini 2.5 Flash",
-        "maxinputtokens": 1048576,
-        "responsetime": 0.658,
-        "supports_tools": false,
-        "supports_images": false
-    },
-    {
         "name": "models/gemini-flash-lite-latest",
         "display_name": "Gemini Flash-Lite Latest",
         "maxinputtokens": 1048576,
         "responsetime": 0.4793,
+        "supports_tools": false,
+        "supports_images": false
+    },
+    {
+        "name": "models/gemini-2.5-flash",
+        "display_name": "Gemini 2.5 Flash",
+        "maxinputtokens": 1048576,
+        "responsetime": 0.658,
         "supports_tools": false,
         "supports_images": false
     },

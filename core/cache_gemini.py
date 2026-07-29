@@ -58,33 +58,33 @@ def prepare_world_context(ttl_hours=12):
 
     for model in data:
         model_name = model["name"]
-        try:
-            print(f"🔮 Attempting to generate cache using model: {model_name}!")
-            cache = ag.GEMINICLIENT.caches.create(
-                model=model_name,
-                config=types.CreateCachedContentConfig(
-                    contents=[world_context],
-                    display_name=f"{pu.PASTA_PROJETO} Cache",
-                    ttl=f"{ttl_hours * 3600}s"  
-                )
-            )
-            print(f"Cache Created with {model_name}! Cache ID: {cache.name}")
+        #try:
+            #print(f"🔮 Attempting to generate cache using model: {model_name}!")
+            #cache = ag.GEMINICLIENT.caches.create(
+                #model=model_name,
+                #config=types.CreateCachedContentConfig(
+                    #contents=[world_context],
+                    #display_name=f"{pu.PASTA_PROJETO} Cache",
+                    #ttl=f"{ttl_hours * 3600}s"  
+                #)
+            #)
+            #print(f"Cache Created with {model_name}! Cache ID: {cache.name}")
             
-            registro = {
-                "type": "cache",
-                "id": cache.name,
-                "model": model_name,  # 👈 NOVO: Guarda o modelo criador do cache
-                "created": pu.currentdate()
-            }
-            with open(arquivo, "w", encoding="utf-8") as f:
-                json.dump(registro, f, ensure_ascii=False, indent=4)
-            return registro
+            #registro = {
+                #"type": "cache",
+                #"id": cache.name,
+                #"model": model_name,  # 👈 NOVO: Guarda o modelo criador do cache
+                #"created": pu.currentdate()
+            #}
+            #with open(arquivo, "w", encoding="utf-8") as f:
+                #json.dump(registro, f, ensure_ascii=False, indent=4)
+            #return registro
 
-        except Exception as e:
-            print(f"{model_name} does not support cache: {e}")
+        #except Exception as e:
+            #print(f"{model_name} does not support cache: {e}")
 
     # 4. Fallback: Files API (If all models fail due to Free Tier limit=0)
-    print("ℹ Context Caching unavailable on this API tier. Falling back to Files API(Free).")
+    #print("ℹ Context Caching unavailable on this API tier. Falling back to Files API(Free).")
     
     bundle_path = pu.log_path("world_bundle.txt")
     with open(bundle_path, "w", encoding="utf-8") as f:
