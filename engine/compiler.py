@@ -361,6 +361,36 @@ def compilar_livro_cenario():
                 page-break-before: always;
             }}
         }}
+        .stat-block {{
+            background-color: #fdf1dc;
+            border: 2px solid #922610;
+            padding: 15px;
+            margin: 20px 0;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+            color: #000000;
+            font-family: 'Georgia', serif;
+        }}
+
+        .stat-block h2 {{
+            color: #7a200d;
+            font-family: 'Cinzel', serif;
+            margin: 0;
+            font-size: 1.6rem;
+        }}
+
+        .stat-block h3 {{
+            color: #7a200d;
+            border-bottom: 1px solid #7a200d;
+            font-size: 1.1rem;
+            margin-top: 10px;
+        }}
+
+        .stat-block hr {{
+            border: 0;
+            height: 2px;
+            background: #922610;
+            margin: 8px 0;
+        }}
     </style>
 </head>
 <body>

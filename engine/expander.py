@@ -142,42 +142,53 @@ def processar_arquivo_unico(path):
                             info_locais += f.read() + "\n\n"
         info_importante = obter_arquivos_relacionados(titulo)
         prompt_conteudo = f"""
-Por favor, analise as informações completas armazenadas no cache e as informações locais e importantes abaixo para preencher as lacunas marcadas no arquivo de destino.
-INFORMAÇÕES LOCAIS DO AMBIENTE (Arquivos da mesma pasta para consistência):
+<contexto_local>
 {info_locais}
+</contexto_contexto_local>
 
-INFORMAÇÕES IMPORTANTES RELACIONADAS:
+<arquivos_relacionados>
 {info_importante}
+</arquivos_relacionados>
 
-CONTEÚDO ORIGINAL DO ARQUIVO ATUAL ({arquivo.name}):
+<arquivo_alvo nome="{arquivo.name}">
 {conteudo}
+</arquivo_alvo>
 
-TAREFA:
-No conteúdo do arquivo atual, identifique a linha que começa com a variação de To-Do '{tag_encontrada}'.
-Substitua essa linha pelo conteúdo expandido de forma criativa, mantendo total coesão com a história local e as diretrizes de {pu.PASTA_PROJETO}.
+<instrucao_tarefa>
+Identifique a tag '{tag_encontrada}' dentro da tag <arquivo_alvo>.
+Substitua essa tag pelo conteúdo expandido, mantendo total coesão com <contexto_local> e <arquivos_relacionados>.
+</instrucao_tarefa>
 
-REGRAS DE RETORNO:
-1. Retorne o texto completo do arquivo original, incluindo a modificação feita.
-2. Preserve rigorosamente a formatação Markdown existente.
-3. Não acrescente prefácios, comentários explicativos ou notas sobre o que você modificou. Retorne apenas o conteúdo final do arquivo editado.
+<regras_de_resposta>
+1. Retorne APENAS o conteúdo final do arquivo editado em Markdown.
+2. Não inclua comentários, prefácios nem tags XML na sua resposta final.
+</regras_de_resposta>
 """
         try:
-            # Opcional: Registrar o prompt gerado para fins de depuração
             with open(pu.log_path("Prompts.txt"), 'w', encoding='utf-8') as f:
                 f.write(f"Alterando Arquivo: {arquivo.name}\n")
                 f.write(prompt_conteudo + '\n')
-                
-            # Substituição da chamada nativa pela função estruturada ask_ai
-            # Graças ao ask_ai, a verificação de fallbacks de modelos e limites de taxa é herdada automaticamente.
-            texto_expandido = au.ask_ai(
-                contents=prompt_conteudo,
-                system_instruction=instrucoes_globais,
-                temperature=0.7,
+            
+            texto_bruto = au.ask_ai(contents=prompt_conteudo, system_instruction=instrucoes_globais, temperature=0.7)
+
+            # Passo 2: Revisão (Editor de Lore)
+            prompt_revisao = f"""
+Você é o Editor de Lore de {pu.PASTA_PROJETO}.
+Revise o texto gerado abaixo e garanta que ele NÃO contradiga a história já estabelecida no cache.
+Se encontrar incoerências com o tom ou com a lore existente, corrija-as. Caso contrário, devolva o texto exato.
+
+TEXTO GERADO:
+{texto_bruto}
+"""
+            texto_final = au.ask_ai(
+                contents=prompt_revisao,
+                system_instruction="Você é um editor de texto rigoroso focado em consistência de worldbuilding.",
+                temperature=0.2, # Temperatura baixa para o editor ser rígido com os fatos
                 use_world_context=True
             )
             
-            if texto_expandido:
-                texto_limpo = remover_markdown_fences(texto_expandido)
+            if texto_final:
+                texto_limpo = remover_markdown_fences(texto_final)
                 novo_arquivo_path = obter_proximo_nome_versao(arquivo)
                 
                 with open(novo_arquivo_path, 'w', encoding='utf-8') as f:

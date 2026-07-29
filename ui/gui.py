@@ -118,6 +118,13 @@ class SilentDesktopApp:
         self.style = ttk.Style()
         self.style.theme_use('clam')
 
+        # 🛠️ FIX DO COMBOBOX (Aplica cor escura na caixa popup/listbox)
+        self.root.option_add('*TCombobox*Listbox.background', '#252526')
+        self.root.option_add('*TCombobox*Listbox.foreground', '#ffffff')
+        self.root.option_add('*TCombobox*Listbox.selectBackground', '#0f766e')
+        self.root.option_add('*TCombobox*Listbox.selectForeground', '#ffffff')
+        self.root.option_add('*TCombobox*Listbox.font', ('Segoe UI', 10))
+
         self.style.configure('.',
             background='#121212',
             foreground='#e3e3e3',
@@ -148,6 +155,23 @@ class SilentDesktopApp:
         )
 
         self.style.configure('TEntry', fieldbackground='#252526', foreground='#ffffff', bordercolor='#2d2d2d', lightcolor='#252526', darkcolor='#252526')
+
+        # 🛠️ FIX DO COMBOBOX (Garante fundo escuro e texto branco no modo 'readonly' e com foco)
+        self.style.configure('TCombobox',
+            fieldbackground='#252526',
+            background='#252526',
+            foreground='#ffffff',
+            bordercolor='#2d2d2d',
+            lightcolor='#252526',
+            darkcolor='#252526',
+            arrowcolor='#e3e3e3'
+        )
+        self.style.map('TCombobox',
+            fieldbackground=[('readonly', '#252526'), ('focus', '#252526'), ('active', '#252526')],
+            foreground=[('readonly', '#ffffff'), ('focus', '#ffffff'), ('active', '#ffffff')],
+            selectbackground=[('readonly', '#0f766e'), ('focus', '#0f766e')],
+            selectforeground=[('readonly', '#ffffff'), ('focus', '#ffffff')]
+        )
 
         self.style.configure('Treeview', background='#1e1e1e', foreground='#e3e3e3', fieldbackground='#1e1e1e', bordercolor='#2d2d2d', borderwidth=1, rowheight=24)
         self.style.map('Treeview',
@@ -253,7 +277,8 @@ class SilentDesktopApp:
                 frame, 
                 self.log_activity, 
                 toast_callback=self.toast,
-                auto_expander_callback=self.options_pane.is_auto_expander_enabled # 👈 Pega diretamente do painel de opções
+                auto_expander_callback=self.options_pane.is_auto_expander_enabled,
+                ask_ao_callback=self.open_chat_with_file_context # 👈 Passado aqui!
             )
             self.explorer_pane.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 15))
             return frame
@@ -437,6 +462,27 @@ class SilentDesktopApp:
 
         except Exception as e:
             self.root.after(0, lambda err=str(e): self.remove_thinking_and_respond(f"Erro de execução: {err}"))
+            
+    def open_chat_with_file_context(self, caminho):
+        """Abre a aba de Chat com o texto do arquivo pré-carregado no campo de mensagem."""
+        try:
+            nome_arq = os.path.basename(caminho)
+            with open(caminho, "r", encoding="utf-8") as f:
+                conteudo = f.read().strip()
+
+            self.switch_page("chat")
+            
+            # Pré-preenche o campo de mensagem
+            prompt_preenchido = f"Sobre o arquivo '{nome_arq}':\n\n[CONTEÚDO DO ARQUIVO]\n{conteudo}\n\n[MINHA PERGUNTA]: "
+            self.input_entry.delete(0, tk.END)
+            self.input_entry.insert(0, f"Analise o arquivo '{nome_arq}' e me ajude com o seguinte: ")
+            self.input_entry.focus_set()
+
+            self.toast(f"💬 Contexto de '{nome_arq}' carregado na conversa!")
+            self.log_activity(f"Carregado arquivo '{nome_arq}' para o chat com Ao.")
+        except Exception as e:
+            self.log_activity(f"Erro ao carregar arquivo no chat: {e}")
+            self.toast("❌ Falha ao carregar o arquivo no chat.")
 
     # ------------------------------------------------------------------
     # TAREFAS DE BACKGROUND E EVENTOS

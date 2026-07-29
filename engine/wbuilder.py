@@ -1,13 +1,13 @@
-import os, json, re, time
+import json, re
+import engine.expander as ex
 import engine.project_utils as pu
 import core.ai_utils as au
-import engine.expander as ex
+import core.cache_gemini as cg
+import ui.settings as st  
 from typing import Optional
 from pathlib import Path
 from pydantic import BaseModel
 from typing import Literal, List
-
-print("Iniciando World Builder! Boa Sorte!")
 
 def resolver_caminho(path_str):
     """
@@ -123,10 +123,34 @@ class ActionPlan(BaseModel):
 
 def taskplanner(maxiterations: int = 1, reason: Optional[str] = "O projeto esteja concluído"):
     print(f"O iterationschoice retornou que vamos precisar de {maxiterations} iterações! Vamos começar o Taskplanner!")
-    while maxiterations>0:
+    
+    # 1. Lê as permissões configuradas na aba de Opções
+    config = st.carregar_configuracoes()
+    allow_folder = config.get("wb_allow_create_folder", True)
+    allow_file = config.get("wb_allow_create_file", True)
+    allow_improve = config.get("wb_allow_improve_file", True)
+
+    # 2. Monta dinamicamente quais ferramentas o Gemini pode usar
+    ferramentas_permitidas = []
+    if allow_folder:
+        ferramentas_permitidas.append("CreateFolder")
+    if allow_file:
+        ferramentas_permitidas.append("CreateFile")
+    if allow_improve:
+        ferramentas_permitidas.append("ImproveFile")
+
+    # Se todas as ferramentas estiverem desabilitadas, cancela o planejamento
+    if not ferramentas_permitidas:
+        print("⚠️ Todas as ferramentas do WorldBuilder estão desabilitadas nas Opções! Ação cancelada.")
+        return
+
+    texto_ferramentas = "\n".join(ferramentas_permitidas)
+
+    while maxiterations > 0:
         if pu.is_cancelled():
             print("\n🛑 Processamento do Expander interrompido pelo usuário!")
             return
+
         instrucao_sistema = f"""
 Você é um especialista em worldbuilding para RPG.
 Analise o projeto e identifique quais ações são necessárias para:
@@ -148,11 +172,8 @@ Ao sugerir 'CreateFile', escolha obrigatoriamente um dos seguintes valores para 
 - "reinado": para países, reinos, impérios e ducados
 - "nenhum": para conceitos genéricos, facções ou tópicos gerais (padrão)
 
-Você possui apenas três ferramentas:
-
-CreateFolder
-CreateFile
-ImproveFile
+FERRAMENTAS PERMITIDAS (Você DEVE usar APENAS estas ferramentas autorizadas):
+{texto_ferramentas}
 
 Formato obrigatório:
 {{
@@ -162,19 +183,6 @@ Formato obrigatório:
         "path": "{pu.PASTA_PROJETO}/...",
         "priority":10,
         "objective": "motivo"
-    }},
-    {{
-        "type": "CreateFile",
-        "path": "{pu.PASTA_PROJETO}/.../arquivo.md",
-        "priority":9,
-        "template":"cidade",
-        "objective": "O que deve ter no arquivo"
-    }},
-    {{
-        "type": "ImproveFile",
-        "path": "{pu.PASTA_PROJETO}/.../arquivo.md",
-        "priority":8,        
-        "objective": "O que deve ter no arquivo"
     }}
     ]
 }}
@@ -186,16 +194,16 @@ Não utilize markdown.
 Analise a estrutura atual do projeto no cache.
 Objetivo do Mestre: {reason}
 
-Crie o plano de ação no formato JSON estruturado com as próximas etapas prioritárias.
+Crie o plano de ação no formato JSON estruturado com as próximas etapas prioritárias usando APENAS as ferramentas permitidas.
 """
 
         try:    
             resposta = au.ask_ai(
-            contents=corpo_usuario,
-            system_instruction=instrucao_sistema,
-            temperature=0.4,
-            response_schema=ActionPlan,
-            use_world_context=True
+                contents=corpo_usuario,
+                system_instruction=instrucao_sistema,
+                temperature=0.4,
+                response_schema=ActionPlan,
+                use_world_context=True
             )
             plano = ActionPlan.model_validate_json(resposta)
 
@@ -203,23 +211,41 @@ Crie o plano de ação no formato JSON estruturado com as próximas etapas prior
                 print("Nenhuma ação necessária.")
                 break
 
-            # model_dump() converte os objetos Pydantic de volta para dicts,
-            # já que enactchoices() e o resto do código trabalham com dicts/JSON puro.
+            # Filtra de segurança: remove do plano qualquer ação que esteja desabilitada
+            acoes_filtradas = []
+            for a in plano.actions:
+                if a.type == "CreateFolder" and not allow_folder:
+                    print(f"Ação '{a.type}' bloqueada pelas Opções.")
+                    continue
+                if a.type == "CreateFile" and not allow_file:
+                    print(f"Ação '{a.type}' bloqueada pelas Opções.")
+                    continue
+                if a.type == "ImproveFile" and not allow_improve:
+                    print(f"Ação '{a.type}' bloqueada pelas Opções.")
+                    continue
+                acoes_filtradas.append(a)
+
             actions = sorted(
-                [a.model_dump() for a in plano.actions],
+                [a.model_dump() for a in acoes_filtradas],
                 key=lambda x: x.get("priority", 0),
                 reverse=True
             )
-            enactchoices(actions)
+            
+            if actions:
+                enactchoices(actions)
+            else:
+                print("Nenhuma ação permitida a ser executada nesta iteração.")
+
             print("1 iteração concluída!")
             maxiterations -= 1
             if pu.is_cancelled():
-                print("\n🛑 Processamento do Expander interrompido pelo usuário!")
+                print("\nProcessamento do Expander interrompido pelo usuário!")
                 return
         except Exception as e:
             print(f"Erro na resposta do TaskPlanner: {e}")
             print("1 iteração concluída!")
             maxiterations -= 1
+            
     ex.processar_arquivos()
     print("TaskPlanner Concluído!")
 
@@ -250,6 +276,12 @@ def enactchoices(actions):
             createfile(action["path"], action.get("objective", ""), template)
         elif tipo == "ImproveFile":
             improvefile(action["path"], action.get("objective", ""))
+    
+        ex.processar_arquivos()
+        # 🔄 RECONSTRUIR O CACHE APÓS O WORLD BUILDER ALTERAR O MUNDO
+        print("♻️ Reconstruindo contexto do cache para refletir as novas criações...")
+        cg.force_rebuild_world_context()
+    
     print("Enactchoices Concluído!")
 
 def createfolder(path, reason):
@@ -316,6 +348,7 @@ status: rascunho
         with open(arquivo, "w", encoding="utf-8") as f:
             f.write(conteudo)
         print(f"✅ Arquivo criado com sucesso: {arquivo}")
+        improvefile(path, reason)
         return True
     except Exception as e:
         print(f"❌ Erro ao criar arquivo {path}: {e}")

@@ -1,5 +1,4 @@
-import os
-import asyncio
+import os, threading, asyncio
 import core.ai_utils as au
 import core.memory as memory
 import engine.project_utils as pu
@@ -91,12 +90,7 @@ if DISCORD_ENABLED:
             # 3. Chamando o novo ask_ai
             # Definimos a temperatura em 0.65 para permitir flexibilidade sem quebrar as regras.
             try:
-                resposta = au.ask_ai(
-                    contents=conteudo_input,
-                    system_instruction=instrucao_sistema,
-                    temperature=0.65,
-                    use_world_context=True
-                )
+                resposta = threading.Thread(target=au.ask_ai, args=(conteudo_input,instrucao_sistema,0.65,True), daemon=True).start()
             except Exception as e:
                 print(f"Erro ao processar: {e}")
                 resposta = "Me perdoe, mortal, estou ocupado com outros afazeres cósmicos!"
