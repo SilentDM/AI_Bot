@@ -7,17 +7,17 @@ if getattr(sys, 'frozen', False):
 else:
     BASE_DIR = Path(__file__).resolve().parent.parent
 
-PASTA_PROJETO = os.getenv("PASTA_PROJETO", "Phaeton")
-CAMINHO_PROJETO = (BASE_DIR / PASTA_PROJETO).resolve()
-
-PASTA_ESTILO = os.getenv("PASTA_ESTILO", "Style")
-CAMINHO_ESTILO = (BASE_DIR / PASTA_ESTILO).resolve()
-
 PASTA_LOGS = (BASE_DIR / "logs").resolve()
-
 PASTA_MEMORIES = (BASE_DIR / "memories").resolve()
 PASTA_EXPORTS = (BASE_DIR / "exports").resolve()
 PASTA_TEMPLATES = (BASE_DIR / "Templates").resolve()
+PASTA_ESTILO = os.getenv("PASTA_ESTILO", "Style")
+CAMINHO_ESTILO = (BASE_DIR / PASTA_ESTILO).resolve()
+PROJECT_ROOT = BASE_DIR
+
+# Variáveis globais mutáveis do projeto ativo
+CAMINHO_PROJETO = None
+PASTA_PROJETO = None
 
 PROJECT_ROOT = BASE_DIR
 
@@ -32,6 +32,78 @@ STOP_WORDS = {
     "o", "a", "os", "as", "e", "the", "of", "and", "in", "on", "para", "com"}
 
 ARQUIVO_ORDEM_GLOBAL = PASTA_LOGS / "folder_orders.json"
+
+def obter_projetos_recentes():
+    """Retorna a lista de caminhos de projetos recentes salvos nas configurações."""
+    arquivo_settings = PASTA_LOGS / "settings.json"
+    if arquivo_settings.exists():
+        try:
+            with open(arquivo_settings, "r", encoding="utf-8") as f:
+                dados = json.load(f)
+                return dados.get("projetos_recentes", [])
+        except Exception:
+            pass
+    return []
+
+def definir_projeto_ativo(caminho_bruto):
+    """
+    Define e ativa o projeto informado (seja um caminho absoluto em qualquer
+    disco ou um nome de pasta relativo dentro da pasta do programa).
+    """
+    global CAMINHO_PROJETO, PASTA_PROJETO
+    
+    caminho_obj = Path(caminho_bruto).resolve()
+    
+    # Se o caminho não existir, cria a pasta automaticamente
+    caminho_obj.mkdir(parents=True, exist_ok=True)
+    
+    CAMINHO_PROJETO = caminho_obj
+    PASTA_PROJETO = caminho_obj.name
+
+    # Atualiza as configurações centrais e o histórico de recentes
+    arquivo_settings = PASTA_LOGS / "settings.json"
+    dados = {}
+    if arquivo_settings.exists():
+        try:
+            with open(arquivo_settings, "r", encoding="utf-8") as f:
+                dados = json.load(f)
+        except Exception:
+            pass
+
+    dados["caminho_projeto_ativo"] = str(caminho_obj)
+    
+    recentes = dados.get("projetos_recentes", [])
+    str_caminho = str(caminho_obj)
+    if str_caminho in recentes:
+        recentes.remove(str_caminho)
+    recentes.insert(0, str_caminho)
+    dados["projetos_recentes"] = recentes[:10]  # Guarda os últimos 10 projetos
+
+    try:
+        with open(arquivo_settings, "w", encoding="utf-8") as f:
+            json.dump(dados, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"Erro ao salvar projeto ativo: {e}")
+
+    print(f"🌍 Projeto Ativo configurado para: {CAMINHO_PROJETO}")
+    return CAMINHO_PROJETO
+
+# Inicialização padrão do projeto
+arquivo_settings = PASTA_LOGS / "settings.json"
+caminho_inicial = None
+if arquivo_settings.exists():
+    try:
+        with open(arquivo_settings, "r", encoding="utf-8") as f:
+            caminho_inicial = json.load(f).get("caminho_projeto_ativo")
+    except Exception:
+        pass
+
+if not caminho_inicial:
+    caminho_inicial = os.getenv("PASTA_PROJETO", "Phaeton")
+    if not os.path.isabs(caminho_inicial):
+        caminho_inicial = BASE_DIR / caminho_inicial
+
+definir_projeto_ativo(caminho_inicial)
 
 def obter_caminho_base():
     """Retorna o caminho raiz correto rodando como script .py ou como .exe compilado."""

@@ -34,43 +34,32 @@ def capturar_erros_fatais(exc_type, exc_value, exc_traceback):
 
 
 def bootstrap():
-    """
-    Ponto único de verificação e criação de todo o ecossistema de pastas e arquivos.
-    Roda ANTES de carregar a interface gráfica ou qualquer outro módulo.
-    """
     print("Iniciando Silent Multiverse Console...")
-    print(f"Diretório Raiz: {BASE_DIR}")
+    print(f"Diretório Raiz do App: {BASE_DIR}")
 
-    # A. Garante o arquivo .env na mesma pasta do main.py
     from ui.setup_env import garantir_env
     garantir_env()
 
-    # B. Carrega o .env explicitamente da raiz
     from dotenv import load_dotenv
-    env_path = BASE_DIR / ".env"
-    load_dotenv(env_path)
-
-    # C. Obtém nomes das pastas dinâmicas do .env (com valores padrão)
-    nome_projeto = os.getenv("PASTA_PROJETO", "Phaeton").strip() or "Phaeton"
+    load_dotenv(BASE_DIR / ".env")
+    import engine.project_utils as pu
     nome_estilo = os.getenv("PASTA_ESTILO", "Style").strip() or "Style"
 
-    # D. Dicionário de todas as pastas que OBRIGATORIAMENTE devem existir
+    # Garante a existência do projeto ativo
+    pu.CAMINHO_PROJETO.mkdir(parents=True, exist_ok=True)
+
     pastas_obrigatorias = {
         "Logs": BASE_DIR / "logs",
         "Memories": BASE_DIR / "memories",
         "Exports": BASE_DIR / "exports",
         "Templates": BASE_DIR / "Templates",
         "Style": BASE_DIR / nome_estilo,
-        "Projeto": BASE_DIR / nome_projeto
+        "Projeto Ativo": pu.CAMINHO_PROJETO
     }
 
-    # E. Verifica e cria cada pasta
     for nome, caminho in pastas_obrigatorias.items():
-        if not caminho.exists():
-            caminho.mkdir(parents=True, exist_ok=True)
-            print(f"  └─ 📁 Pasta criada: {nome} -> {caminho.name}")
-        else:
-            print(f"  └─ ✅ Pasta verificada: {nome} -> {caminho.name}")
+        caminho.mkdir(parents=True, exist_ok=True)
+        print(f"  └─ ✅ {nome}: {caminho}")
 
     print("Pastas e configurações foram verificadas com sucesso!")
 

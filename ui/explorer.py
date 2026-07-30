@@ -42,7 +42,7 @@ class ExplorerFrame(ttk.Frame):
         self.btn_clear_search.pack(side=tk.RIGHT, padx=(2, 0))
 
         # ÁRVORE DE DIRETÓRIOS
-        self.tree = ttk.Treeview(self.tree_frame, selectmode="browse")
+        self.tree = ttk.Treeview(self.tree_frame, selectmode="browse",show="tree")
         self.tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=2)
 
         self.tree_ysb = ttk.Scrollbar(self.tree, orient="vertical", command=self.tree.yview)

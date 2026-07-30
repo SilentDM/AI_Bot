@@ -208,6 +208,7 @@ class SilentDesktopApp:
 
         tk.Label(sidebar, text="🜂 Silent Console", bg="#0a0a0a", fg="#10b981", font=("Segoe UI", 13, "bold")).pack(anchor=tk.W, padx=16, pady=(22, 26))
 
+        self.setup_project_selector(sidebar)
         nav_items = [
             ("editor", "Edição do Mundo"),
             ("worldbuilder", "WorldBuilder"),
@@ -857,6 +858,82 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
                 self.toast("Erro ao criar o backup.")
                 self.root.after(0, lambda err=str(e): messagebox.showerror("Erro no Backup", err))
         threading.Thread(target=_run_backup, daemon=True).start()
+    
+    # Dentro da classe SilentDesktopApp em ui/gui.py:
+
+    def setup_project_selector(self, parent_frame):
+        """Cria a caixa de seleção de projetos na barra lateral."""
+        project_frame = tk.Frame(parent_frame, bg="#0a0a0a")
+        project_frame.pack(fill=tk.X, padx=12, pady=(0, 15))
+
+        tk.Label(
+            project_frame, 
+            text="PROJETO ATIVO:", 
+            bg="#0a0a0a", 
+            fg="#888888", 
+            font=("Segoe UI", 8, "bold")
+        ).pack(anchor=tk.W, pady=(0, 2))
+
+        select_row = tk.Frame(project_frame, bg="#0a0a0a")
+        select_row.pack(fill=tk.X)
+
+        self.recentes_map = {Path(p).name: p for p in pu.obter_projetos_recentes()}
+        
+        self.combo_projetos = ttk.Combobox(
+            select_row, 
+            state="readonly", 
+            values=list(self.recentes_map.keys()),
+            font=("Segoe UI", 9)
+        )
+        if pu.PASTA_PROJETO in self.recentes_map:
+            self.combo_projetos.set(pu.PASTA_PROJETO)
+        else:
+            self.combo_projetos.set(pu.PASTA_PROJETO)
+            
+        self.combo_projetos.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 4))
+        self.combo_projetos.bind("<<ComboboxSelected>>", self._on_project_selected)
+
+        btn_browse = ttk.Button(
+            select_row, 
+            text="📁", 
+            width=3, 
+            command=self.browse_open_project
+        )
+        btn_browse.pack(side=tk.RIGHT)
+
+    def _on_project_selected(self, event):
+        nome_sel = self.combo_projetos.get()
+        caminho_completo = self.recentes_map.get(nome_sel)
+        if caminho_completo:
+            self.switch_to_project(caminho_completo)
+
+    def browse_open_project(self):
+        pasta_escolhida = filedialog.askdirectory(
+            title="Selecione ou Crie a Pasta de um Projeto de Lore",
+            initialdir=str(pu.CAMINHO_PROJETO.parent)
+        )
+        if pasta_escolhida:
+            self.switch_to_project(pasta_escolhida)
+
+    def switch_to_project(self, caminho_novo):
+        try:
+            self.explorer_pane.save_current_file()
+            pu.definir_projeto_ativo(caminho_novo)
+            
+            # Recarrega mapa de recentes no dropdown
+            self.recentes_map = {Path(p).name: p for p in pu.obter_projetos_recentes()}
+            self.combo_projetos["values"] = list(self.recentes_map.keys())
+            self.combo_projetos.set(pu.PASTA_PROJETO)
+
+            # Atualiza a árvore do Explorer e recria o cache da IA para o novo mundo
+            self.explorer_pane.refresh_tree()
+            self.rebuild_world_context()
+
+            self.log_activity(f"Projeto alternado para: {pu.CAMINHO_PROJETO}")
+            self.toast(f"🌐 Mundo alterado para '{pu.PASTA_PROJETO}'!")
+        except Exception as e:
+            self.log_activity(f"Erro ao alternar de projeto: {e}")
+            messagebox.showerror("Erro de Projeto", f"Falha ao abrir projeto: {e}")
 
 
 def main():
