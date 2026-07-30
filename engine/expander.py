@@ -129,18 +129,28 @@ def processar_arquivo_unico(path):
         print(f"\n=====\nTag encontrada no arquivo:\n{arquivo.name}\n=====")
         tagx=1
         info_locais = ""
-        for arquivo_local in arquivo.parent.glob("*.md"):
-            if nome_base(arquivo_local) != nome_base(arquivo):
-                with open(arquivo_local, "r", encoding="utf-8") as f:
+        grupos_locais = {}
+        for arq_p in arquivo.parent.glob("*.md"):
+            base = nome_base(arq_p)
+            if base != nome_base(arquivo):
+                if base not in grupos_locais:
+                    grupos_locais[base] = []
+                grupos_locais[base].append(arq_p)
+
+        for base, lista_vers in grupos_locais.items():
+            def _ver(p):
+                m = re.search(r'_v(\d+)$', p.stem, flags=re.IGNORECASE)
+                return int(m.group(1)) if m else 0
+            lista_vers.sort(key=_ver, reverse=True)
+            arq_mais_recente = lista_vers[0]
+            
+            try:
+                with open(arq_mais_recente, "r", encoding="utf-8") as f:
                     conteudo_local = f.read()
-                    if (
-                        any(tag in conteudo_local for tag in pu.TAG_ALVO)
-                        or "status: rascunho" in conteudo_local.lower()
-                        ):
-                        continue
-                    else:
-                        with open(arquivo_local, "r", encoding="utf-8") as f:
-                            info_locais += f.read() + "\n\n"
+                    if not any(tag in conteudo_local for tag in pu.TAG_ALVO) and "status: rascunho" not in conteudo_local.lower():
+                        info_locais += conteudo_local + "\n\n"
+            except Exception:
+                pass
         info_importante = obter_arquivos_relacionados(titulo)
         prompt_conteudo = f"""
 <contexto_local>
@@ -195,9 +205,9 @@ TEXTO GERADO:
                 with open(novo_arquivo_path, 'w', encoding='utf-8') as f:
                     f.write(texto_limpo)
                 arquivar_versao_antiga(arquivo)
-                print(f"✅ Nova versão gerada com sucesso: {novo_arquivo_path.name}")
+                print(f"Nova versão gerada com sucesso: {novo_arquivo_path.name}")
             else:
-                print(f"⚠️ O retorno do modelo para {arquivo.name} foi vazio.")
+                print(f"O retorno do modelo para {arquivo.name} foi vazio.")
             
         except Exception as e:
             print(f"❌ Erro ao processar {arquivo.name}: {e}")

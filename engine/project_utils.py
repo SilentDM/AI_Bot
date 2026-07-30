@@ -1,31 +1,36 @@
-import sys, os, re, json, threading, unicodedata, difflib
+import sys, os, re, json, threading, unicodedata, difflib, zipfile
 from pathlib import Path
 from datetime import datetime
+
+if getattr(sys, 'frozen', False):
+    BASE_DIR = Path(sys.executable).resolve().parent
+else:
+    BASE_DIR = Path(__file__).resolve().parent.parent
+
 PASTA_PROJETO = os.getenv("PASTA_PROJETO", "Phaeton")
-CAMINHO_PROJETO = os.path.join(os.getcwd(), PASTA_PROJETO)
+CAMINHO_PROJETO = (BASE_DIR / PASTA_PROJETO).resolve()
+
 PASTA_ESTILO = os.getenv("PASTA_ESTILO", "Style")
-CAMINHO_ESTILO = (Path.cwd()/PASTA_ESTILO)
-PASTA_LOGS = Path.cwd() / "logs"
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-PASTA_LOGS.mkdir(exist_ok=True,parents=True)
-TAG_ALVO = [
-    "<-- TO DO:", "<-- TO DO", "<-- TODO:", "<-- TODO", "<-- todo",
-    "<-- To do:", "<-- to-do:", "<-- to-do", "<-- to do:", "<-- to do",
-    "<-- To Do:", "<-- To Do", "<-- To-Do:", "<-- To-Do", "<-- To-do:", 
-    "<-- To-do", "<-- Todo:"
-]
-IGNORELIST = [
-    "Templates", 
-    "status: rascunho"
-]
+CAMINHO_ESTILO = (BASE_DIR / PASTA_ESTILO).resolve()
+
+PASTA_LOGS = (BASE_DIR / "logs").resolve()
+
+PASTA_MEMORIES = (BASE_DIR / "memories").resolve()
+PASTA_EXPORTS = (BASE_DIR / "exports").resolve()
+PASTA_TEMPLATES = (BASE_DIR / "Templates").resolve()
+
+PROJECT_ROOT = BASE_DIR
+
+TAG_ALVO = ["<-- TO DO:", "<-- TO DO", "<-- TODO:", "<-- TODO", "<-- todo","<-- To do:", "<-- to-do:", "<-- to-do", "<-- to do:", "<-- to do","<-- To Do:", "<-- To Do", "<-- To-Do:", "<-- To-Do", "<-- To-do:", "<-- To-do", "<-- Todo:"]
+IGNORELIST = ["Templates", "status: rascunho"]
+
 # Sinalizador global de cancelamento
 _CANCEL_EVENT = threading.Event()
 
-
 STOP_WORDS = {
     "de", "da", "do", "das", "dos", "em", "no", "na", "nos", "nas", 
-    "o", "a", "os", "as", "e", "the", "of", "and", "in", "on", "para", "com"
-}
+    "o", "a", "os", "as", "e", "the", "of", "and", "in", "on", "para", "com"}
+
 ARQUIVO_ORDEM_GLOBAL = PASTA_LOGS / "folder_orders.json"
 
 def obter_caminho_base():
@@ -304,3 +309,53 @@ def obter_itens_ordenados(caminho_pasta):
 
     # Caso não tenha ordem gravada ainda, usa ordem alfabética padrão
     return sorted(todos_itens, key=lambda x: x.lower())
+
+def criar_backup_projeto():
+    """
+    Reúne e compacta todas as pastas de conteúdo do usuário em um arquivo .zip
+    salvo na raiz do volume de disco em uso (ex: C:\\, E:\\, F:\\).
+    """
+    # Pastas que serão incluídas no backup
+    pastas_para_backup = [
+        ("exports", PASTA_EXPORTS),
+        ("logs", PASTA_LOGS),
+        ("memories", PASTA_MEMORIES),
+        ("Templates", PASTA_TEMPLATES),
+        (PASTA_ESTILO, CAMINHO_ESTILO),
+        (PASTA_PROJETO, CAMINHO_PROJETO),
+    ]
+
+    # Nome do arquivo de backup com data e hora
+    data_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+    nome_zip = f"backup_{PASTA_PROJETO}_{data_str}.zip"
+
+    # Raiz do volume (ex: C:\ ou E:\)
+    raiz_volume = Path(BASE_DIR.anchor)
+    caminho_destino = raiz_volume / nome_zip
+
+    # Teste de permissão de escrita na raiz do disco
+    try:
+        teste_perm = raiz_volume / f".test_perm_{data_str}"
+        teste_perm.touch()
+        teste_perm.unlink()
+    except (PermissionError, OSError):
+        # Se não houver permissão de admin na raiz do C:\, salva na pasta do programa
+        caminho_destino = BASE_DIR / nome_zip
+
+    # Criação do arquivo .zip
+    total_arquivos = 0
+    with zipfile.ZipFile(caminho_destino, "w", zipfile.ZIP_DEFLATED) as zipf:
+        for nome_pasta_rel, pasta_path in pastas_para_backup:
+            if pasta_path.exists() and pasta_path.is_dir():
+                for arq in pasta_path.rglob("*"):
+                    if arq.is_file():
+                        # Evita incluir backups zip antigos dentro do novo zip
+                        if arq.name.startswith("backup_") and arq.suffix == ".zip":
+                            continue
+                        
+                        # Preserva a estrutura interna de pastas dentro do .zip
+                        rel_path = Path(nome_pasta_rel) / arq.relative_to(pasta_path)
+                        zipf.write(arq, arcname=rel_path)
+                        total_arquivos += 1
+
+    return caminho_destino, total_arquivos

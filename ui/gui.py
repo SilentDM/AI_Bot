@@ -288,7 +288,7 @@ class SilentDesktopApp:
         # BARRA DE EMERGÊNCIA
         stop_box = ttk.LabelFrame(body, text=" Controle de Emergência ")
         stop_box.pack(fill=tk.X, pady=(0, 15))
-        self.btn_stop = ttk.Button(stop_box, text="⛔ PARAR EXECUÇÃO ATUAL", command=self.stop_all_tasks)
+        self.btn_stop = ttk.Button(stop_box, text="⛔⛔PARAR QUALQUER EXECUÇÃO ATUAL⛔⛔", command=self.stop_all_tasks)
         self.btn_stop.pack(fill=tk.X, padx=10, pady=10)
 
         # AUDITORIA DE LORE
@@ -296,7 +296,7 @@ class SilentDesktopApp:
         audit_box.pack(fill=tk.X, pady=(0, 15))
         self.btn_audit_lore = ttk.Button(
             audit_box, 
-            text="🔍 Auditar Lore do Mundo (Buscar Incoerências e Furos)", 
+            text="Auditar Lore do Mundo (Buscar Incoerências e Furos)", 
             command=self.start_lore_audit_thread
         )
         self.btn_audit_lore.pack(fill=tk.X, padx=10, pady=10)
@@ -306,11 +306,11 @@ class SilentDesktopApp:
         # Expander Box
         expander_box = ttk.LabelFrame(body, text=" Expander (preenche lacunas marcadas com TO DO) ")
         expander_box.pack(fill=tk.X, pady=(0, 15))
-        self.btn_expander = ttk.Button(expander_box, text="▶  Executar Tarefa do Expander", command=self.start_expander_thread)
+        self.btn_expander = ttk.Button(expander_box, text="▶ Executar Tarefa do Expander", command=self.start_expander_thread)
         self.btn_expander.pack(fill=tk.X, padx=10, pady=10)
         self.lbl_expander = ttk.Label(expander_box, text="Status: Inativo")
         self.lbl_expander.pack(anchor=tk.W, padx=10, pady=(0, 10))
-        self.btn_rebuild_context = ttk.Button(expander_box, text="Reconstruir Contexto do Mundo", command=self.rebuild_world_context)
+        self.btn_rebuild_context = ttk.Button(expander_box, text="▶ Reconstruir Contexto do Mundo", command=self.rebuild_world_context)
         self.btn_rebuild_context.pack(fill=tk.X, padx=10, pady=5)
         
         # WorldBuilder Box
@@ -320,7 +320,7 @@ class SilentDesktopApp:
         self.worldbuilder_objective = tk.StringVar(value="Completar o Projeto")
         self.objective_entry = ttk.Entry(wb_box, textvariable=self.worldbuilder_objective)
         self.objective_entry.pack(fill=tk.X, padx=10, pady=5)
-        self.btn_worldbuilder = ttk.Button(wb_box, text="▶  Executar WorldBuilder", command=self.start_worldbuilder_thread)
+        self.btn_worldbuilder = ttk.Button(wb_box, text="▶ Executar WorldBuilder", command=self.start_worldbuilder_thread)
         self.btn_worldbuilder.pack(fill=tk.X, padx=10, pady=(5, 10))
         self.lbl_worldbuilder = ttk.Label(wb_box, text="Status: Inativo")
         self.lbl_worldbuilder.pack(anchor=tk.W, padx=10, pady=(0, 10))
@@ -328,13 +328,17 @@ class SilentDesktopApp:
         # Exportação do Livro
         export_box = ttk.LabelFrame(body, text=" Exportação do Cenário ")
         export_box.pack(fill=tk.X, pady=(15, 0))
-        self.btn_export_book = ttk.Button(export_box, text="Gerar e Abrir Livro do Cenário (HTML/PDF)", command=self.export_sourcebook)
+        self.btn_export_book = ttk.Button(export_box, text="▶ Gerar e Abrir Livro do Cenário (HTML/PDF)", command=self.export_sourcebook)
         self.btn_export_book.pack(fill=tk.X, padx=10, pady=10)
 
         # Gerenciamento de Memórias
         db_box = ttk.LabelFrame(body, text=" Gerenciamento ")
         db_box.pack(fill=tk.X, pady=(15, 0))
-        self.btn_delete_memories = ttk.Button(db_box, text="❌ Excluir Todas as Memórias", command=self.delete_memories)
+        
+        self.btn_create_backup = ttk.Button(db_box, text="▶ Criar Backup Completo do Projeto (.zip)", command=self.create_backup)
+        self.btn_create_backup.pack(fill=tk.X, padx=10, pady=5)        
+        
+        self.btn_delete_memories = ttk.Button(db_box, text="⛔Excluir Todas as Memórias⛔", command=self.delete_memories)
         self.btn_delete_memories.pack(fill=tk.X, padx=10, pady=5)
 
         ttk.Label(body, text="Acompanhe o andamento detalhado no Log de Atividades.", foreground="#666666", wraplength=560, justify="left").pack(anchor=tk.W, pady=(15, 0))
@@ -831,6 +835,28 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
                 self.toast("❌ Erro ao compilar o livro.")
 
         threading.Thread(target=_run_compile, daemon=True).start()
+
+    # ------------------------------------------------------------------
+    # Backup full do projeto
+    # ------------------------------------------------------------------
+    def create_backup(self):
+        def _run_backup():
+            try:
+                self.log_activity("Iniciando criação de backup completo do projeto...")
+                self.toast("Compactando arquivos em backup.zip...")
+                caminho_zip, num_arquivos = pu.criar_backup_projeto()
+                msg = (
+                    f"Backup concluído com sucesso!\n\n"
+                    f"Total de arquivos incluídos: {num_arquivos}\n"
+                    f"Salvo em: {caminho_zip}")
+                self.log_activity(f"Backup gerado: {caminho_zip} ({num_arquivos} arquivos)")
+                self.toast(f"✅ Backup salvo em: {caminho_zip.name}")
+                self.root.after(0, lambda: messagebox.showinfo("Backup Concluído", msg))
+            except Exception as e:
+                self.log_activity(f"Erro ao criar backup: {e}")
+                self.toast("Erro ao criar o backup.")
+                self.root.after(0, lambda err=str(e): messagebox.showerror("Erro no Backup", err))
+        threading.Thread(target=_run_backup, daemon=True).start()
 
 
 def main():

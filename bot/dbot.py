@@ -90,10 +90,16 @@ if DISCORD_ENABLED:
             # 3. Chamando o novo ask_ai
             # Definimos a temperatura em 0.65 para permitir flexibilidade sem quebrar as regras.
             try:
-                resposta = threading.Thread(target=au.ask_ai, args=(conteudo_input,instrucao_sistema,0.65,True), daemon=True).start()
+                resposta = await asyncio.to_thread(
+                    au.ask_ai,
+                    contents=conteudo_input,
+                    system_instruction=instrucao_sistema,
+                    temperature=0.65,
+                    use_world_context=True,
+                )
             except Exception as e:
                 print(f"Erro ao processar: {e}")
-                resposta = "Me perdoe, mortal, estou ocupado com outros afazeres cósmicos!"
+                resposta = ("Me perdoe, mortal, estou ocupado com outros afazeres cósmicos!")
                 
             if resposta:
                 print("Resposta criada!")
@@ -102,31 +108,25 @@ if DISCORD_ENABLED:
                     resposta = memory.trim_incomplete_sentences(resposta)
                 
                 if len(resposta) > 1900:
-                    print("Resposta muito grande!")
-                    paragraph = [p for p in resposta.split("\n\n") if p.strip()]
-                    buffer = ""
-                    t = 1
-                    for p in paragraph:
-                        if buffer:
-                            buffer += "\n\n" + p
+                    print("Resposta muito grande! Fatiando...")
+                    # Garante fatiamento seguro mesmo sem \n\n
+                    chunks = []
+                    texto_restante = resposta
+                    while len(texto_restante) > 1800:
+                        ponto_corte = texto_restante.rfind('\n', 0, 1800)
+                        if ponto_corte == -1:
+                            ponto_corte = 1800
+                        chunks.append(texto_restante[:ponto_corte])
+                        texto_restante = texto_restante[ponto_corte:].lstrip()
+                    if texto_restante:
+                        chunks.append(texto_restante)
+
+                    for idx, chunk in enumerate(chunks):
+                        if idx == 0:
+                            await responderreply(message, chunk)
                         else:
-                            buffer = p
-                        
-                        if len(buffer) > 1300:
-                            if t == 1:
-                                await responderreply(message, buffer)
-                                print(f"Enviei a {t}º resposta!")
-                            else:
-                                await respondersend(message, buffer)
-                                print(f"Enviei a {t}º resposta!")
-                            
-                            await asyncio.sleep(2) 
-                            t += 1
-                            buffer = "\u200b"
-                    
-                    if buffer and buffer != "\u200b":
-                        await respondersend(message, buffer)
-                        print("Enviei a última resposta!")
+                            await respondersend(message, chunk)
+                        await asyncio.sleep(1.5)
                 else:
                     await responderreply(message, resposta)
                     print("Resposta enviada!")

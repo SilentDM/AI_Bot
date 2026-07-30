@@ -302,9 +302,14 @@ class ExplorerFrame(ttk.Frame):
                 texto = f.read()
             if any(tag in texto for tag in pu.TAG_ALVO):
                 nome_arq = os.path.basename(path)
-                self.log_callback(f"TODO encontrado em {nome_arq}")
-                self.toast(f"⚡ TODO detectado em '{nome_arq}'! Executando Expander...")
-                threading.Thread(target=wb.improvefile, args=(path,), daemon=True).start()
+                self.log_callback(f"'<--TO DO:' encontrado em {nome_arq}")
+                self.toast(f"Tag '<--TO DO:' detectada em '{nome_arq}'! Executando Expander!")
+            
+            def _worker():
+                wb.improvefile(path)
+                self.after(0, self.refresh_tree)
+
+            threading.Thread(target=_worker, daemon=True).start()
         except Exception as e:
             self.log_callback(f"Erro analisando TODO: {e}")
 

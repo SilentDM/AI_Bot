@@ -4,6 +4,7 @@ from openai import OpenAI
 
 PRO_API_KEY = os.getenv("PRO_API_KEY")
 client = OpenAI(api_key=PRO_API_KEY) if PRO_API_KEY else None
+if not client: raise ValueError("PRO_API_KEY não configurada no .env")
 
 def ask_ai(contents, system_instruction=None, temperature=0.7, response_schema=None, **kwargs):
     messages = []

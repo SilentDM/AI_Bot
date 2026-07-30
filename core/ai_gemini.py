@@ -198,14 +198,14 @@ def ask_ai(
     if use_world_context:
         try:
             world_context = cg.prepare_world_context()
-            config = config.model_copy(deep=True)
-            
-            if world_context["type"] == "file":
-                uploaded_file = GEMINICLIENT.files.get(name=world_context["id"])
-                contents_to_send = [uploaded_file, contents]
-            elif world_context["type"] == "cache":
-                config.cached_content = world_context["id"]
-                cache_model = world_context.get("model")  # 👈 Passa o nome do modelo criador do cache
+            if world_context:
+                config = config.model_copy(deep=True)
+                if world_context.get("type") == "file":
+                    uploaded_file = GEMINICLIENT.files.get(name=world_context["id"])
+                    contents_to_send = [uploaded_file, contents]
+                elif world_context.get("type") == "cache":
+                    config.cached_content = world_context["id"]
+                    cache_model = world_context.get("model")
         except Exception as e:
             print(f"⚠️ World Context unavailable: {e}")
             print("Continuing without cache or file.")

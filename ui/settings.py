@@ -83,9 +83,9 @@ def escrever_arquivo_estilo_tom(nome_perfil):
         with open(caminho_arquivo, "w", encoding="utf-8") as f:
             f.write(conteudo)
             
-        print(f"📄 Arquivo de tom atualizado em Style: {caminho_arquivo.name} ({nome_perfil})")
+        print(f"Arquivo de tom atualizado em Style: {caminho_arquivo.name} ({nome_perfil})")
     except Exception as e:
-        print(f"❌ Erro ao escrever arquivo de tom em Style: {e}")
+        print(f"Erro ao escrever arquivo de tom em Style: {e}")
 
 
 class OptionsFrame(ttk.Frame):

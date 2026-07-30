@@ -1,21 +1,17 @@
-import os
+import sys, os
 import tkinter as tk
-import engine.project_utils as pu
 from tkinter import ttk, messagebox
 from pathlib import Path
 from dotenv import load_dotenv, find_dotenv
 
-
-# Tenta localizar o arquivo .env de forma dinâmica (mesma lógica que o python-dotenv usa)
-_found_env = find_dotenv()
-if _found_env:
-    ENV_PATH = Path(_found_env).resolve()
+# Garante que o .env sempre fique no mesmo diretório do executável/main.py
+if getattr(sys, 'frozen', False):
+    BASE_DIR = Path(sys.executable).resolve().parent
 else:
-    ENV_PATH = (pu.PROJECT_ROOT / ".env").resolve()
+    BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Carrega as variáveis de ambiente
+ENV_PATH = (BASE_DIR / ".env").resolve()
 load_dotenv(ENV_PATH)
-
 
 class SetupWizard:
     """
@@ -244,7 +240,6 @@ def garantir_env():
     env_existe = (
         bool(found_path and Path(found_path).exists())
         or ENV_PATH.exists()
-        or (pu.PROJECT_ROOT / ".env").exists()
         or (Path.cwd() / ".env").exists()
     )
 

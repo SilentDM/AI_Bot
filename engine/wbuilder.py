@@ -44,12 +44,7 @@ def obter_conteudo_template(nome_template: Optional[str]) -> str:
     nome_arquivo = f"{nome_template.lower().strip()}.md"
 
     # Locais onde a pasta de Templates pode estar localizada
-    locais_possiveis = [
-        Path(pu.CAMINHO_PROJETO) / "Templates" / nome_arquivo,
-        Path(pu.CAMINHO_PROJETO) / "Template" / nome_arquivo,
-        Path.cwd() / "Templates" / nome_arquivo,
-        Path.cwd() / "Template" / nome_arquivo,
-    ]
+    locais_possiveis = [Path(pu.CAMINHO_PROJETO) / "Templates" / nome_arquivo,pu.PASTA_TEMPLATES / nome_arquivo,]
 
     for caminho in locais_possiveis:
         if caminho.exists() and caminho.is_file():
@@ -205,8 +200,9 @@ Crie o plano de ação no formato JSON estruturado com as próximas etapas prior
                 response_schema=ActionPlan,
                 use_world_context=True
             )
-            plano = ActionPlan.model_validate_json(resposta)
-
+            texto_limpo = ex.remover_markdown_fences(str(resposta))
+            plano = ActionPlan.model_validate_json(texto_limpo)
+            
             if not plano.actions:
                 print("Nenhuma ação necessária.")
             else:

@@ -137,14 +137,14 @@ def compilar_livro_cenario():
     """Compila todo o projeto de lore em um documento HTML formatado como livro de RPG."""
     caminho = Path(pu.CAMINHO_PROJETO)
     if not caminho.exists():
-        print(f"⚠️ Erro: Pasta do projeto '{pu.PASTA_PROJETO}' não encontrada.")
+        print(f"Erro: Pasta do projeto '{pu.PASTA_PROJETO}' não encontrada.")
         return None
 
     # 1. Obtém a estrutura na ordem manual exata definida no Explorer
     estrutura_capitulos = _obter_estrutura_ordenada(caminho)
 
     if not estrutura_capitulos:
-        print("⚠️ Nenhum conteúdo válido encontrado para compilar.")
+        print("Nenhum conteúdo válido encontrado para compilar.")
         return None
 
     # 2. Gerar Sumário (TOC) e Conteúdo HTML
@@ -403,7 +403,7 @@ def compilar_livro_cenario():
         </div>
 
         <div class="toc-box">
-            <h2>📜 Sumário do Mundo</h2>
+            <h2>Sumário do Mundo</h2>
             <ul>
                 {"".join(indice_html)}
             </ul>
@@ -417,12 +417,12 @@ def compilar_livro_cenario():
 """
 
     # 4. Salva o HTML
-    pasta_export = Path.cwd() / "exports"
+    pasta_export = pu.PASTA_EXPORTS
     pasta_export.mkdir(exist_ok=True, parents=True)
     caminho_saida = pasta_export / f"Livro_do_Cenario_{pu.PASTA_PROJETO}.html"
 
     with open(caminho_saida, "w", encoding="utf-8") as f:
         f.write(documento_completo)
 
-    print(f"📖 Livro do Cenário compilado com sucesso em: {caminho_saida}")
+    print(f"Livro do Cenário compilado com sucesso em: {caminho_saida}")
     return caminho_saida
