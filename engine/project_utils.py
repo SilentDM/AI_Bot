@@ -1,4 +1,4 @@
-import os, re, json, threading, unicodedata, difflib
+import sys, os, re, json, threading, unicodedata, difflib
 from pathlib import Path
 from datetime import datetime
 PASTA_PROJETO = os.getenv("PASTA_PROJETO", "Phaeton")
@@ -21,11 +21,20 @@ IGNORELIST = [
 # Sinalizador global de cancelamento
 _CANCEL_EVENT = threading.Event()
 
+
 STOP_WORDS = {
     "de", "da", "do", "das", "dos", "em", "no", "na", "nos", "nas", 
     "o", "a", "os", "as", "e", "the", "of", "and", "in", "on", "para", "com"
 }
 ARQUIVO_ORDEM_GLOBAL = PASTA_LOGS / "folder_orders.json"
+
+def obter_caminho_base():
+    """Retorna o caminho raiz correto rodando como script .py ou como .exe compilado."""
+    if getattr(sys, 'frozen', False):
+        return Path(sys._MEIPASS) # Pasta temporária do PyInstaller
+    return Path(__file__).resolve().parent.parent
+
+ROOT_EMBUTIDO = obter_caminho_base()
 
 def normalizar_nome(nome: str) -> str:
     """Normaliza o nome removendo extensão, sufixos de versão, acentos e separadores."""
