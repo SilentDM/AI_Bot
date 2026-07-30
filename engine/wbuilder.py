@@ -121,8 +121,8 @@ class Action(BaseModel):
 class ActionPlan(BaseModel):
     actions: List[Action]
 
-def taskplanner(maxiterations: int = 1, reason: Optional[str] = "O projeto esteja concluído"):
-    print(f"O iterationschoice retornou que vamos precisar de {maxiterations} iterações! Vamos começar o Taskplanner!")
+def taskplanner(reason: Optional[str] = "O projeto esteja concluído"):
+    print("Vamos começar o Taskplanner!")
     
     # 1. Lê as permissões configuradas na aba de Opções
     config = st.carregar_configuracoes()
@@ -146,11 +146,11 @@ def taskplanner(maxiterations: int = 1, reason: Optional[str] = "O projeto estej
 
     texto_ferramentas = "\n".join(ferramentas_permitidas)
 
-    while maxiterations > 0:
-        if pu.is_cancelled():
-            print("\n🛑 Processamento do Expander interrompido pelo usuário!")
-            return
-
+    
+    if pu.is_cancelled():
+        print("\n🛑 Processamento do Expander interrompido pelo usuário!")
+        return
+    else:
         instrucao_sistema = f"""
 Você é um especialista em worldbuilding para RPG.
 Analise o projeto e identifique quais ações são necessárias para:
@@ -209,42 +209,35 @@ Crie o plano de ação no formato JSON estruturado com as próximas etapas prior
 
             if not plano.actions:
                 print("Nenhuma ação necessária.")
-                break
-
-            # Filtra de segurança: remove do plano qualquer ação que esteja desabilitada
-            acoes_filtradas = []
-            for a in plano.actions:
-                if a.type == "CreateFolder" and not allow_folder:
-                    print(f"Ação '{a.type}' bloqueada pelas Opções.")
-                    continue
-                if a.type == "CreateFile" and not allow_file:
-                    print(f"Ação '{a.type}' bloqueada pelas Opções.")
-                    continue
-                if a.type == "ImproveFile" and not allow_improve:
-                    print(f"Ação '{a.type}' bloqueada pelas Opções.")
-                    continue
-                acoes_filtradas.append(a)
-
-            actions = sorted(
-                [a.model_dump() for a in acoes_filtradas],
-                key=lambda x: x.get("priority", 0),
-                reverse=True
-            )
-            
-            if actions:
-                enactchoices(actions)
             else:
-                print("Nenhuma ação permitida a ser executada nesta iteração.")
+                acoes_filtradas = []
+                for a in plano.actions:
+                    if a.type == "CreateFolder" and not allow_folder:
+                        print(f"Ação '{a.type}' bloqueada pelas Opções.")
+                        continue
+                    if a.type == "CreateFile" and not allow_file:
+                        print(f"Ação '{a.type}' bloqueada pelas Opções.")
+                        continue
+                    if a.type == "ImproveFile" and not allow_improve:
+                        print(f"Ação '{a.type}' bloqueada pelas Opções.")
+                        continue
+                    acoes_filtradas.append(a)
 
-            print("1 iteração concluída!")
-            maxiterations -= 1
-            if pu.is_cancelled():
-                print("\nProcessamento do Expander interrompido pelo usuário!")
-                return
+                actions = sorted(
+                    [a.model_dump() for a in acoes_filtradas],
+                    key=lambda x: x.get("priority", 0),
+                    reverse=True
+                )
+                
+                if actions:
+                    enactchoices(actions)
+                else:
+                    print("Nenhuma ação permitida a ser executada nesta iteração.")
+                if pu.is_cancelled():
+                    print("\nProcessamento do Expander interrompido pelo usuário!")
+                    return
         except Exception as e:
             print(f"Erro na resposta do TaskPlanner: {e}")
-            print("1 iteração concluída!")
-            maxiterations -= 1
             
     ex.processar_arquivos()
     print("TaskPlanner Concluído!")
@@ -253,7 +246,7 @@ def enactchoices(actions):
     print("Enactchoices Iniciado!")
     for action in actions:
         if pu.is_cancelled():
-            print("\n🛑 Processamento do Expander interrompido pelo usuário!")
+            print("\nProcessamento do Expander interrompido pelo usuário!")
             return
         tipo = action["type"]
         path = action.get("path", "")
@@ -291,24 +284,24 @@ def createfolder(path, reason):
         destino = resolver_caminho(path)
 
         if not destino.is_relative_to(raiz):
-            print("❌ Tentativa de criar pasta fora da pasta raiz de conhecimento.")
+            print("Tentativa de criar pasta fora da pasta raiz de conhecimento.")
             return False
 
         # --- CHECAGEM DE NOME PARECIDO ---
         # Evita criar "Segredos" quando já existe "Segredo" na mesma pasta pai.
         parecido = pu.existe_nome_parecido(destino.name, destino.parent)
         if parecido:
-            print(f"⚠️ Pasta não criada: '{destino.name}' é muito parecida com a já existente '{parecido}'.")
+            print(f"Pasta não criada: '{destino.name}' é muito parecida com a já existente '{parecido}'.")
             return False
 
         if destino.exists():
-            print(f"⚠️ Pasta já existe: {destino}")
+            print(f"Pasta já existe: {destino}")
             return False
         destino.mkdir(parents=True, exist_ok=True)
-        print(f"✅ Pasta criada: {destino}")
+        print(f"Pasta criada: {destino}")
         return True
     except Exception as e:
-        print(f"❌ Erro ao criar pasta: {e}")
+        print(f"Erro ao criar pasta: {e}")
         return False
 
 def createfile(path, reason, template="nenhum"):
@@ -318,7 +311,7 @@ def createfile(path, reason, template="nenhum"):
         arquivo = resolver_caminho(path)
 
         if not arquivo.is_relative_to(raiz):
-            print("❌ Tentativa de criar arquivo fora da pasta raiz de conhecimento.")
+            print("Tentativa de criar arquivo fora da pasta raiz de conhecimento.")
             return False
 
         arquivo = arquivo.with_suffix(".md")
@@ -355,23 +348,22 @@ status: rascunho
         return False
 
 def improvefile(path, reason="Melhorar o arquivo!"):
-    print(f"Vamos melhorar o arquivo: {path}")
-    print(f"Motivo: {reason}")
+    print(f"Vamos melhorar o arquivo: {path}\nMotivo: {reason}")
     arquivo = resolver_caminho(path)   # <-- normaliza o caminho recebido
 
     if not arquivo.exists():
-        print(f"❌ Arquivo não encontrado, ação ignorada: {arquivo}")
+        print(f"Arquivo não encontrado, ação ignorada: {arquivo}")
         return False
 
     if not arquivo.is_file():
-        print(f"❌ O caminho informado não é um arquivo, ação ignorada: {arquivo}")
+        print(f"O caminho informado não é um arquivo, ação ignorada: {arquivo}")
         return False
 
     try:
         with open(arquivo, "r", encoding="utf-8") as f:
             arquivoatual = f.read()
     except Exception as e:
-        print(f"❌ Erro ao ler o arquivo {arquivo.name}: {e}")
+        print(f"Erro ao ler o arquivo {arquivo.name}: {e}")
         return False
 
     instrucoes_globais = f"""
@@ -406,9 +398,9 @@ Retorne apenas o conteúdo final do arquivo.
         with open(novo_arquivo_path, "w", encoding="utf-8") as f:
             f.write(texto_limpo)
         ex.arquivar_versao_antiga(arquivo)
-        print(f"✅ Nova versão criada: {novo_arquivo_path.name}")
+        print(f"Nova versão criada!! {novo_arquivo_path.name}")
         return True
     except Exception as e:
-        print(f"❌ Erro ao processar {arquivo.name}: {e}")
+        print(f"Erro ao processar {arquivo.name}: {e}")
         return False
         

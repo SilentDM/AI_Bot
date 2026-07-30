@@ -686,12 +686,8 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
     def run_worldbuilder_task(self):
         try:
             objective = self.worldbuilder_objective_value
-            iterations = wb.iterationschoice(objective)
-            if iterations is None:
-                iterations = 1
-            self.log_activity(f"O Gemini definiu {iterations} iterações.")
-
-            wb.taskplanner(iterations, objective)
+            
+            wb.taskplanner(objective)
 
             self.log_activity("WorldBuilder concluído com sucesso.")
             self.finished_worldbuilder_ui_update("Tarefa Concluída")

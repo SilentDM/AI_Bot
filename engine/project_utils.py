@@ -55,11 +55,6 @@ def extrair_palavras_chave(nome: str):
     return norm, palavras_relevantes
 
 def existe_nome_parecido(nome_proposto: str, pasta_destino: Path, limiar: float = 0.65):
-    """
-    Verifica se já existe na pasta_destino um arquivo/pasta com nome igual,
-    parecido, contido ou compartilhando palavras-chave principais.
-    Retorna o nome do item existente se encontrar, ou None caso contrário.
-    """
     if not pasta_destino.exists():
         return None
 

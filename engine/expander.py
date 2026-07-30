@@ -86,7 +86,8 @@ def carregar_diretrizes_estilo():
         for arquivo in sorted(pasta_estilo.glob("*.md")):
             try:
                 with open(arquivo, "r", encoding="utf-8") as f:
-                    conteudo_estilo.append(f"\n# DIRETRIZ ({arquivo.name}):\n{f.read()}")
+                    titulo = arquivo.stem.replace(" ", "_").replace("-", "_").lower()
+                    conteudo_estilo.append(f"\n<diretrizes_de_{titulo}>\n{f.read().strip()}\n</diretrizes_de_{titulo}>\n")
             except Exception as e:
                 print(f"Erro ao carregar diretriz {arquivo.name}: {e}")
     return "".join(conteudo_estilo)
