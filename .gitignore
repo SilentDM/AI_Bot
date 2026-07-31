@@ -3,14 +3,22 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Arquivos Sensíveis
+.env
+*.key
+*.token
+
+# Pastas de Dados Locais e Logs
+logs/
 memories/
-Aliases.txt
-Phaeton.txt
-Key.txt
-vision.md
-memorias_*
-memorias
-*.txt
+exports/
+history/
+
+# Pastas Compiladas do PyInstaller
+build/
+dist/
+*.spec
+
 # C extensions
 *.so
 resposta.json
@@ -208,3 +216,5 @@ logs/Gemini_cache_id.json
 logs/Gemini_cache_id.json
 AI_Bot.zip
 logs/Gemini_cache_id.json
+Key.txt
+directories.txt
