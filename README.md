@@ -1,2 +1,2 @@
-# AI_Bot
-Bot AI para responder perguntas no Discord
+# <-- To do: Gerar Readme explicando as funcionalidades do programa!
+
