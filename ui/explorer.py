@@ -6,12 +6,13 @@ import engine.project_utils as pu
 import engine.wbuilder as wb
 
 class ExplorerFrame(ttk.Frame):
-    def __init__(self, parent, log_callback, toast_callback=None, auto_expander_callback=None, ask_ao_callback=None):
+    def __init__(self, parent, log_callback, toast_callback=None, auto_expander_callback=None, ask_ao_callback=None, stats_callback=None):
         super().__init__(parent)
         self.log_callback = log_callback
         self.toast_callback = toast_callback
         self.auto_expander_callback = auto_expander_callback 
-        self.ask_ao_callback = ask_ao_callback  # 👈 Callback para abrir no chat
+        self.ask_ao_callback = ask_ao_callback
+        self.stats_callback = stats_callback
         
         self.current_file = None
         self.path_to_item = {}
@@ -228,6 +229,7 @@ class ExplorerFrame(ttk.Frame):
 
     # --- AUTO-SAVE E EDIÇÃO ---
     def on_key_release(self, event):
+        self.update_stats()
         if self.autosave_timer:
             self.after_cancel(self.autosave_timer)
         self.autosave_timer = self.after(5000, self.save_current_file_on_timer)
@@ -279,6 +281,7 @@ class ExplorerFrame(ttk.Frame):
             try:
                 with open(novo_caminho, "r", encoding="utf-8") as f:
                     texto = f.read()
+                self.update_stats()
             except UnicodeDecodeError:
                 try:
                     with open(novo_caminho, "r", encoding="latin1") as f:
@@ -704,3 +707,15 @@ class ExplorerFrame(ttk.Frame):
             self.editor.focus_set()
             self.on_key_release(None)
             self.toast("Tag To-Do inserida!")
+    
+    def update_stats(self):
+        if self.stats_callback and self.current_file:
+            try:
+                texto = self.editor.get("1.0", tk.END)
+                palavras = len(texto.split())
+                caracteres = len(texto.replace("\n", ""))
+                linhas = int(self.editor.index("end-1c").split(".")[0])
+                tokens = palavras/4
+                self.stats_callback(palavras, caracteres, linhas, tokens)
+            except Exception:
+                pass

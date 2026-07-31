@@ -44,10 +44,14 @@ class SilentDesktopApp:
         self.current_page = None
 
         self.setup_ui()
+        self.setup_status_bar()
         self.setup_shortcuts()
         self.change_font_size(0)
 
         # Página inicial ao abrir o programa
+        icon_path = pu.BASE_DIR / "icon.ico"
+        if icon_path.exists():
+            self.root.iconbitmap(str(icon_path))
         self.switch_page("editor")
 
         self.start_discord_bot_thread()
@@ -275,7 +279,8 @@ class SilentDesktopApp:
             self.log_activity, 
             toast_callback=self.toast,
             auto_expander_callback=self.options_pane.is_auto_expander_enabled,
-            ask_ao_callback=self.open_chat_with_file_context
+            ask_ao_callback=self.open_chat_with_file_context,
+            stats_callback=self.update_editor_stats
         )
         self.explorer_pane.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 15))
         return frame
@@ -396,10 +401,11 @@ class SilentDesktopApp:
         self.audit_running = True
         self.btn_audit_lore.config(state=tk.DISABLED)
         self.lbl_audit.config(text="Status: Auditando e reconstruindo contexto...", foreground="#60a5fa")
-        self.toast("🔍 Recriando bundle e iniciando Auditoria de Lore...")
+        self.toast("Recriando bundle e iniciando Auditoria de Lore...")
         self.log_activity("Iniciando auditoria de lore...")
-
+        
         self.explorer_pane.save_current_file()
+        self.start_spinner("Auditando Lore do Mundo")
         threading.Thread(target=self.run_lore_audit_task, daemon=True).start()
 
     def run_lore_audit_task(self):
@@ -467,6 +473,7 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
             self.toast("❌ Erro ao auditar a lore.")
 
     def finished_audit_ui_update(self, status):
+        self.stop_spinner(f"Auditoria: {status}")
         self.audit_running = False
         self.root.after(0, lambda: self.btn_audit_lore.config(state=tk.NORMAL))
         self.root.after(0, lambda: self.lbl_audit.config(text=f"Status: {status}", foreground="#e3e3e3"))
@@ -634,6 +641,7 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
         self.log_activity("Iniciando tarefa do Expander...")
 
         self.explorer_pane.save_current_file()
+        self.start_spinner("Expander em execução")
         threading.Thread(target=self.run_expander_task, daemon=True).start()
 
     def run_expander_task(self):
@@ -649,6 +657,7 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
 
     def finished_expander_ui_update(self, status):
         self.expander_running = False
+        self.stop_spinner(f"Expander: {status}")
         self.root.after(0, self._safe_finished_expander, status)
 
     def _safe_finished_expander(self, status):
@@ -686,6 +695,7 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
         self.log_activity("Iniciando WorldBuilder autônomo...")
 
         self.explorer_pane.save_current_file()
+        self.start_spinner("WorldBuilder em execução")
         threading.Thread(target=self.run_worldbuilder_task, daemon=True).start()
 
     def run_worldbuilder_task(self):
@@ -704,6 +714,7 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
 
     def finished_worldbuilder_ui_update(self, status):
         self.worldbuilder_running = False
+        self.stop_spinner(f"WorldBuilder: {status}")
         self.root.after(0, self._safe_finished_worldbuilder, status)
 
     def _safe_finished_worldbuilder(self, status):
@@ -820,14 +831,17 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
     # ------------------------------------------------------------------
     def export_sourcebook(self):
         def _run_compile():
+            self.start_spinner("Compilador em execução")
             try:
                 self.log_activity("Iniciando compilação do Livro do Cenário...")
-                self.toast("📖 Compilando Livro do Cenário...")
+                self.toast("Compilando Livro do Cenário...")
+                
                 
                 caminho_html = comp.compilar_livro_cenario()
                 if caminho_html and caminho_html.exists():
                     self.log_activity(f"Livro gerado em: {caminho_html.name}")
                     self.toast("✅ Livro compilado com sucesso! Abrindo...")
+                    self.stop_spinner(f"Compilador: Concluído!")
                     os.startfile(str(caminho_html))
                 else:
                     self.toast("❌ Falha ao compilar o livro.")
@@ -859,8 +873,9 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
                 self.root.after(0, lambda err=str(e): messagebox.showerror("Erro no Backup", err))
         threading.Thread(target=_run_backup, daemon=True).start()
     
-    # Dentro da classe SilentDesktopApp em ui/gui.py:
-
+    # ------------------------------------------------------------------
+    # Seletor de projetos secundários
+    # ------------------------------------------------------------------
     def setup_project_selector(self, parent_frame):
         """Cria a caixa de seleção de projetos na barra lateral."""
         project_frame = tk.Frame(parent_frame, bg="#0a0a0a")
@@ -930,10 +945,82 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
             self.rebuild_world_context()
 
             self.log_activity(f"Projeto alternado para: {pu.CAMINHO_PROJETO}")
+            self.lbl_status_project.config(text=f"Projeto: {pu.PASTA_PROJETO}")
             self.toast(f"🌐 Mundo alterado para '{pu.PASTA_PROJETO}'!")
         except Exception as e:
             self.log_activity(f"Erro ao alternar de projeto: {e}")
             messagebox.showerror("Erro de Projeto", f"Falha ao abrir projeto: {e}")
+
+    # ------------------------------------------------------------------
+    # Spinner + Barra de Status
+    # ------------------------------------------------------------------
+    def setup_status_bar(self):
+        """Cria a barra de status fixa na base do aplicativo."""
+        self.status_bar = tk.Frame(self.root, bg="#0a0a0a", height=28)
+        self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
+
+        # Esquerda: Projeto Ativo
+        self.lbl_status_project = tk.Label(
+            self.status_bar, 
+            text=f"Projeto: {pu.PASTA_PROJETO}", 
+            bg="#0a0a0a", fg="#10b981", font=("Segoe UI", 9)
+        )
+        self.lbl_status_project.pack(side=tk.LEFT, padx=12)
+
+        ttk.Separator(self.status_bar, orient="vertical").pack(side=tk.LEFT, fill=tk.Y, pady=4)
+
+        # Centro: Estatísticas de Palavras / Linhas
+        self.lbl_status_stats = tk.Label(
+            self.status_bar, 
+            text="NENHUM ARQUIVO SELECIONADO", 
+            bg="#0a0a0a", fg="#888888", font=("Segoe UI", 9)
+        )
+        self.lbl_status_stats.pack(side=tk.LEFT, padx=12)
+
+        # Direita: Indicador Dinâmico de Tarefas (Spinner)
+        self.lbl_status_task = tk.Label(
+            self.status_bar, 
+            text="PRONTO", 
+            bg="#0a0a0a", fg="#10b981", font=("Segoe UI", 9, "bold")
+        )
+        self.lbl_status_task.pack(side=tk.RIGHT, padx=12)
+
+    def start_spinner(self, task_name="Executando..."):
+        """Inicia a animação do círculo giratório."""
+        self.spinner_running = True
+        # Animação em círculos geométricos suaves
+        self.spinner_frames = ["◐", "◓", "◑", "◒"]
+        self.spinner_idx = 0
+        self._animate_spinner(task_name)
+
+    def _animate_spinner(self, task_name):
+        if not getattr(self, "spinner_running", False):
+            return
+        char = self.spinner_frames[self.spinner_idx % len(self.spinner_frames)]
+        self.spinner_idx += 1
+        self.lbl_status_task.config(
+            text=f"{char} {task_name.upper()}", 
+            fg="#60a5fa"
+        )
+        self.root.after(90, lambda: self._animate_spinner(task_name))
+
+    def stop_spinner(self, final_msg="PRONTO", is_error=False):
+        """Para a animação do círculo."""
+        self.spinner_running = False
+        color = "#ef4444" if is_error else "#10b981"
+        self.lbl_status_task.config(text=final_msg.upper(), fg=color)
+
+    def update_editor_stats(self, words, chars, lines, tokens):
+        """Atualiza a contagem de palavras da barra de status."""
+        self.lbl_status_stats.config(
+            text=f"PALAVRAS: {words:,}  |  CARACTERES: {chars:,}  |  LINHAS: {lines:,}  |  ~TOKENS: {tokens:,}",
+            fg="#e3e3e3"
+        )
+
+    # ------------------------------------------------------------------
+    # Próxima evolução
+    # ------------------------------------------------------------------
+    #
 
 
 def main():

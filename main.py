@@ -1,6 +1,7 @@
-import sys, os, traceback
+import sys, os, traceback, ctypes
 from pathlib import Path
 from datetime import datetime
+
 
 # ----------------------------------------------------------------------
 # 1. DETERMINA A PASTA RAIZ DO PROJETO (ONDE O MAIN.PY / EXE ESTÁ)
@@ -15,6 +16,11 @@ else:
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
+try:
+    myappid = "silent.multiverse.nexus.v1"
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+except Exception:
+    pass
 
 def capturar_erros_fatais(exc_type, exc_value, exc_traceback):
     """Salva qualquer travamento não tratado em um arquivo crash_log.txt no logs/."""
