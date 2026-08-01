@@ -70,6 +70,7 @@ def bootstrap():
     print("Pastas e configurações foram verificadas com sucesso!")
 
 
+
 def main():
     # 1. Registra hook de crash global
     sys.excepthook = capturar_erros_fatais
@@ -80,7 +81,6 @@ def main():
     # 3. Carrega e inicia a interface gráfica
     from ui.gui import main as start_gui
     start_gui()
-
 
 if __name__ == "__main__":
     main()

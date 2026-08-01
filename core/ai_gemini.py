@@ -59,7 +59,6 @@ def findmodel(file_path=pu.log_path("models.json")):
     for model in all_models:
         model_name = model.name
         max_input_tokens = getattr(model, 'input_token_limit', 0) or 0
-        support_image = "IMAGE" in (getattr(model, "input_modalities", []) or [])
         print(f"Testando modelo: {model_name}")
         if "gemini" not in model_name.lower() or "embedding" in model_name.lower():
             continue
@@ -96,7 +95,8 @@ def findmodel(file_path=pu.log_path("models.json")):
                 "maxinputtokens": max_input_tokens,
                 "responsetime": response_time,
                 "supports_tools": supports_tools,
-                "supports_images": support_image  
+                "attempts": 1,
+                "success":1
             })
 
             # Brief pause to respect Free Tier RPM limits during model discovery
@@ -106,7 +106,6 @@ def findmodel(file_path=pu.log_path("models.json")):
             working_models.sort(
                 key=lambda x: (
                     not x.get("supports_tools", False),
-                    not x.get("supports_images", False),
                     -x.get("maxinputtokens", 0),
                     x.get("responsetime", 9999)
                 )
@@ -116,6 +115,31 @@ def findmodel(file_path=pu.log_path("models.json")):
         json.dump(working_models, f, indent=4)
     print("Lista de modelos disponíveis Criada!")
 
+def improvemodel(model,success,time=None):
+    with open(pu.log_path("models.json"), "r", encoding="utf-8") as f:
+        data = json.load(f)
+    for m in data:
+        if m.get("name") == model:
+            if time is not None:
+                m["responsetime"] = (m.get("responsetime")+time)/2
+                m["attempts"] = m.get("attempts")+1
+                m["success"] = m.get("success")+(1 if success is True else 0)
+            
+            data.sort(
+                key=lambda x: (
+                    not x.get("supports_tools", False),
+                    -x.get("maxinputtokens", 0),
+                    x.get("responsetime", 9999),
+                    -(x.get("success", 0) / x.get("attempts", 1))  
+                )
+            )
+            
+            with open(pu.log_path("models.json"), "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=4)
+            
+            return
+    print(f"{model} does not exist!")
+                
 def generate_content_with_fallback(contents: Any, config: types.GenerateContentConfig, cache_model: Optional[str] = None) -> Any:
     try:
         with open(pu.log_path("models.json"), "r", encoding="utf-8") as f:
@@ -147,17 +171,21 @@ def generate_content_with_fallback(contents: Any, config: types.GenerateContentC
         else:
             config_to_use.tools = []
 
+        start_time = time.time()
         try:
             response = GEMINICLIENT.models.generate_content(
                 model=model_name,
                 contents=contents,
                 config=config_to_use
             )
-
+            response_time = round(time.time() - start_time, 4)
+            improvemodel(model_name,True,response_time)
             if response and response.text:
                 return response
 
         except Exception as e:
+            response_time = round(time.time() - start_time, 4)
+            improvemodel(model_name,False,response_time)
             if _is_rate_limit_error(e):
                 print(f"Rate Limit atingido no modelo {model_name}. Pulando imediatamente para o próximo...")
             else:
