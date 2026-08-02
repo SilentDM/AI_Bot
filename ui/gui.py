@@ -1,4 +1,4 @@
-import os, threading, time, asyncio, sys, json
+import os, threading, time, asyncio, sys, pystray
 import core.ai_gemini as ag
 import core.cache_gemini as cg
 import core.memory as me
@@ -7,6 +7,7 @@ import engine.compiler as comp
 import engine.expander as ex
 import engine.wbuilder as wb
 import engine.project_utils as pu
+
 import ui.explorer as expl
 import ui.gui_logger as gl
 import ui.settings as st
@@ -14,6 +15,8 @@ import ui.setup_env as se
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext, filedialog
 from pathlib import Path
+from pystray import MenuItem as item
+from PIL import Image
 
 SETTINGS_FILE = pu.PASTA_LOGS / "settings.json"
 
@@ -28,7 +31,7 @@ class SilentDesktopApp:
         self.root.configure(bg="#121212")
 
         self.current_font_size = 11
-        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+        self.root.protocol("WM_DELETE_WINDOW", self.minimize_to_tray)
         self.setup_dark_style()
 
         # Estados internos das engines de background
@@ -58,6 +61,8 @@ class SilentDesktopApp:
 
         # Executa descoberta de modelos em segundo plano para não travar o startup
         threading.Thread(target=ag.findmodel, daemon=True).start()
+        
+        self.setup_system_tray()
 
     # ------------------------------------------------------------------
     # SISTEMA DE OPÇÕES
@@ -1017,6 +1022,78 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
             fg="#e3e3e3"
         )
 
+    # ------------------------------------------------------------------
+    # BANDEJA DO SISTEMA (SYSTEM TRAY)
+    # ------------------------------------------------------------------
+    def setup_system_tray(self):
+        """Inicializa o ícone oculto ao lado do relógio do Windows."""
+        try:
+            icon_path = pu.BASE_DIR / "icon.ico"
+            if icon_path.exists():
+                image = Image.open(icon_path)
+            else:
+                image = Image.new('RGB', (64, 64), color=(16, 185, 129))
+
+            # Menu de contexto ao clicar com o botão direito no ícone do relógio
+            menu = pystray.Menu(
+                item('Abrir Silent Console', self.restore_from_tray, default=True),
+                pystray.Menu.SEPARATOR,
+                item('Encerrar Completamente', self.quit_app_completely)
+            )
+
+            self.tray_icon = pystray.Icon(
+                "SilentMultiverse",
+                image,
+                "Silent Multiverse Nexus (Bot Ativo)",
+                menu
+            )
+
+            # Executa o ícone da bandeja em uma thread separada
+            threading.Thread(target=self.tray_icon.run, daemon=True).start()
+        except Exception as e:
+            print(f"Erro ao inicializar System Tray: {e}")
+
+    def minimize_to_tray(self):
+        """Oculta a janela principal para a bandeja em vez de encerrar o programa."""
+        self.explorer_pane.save_current_file()
+        self.root.withdraw()  # Esconde a janela do Tkinter da barra de tarefas
+        self.toast("O bot continua rodando minimizado ao lado do relógio! 🟢")
+
+    def restore_from_tray(self, icon=None, item=None):
+        """Restaura a janela principal a partir da bandeja."""
+        self.root.after(0, self._safe_restore)
+
+    def _safe_restore(self):
+        self.root.deiconify()  # Exibe a janela novamente
+        self.root.state("zoomed")
+        self.root.lift()
+        self.root.focus_force()
+
+    def quit_app_completely(self, icon=None, item=None):
+        """Encerra o programa e o bot do Discord definitivamente."""
+        self.log_activity("Encerrando aplicativo definitivamente via System Tray...")
+        
+        # Para o ícone da bandeja
+        if hasattr(self, "tray_icon") and self.tray_icon:
+            try:
+                self.tray_icon.stop()
+            except Exception:
+                pass
+
+        # Para o bot do Discord e limpa recursos
+        try:
+            if hasattr(self, "discord_loop") and self.discord_loop and self.discord_loop.is_running():
+                from bot.dbot import discordclient
+                future = asyncio.run_coroutine_threadsafe(discordclient.close(), self.discord_loop)
+                try:
+                    future.result(timeout=3)
+                except Exception:
+                    pass
+        except Exception as e:
+            print(f"Encerramento do Discord: {e}")
+        finally:
+            self.root.after(0, self.root.destroy)
+            
     # ------------------------------------------------------------------
     # Próxima evolução
     # ------------------------------------------------------------------
