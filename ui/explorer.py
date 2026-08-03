@@ -4,6 +4,55 @@ from tkinter import ttk, messagebox, simpledialog, scrolledtext
 from pathlib import Path
 import engine.project_utils as pu
 import engine.wbuilder as wb
+class NewFileDialog(tk.Toplevel):
+    """Janela modal para criar um novo arquivo definindo nome e template."""
+    def __init__(self, parent, templates_disponiveis):
+        super().__init__(parent)
+        self.title("Novo Arquivo")
+        self.geometry("420x230")
+        self.resizable(False, False)
+        self.configure(bg="#121212")
+        self.transient(parent)
+        self.grab_set()
+
+        self.result_filename = None
+        self.result_template = None
+
+        # Container principal
+        container = ttk.Frame(self)
+        container.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+
+        # Campo: Nome do Arquivo
+        ttk.Label(container, text="Nome do Arquivo:", font=("Segoe UI", 9, "bold")).pack(anchor=tk.W, pady=(0, 4))
+        self.entry_nome = ttk.Entry(container, font=("Segoe UI", 10))
+        self.entry_nome.pack(fill=tk.X, pady=(0, 14))
+        self.entry_nome.focus_set()
+        self.entry_nome.bind("<Return>", lambda e: self.on_confirm())
+
+        # Campo: Seleção de Template
+        ttk.Label(container, text="Modelo / Template:", font=("Segoe UI", 9, "bold")).pack(anchor=tk.W, pady=(0, 4))
+        self.combo_template = ttk.Combobox(container, values=templates_disponiveis, state="readonly", font=("Segoe UI", 10))
+        self.combo_template.set(templates_disponiveis[0] if templates_disponiveis else "Nenhum (Padrão)")
+        self.combo_template.pack(fill=tk.X, pady=(0, 20))
+
+        # Botões de Ação
+        btn_frame = ttk.Frame(container)
+        btn_frame.pack(fill=tk.X, side=tk.BOTTOM)
+
+        ttk.Button(btn_frame, text="Cancelar", command=self.destroy).pack(side=tk.RIGHT, padx=(6, 0))
+        ttk.Button(btn_frame, text="Criar Arquivo", command=self.on_confirm).pack(side=tk.RIGHT)
+
+        self.protocol("WM_DELETE_WINDOW", self.destroy)
+        self.wait_window()
+
+    def on_confirm(self):
+        nome = self.entry_nome.get().strip()
+        if not nome:
+            messagebox.showwarning("Aviso", "Por favor, digite o nome do arquivo.", parent=self)
+            return
+        self.result_filename = nome
+        self.result_template = self.combo_template.get()
+        self.destroy()
 
 class ExplorerFrame(ttk.Frame):
     def __init__(self, parent, log_callback, toast_callback=None, auto_expander_callback=None, ask_ao_callback=None, stats_callback=None):
@@ -486,22 +535,60 @@ class ExplorerFrame(ttk.Frame):
             self.log_callback(f"Erro ao abrir explorador nativo: {e}")
 
     def create_new_file(self, parent_dir):
-        nome = simpledialog.askstring("Novo Arquivo", "Coloque o nome do Arquivo (exemplo: Historia.md):", parent=self)
-        if nome:
-            if not nome.endswith(".md"):
-                nome += ".md"
-            caminho_arquivo = os.path.join(parent_dir, nome)
-            if os.path.exists(caminho_arquivo):
-                messagebox.showerror("Erro", "Um arquivo com esse nome já existe.")
-                return
-            try:
-                with open(caminho_arquivo, "w", encoding="utf-8") as f:
-                    f.write(f"# {nome.replace('.md', '').title()}\n\n<-- TODO: Crie informações para {nome.replace('.md', '').title()}.")
-                self.toast(f"📄 Arquivo criado: '{nome}'")
-                self.refresh_tree()
-                self.select_path_in_tree(caminho_arquivo)
-            except Exception as e:
-                messagebox.showerror("Erro", f"Falha ao criar arquivo: {e}")
+        # 1. Varre dinamicamente a pasta Templates para buscar modelos .md
+        opcoes_templates = ["Nenhum (Padrão)"]
+        locais_templates = [
+            pu.PASTA_TEMPLATES,
+            Path(pu.CAMINHO_PROJETO) / "Templates"
+        ]
+        
+        modelos_encontrados = set()
+        for pasta in locais_templates:
+            if pasta.exists() and pasta.is_dir():
+                for arq in pasta.glob("*.md"):
+                    modelos_encontrados.add(arq.stem.lower())
+        
+        opcoes_templates.extend(sorted(list(modelos_encontrados)))
+
+        # 2. Abre a janela modal de criação
+        dialog = NewFileDialog(self, opcoes_templates)
+        if not dialog.result_filename:
+            return  # Usuário cancelou
+
+        nome = dialog.result_filename
+        template_escolhido = dialog.result_template
+
+        if not nome.lower().endswith(".md"):
+            nome += ".md"
+
+        caminho_arquivo = os.path.join(parent_dir, nome)
+        if os.path.exists(caminho_arquivo):
+            messagebox.showerror("Erro", "Um arquivo com esse nome já existe.")
+            return
+
+        try:
+            titulo = nome.replace('.md', '').replace('_', ' ').title()
+            
+            # 3. Busca o conteúdo do template via wbuilder
+            conteudo_template = wb.obter_conteudo_template(template_escolhido)
+
+            if conteudo_template:
+                conteudo_final = f"# {titulo}\nstatus: rascunho\n---\n<-- TODO: Preencha as informações de {titulo} usando o template.\n{conteudo_template}"
+            else:
+                conteudo_final = f"# {titulo}\n\n<-- TODO: Crie informações para {titulo}."
+
+            with open(caminho_arquivo, "w", encoding="utf-8") as f:
+                f.write(conteudo_final)
+
+            msg_toast = f"📄 Arquivo '{nome}' criado com sucesso!"
+            if template_escolhido != "Nenhum (Padrão)":
+                msg_toast = f"📑 Arquivo '{nome}' criado usando template '{template_escolhido}'!"
+
+            self.toast(msg_toast)
+            self.refresh_tree()
+            self.select_path_in_tree(caminho_arquivo)
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao criar arquivo: {e}")
 
     def create_new_folder(self, parent_dir):
         nome = simpledialog.askstring("Nova Pasta", "Coloque o nome da pasta:", parent=self)

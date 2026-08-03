@@ -1,4 +1,5 @@
 import sys, os, re, json, threading, unicodedata, difflib, zipfile
+import core.secret_filter as sf
 from pathlib import Path
 from datetime import datetime
 
@@ -255,7 +256,7 @@ def carregar_estrutura_projeto():
             )
     return "\n".join(resultado)
 
-def carregar_projeto():
+def carregar_projeto(is_dm: bool = True):
     caminho=Path(CAMINHO_PROJETO)
     if not caminho.exists():
         print(f"⚠️ Alerta: Pasta '{PASTA_PROJETO}' não encontrada.")
@@ -301,7 +302,9 @@ def carregar_projeto():
             ):
             #print(f"Excluindo '{f_path.name}' do conhecimento por possuir tags TODO ou Rascunho ou Template.")
             continue
-            
+        content_filtrado = sf.filtrar_conteudo_por_permissao(content, is_dm=is_dm)
+        if not content_filtrado:
+            continue            
         conteudo_total.append(f"\n==== {f_path.name} ====\n{content}\n")
         
     return "\n\n".join(conteudo_total)

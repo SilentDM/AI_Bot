@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 DISCORD_ENABLED = bool(TOKEN)
+MESTRE_DISCORD_ID = int(os.getenv("MESTRE_DISCORD_ID", "0"))
 
 if DISCORD_ENABLED:
     import discord
@@ -27,7 +28,9 @@ if DISCORD_ENABLED:
     async def on_message(message):
         if message.author == discordclient.user:
             return
-        
+        if message.author.id == MESTRE_DISCORD_ID:
+            print("Mensagem do Mestre!")
+            is_dm_user = (message.author.id == MESTRE_DISCORD_ID) or (message.guild is None)
         content_lower = message.content.lower()
         if content_lower.startswith("!ao"):
             if content_lower.startswith("!ao,"):
@@ -96,6 +99,7 @@ if DISCORD_ENABLED:
                     system_instruction=instrucao_sistema,
                     temperature=0.65,
                     use_world_context=True,
+                    is_dm=is_dm_user
                 )
             except Exception as e:
                 print(f"Erro ao processar: {e}")

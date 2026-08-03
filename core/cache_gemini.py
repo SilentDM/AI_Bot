@@ -13,7 +13,7 @@ def force_rebuild_world_context():
         print(f"Erro removendo arquivo:{e}")
     return prepare_world_context()
 
-def prepare_world_context(ttl_hours=12):
+def prepare_world_context(is_dm: bool = True, ttl_hours=12):
     arquivo = pu.log_path("Gemini_cache_id.json")
     
     # 1. Check if an existing Cache or File Upload is still valid (< 24 hours old)
@@ -23,27 +23,32 @@ def prepare_world_context(ttl_hours=12):
         if idade_horas <= 12:  # Ajustado para bater com ttl_hours
             with open(arquivo, "r", encoding="utf-8") as f:
                 dados = json.load(f)
-            print(f"Using existing {dados.get('type', 'cache')}: {dados['id']}")
-            return dados
+            chave = "dm" if is_dm else "player"
+            if chave in dados:
+                return dados[chave]
             
-        print("♻️ Cache/File expired. Rebuilding...")
+        print("O Cache/bundle já está velho! Recriando!")
         try:
             os.remove(arquivo)
         except OSError:
             pass
 
     # 2. Bundle worldbuilding files
-    print("Bundling worldbuilding files...")
-    world_context = (
-        pu.carregar_estrutura_projeto()
-        + "\n\n"
-        + pu.gerar_indice()
-        + "\n\n"
-        + pu.carregar_projeto()
+    print("Criando o bundle!")
+    context_dm = (
+        pu.carregar_estrutura_projeto() + "\n\n" + 
+        pu.gerar_indice() + "\n\n" + 
+        pu.carregar_projeto(is_dm=True)
+    )
+
+    context_player = (
+        pu.carregar_estrutura_projeto() + "\n\n" + 
+        pu.gerar_indice() + "\n\n" + 
+        pu.carregar_projeto(is_dm=False)
     )
 
     # 3. Attempt Explicit Context Caching (For Billing-Enabled Accounts)
-    print("Attempting to create Gemini Context Cache...")
+    print("Fazendo upload do Bundle!")
     try:
         with open(pu.log_path("models.json"),"r",encoding="utf-8") as f:
             data = json.load(f)
@@ -56,53 +61,62 @@ def prepare_world_context(ttl_hours=12):
         with open(pu.log_path("models.json"),"r",encoding="utf-8") as f:
             data = json.load(f)
 
-    for model in data:
-        model_name = model["name"]
+    #for model in data:
+        #model_name = model["name"]
         #try:
-            #print(f"🔮 Attempting to generate cache using model: {model_name}!")
-            #cache = ag.GEMINICLIENT.caches.create(
+            #print(f"Tentando gerar Cache explícito com o modelo: {model_name}")
+            #cache_dm_path = ag.GEMINICLIENT.caches.create(
                 #model=model_name,
                 #config=types.CreateCachedContentConfig(
-                    #contents=[world_context],
-                    #display_name=f"{pu.PASTA_PROJETO} Cache",
+                    #contents=[context_dm],
+                    #display_name=f"{pu.PASTA_PROJETO} Cache(DM)",
                     #ttl=f"{ttl_hours * 3600}s"  
                 #)
             #)
-            #print(f"Cache Created with {model_name}! Cache ID: {cache.name}")
+            #cache_player_path = ag.GEMINICLIENT.caches.create(
+                            #model=model_name,
+                            #config=types.CreateCachedContentConfig(
+                                #contents=[context_player],
+                                #display_name=f"{pu.PASTA_PROJETO} Cache(Player)",
+                                #ttl=f"{ttl_hours * 3600}s"  
+                            #)
+                        #)
             
             #registro = {
-                #"type": "cache",
-                #"id": cache.name,
-                #"model": model_name,  # 👈 NOVO: Guarda o modelo criador do cache
-                #"created": pu.currentdate()
+                #"dm": {"type": "cache","id": cache_dm_path.name,"model": model_name,"created": pu.currentdate()},
+                #"player":{"type": "cache","id": cache_player_path.name,"model": model_name,"created": pu.currentdate()}
             #}
             #with open(arquivo, "w", encoding="utf-8") as f:
                 #json.dump(registro, f, ensure_ascii=False, indent=4)
-            #return registro
+            #print(f"Context Cache foi gerado com sucesso!")
+            #return registro["dm" if is_dm else "player"]
 
         #except Exception as e:
-            #print(f"{model_name} does not support cache: {e}")
+            #print(f"{model_name} não suporta cache: {e}")
 
-    # 4. Fallback: Files API (If all models fail due to Free Tier limit=0)
-    #print("ℹ Context Caching unavailable on this API tier. Falling back to Files API(Free).")
-    
-    bundle_path = pu.log_path("world_bundle.txt")
-    with open(bundle_path, "w", encoding="utf-8") as f:
-        f.write(world_context)
+    bundle_dm_path = pu.log_path("world_bundle_dm.txt")
+    bundle_player_path = pu.log_path("world_bundle_player.txt")
+
+    with open(bundle_dm_path, "w", encoding="utf-8") as f:
+        f.write(context_dm)
+
+    with open(bundle_player_path, "w", encoding="utf-8") as f:
+        f.write(context_player)
 
     try:
-        uploaded_file = ag.GEMINICLIENT.files.upload(file=bundle_path)
-        print(f"World bundle uploaded via Files API: {uploaded_file.name}")
+        uploaded_dm = ag.GEMINICLIENT.files.upload(file=bundle_dm_path)
+        uploaded_player = ag.GEMINICLIENT.files.upload(file=bundle_player_path)
 
         registro = {
-            "type": "file",
-            "id": uploaded_file.name,
-            "created": pu.currentdate()
+            "dm": {"type": "file", "id": uploaded_dm.name, "created": pu.currentdate()},
+            "player": {"type": "file", "id": uploaded_player.name, "created": pu.currentdate()}
         }
+
         with open(arquivo, "w", encoding="utf-8") as f:
             json.dump(registro, f, ensure_ascii=False, indent=4)
-        return registro
+        print("Tudo certo, Bundle criado!")
+        return registro["dm" if is_dm else "player"]
 
     except Exception as e:
-        print(f"Failed to upload via Files API: {e}")
+        print(f"Failed to upload bundles via Files API: {e}")
         return None

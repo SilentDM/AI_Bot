@@ -200,7 +200,8 @@ def ask_ai(
     system_instruction: Optional[str] = None, 
     temperature: Optional[float] = None,
     response_schema: Optional[Type[BaseModel]] = None,
-    use_world_context: Optional[bool] = True
+    use_world_context: Optional[bool] = True,
+    is_dm: Optional[bool] = True
 ) -> str:
     if not system_instruction:
         system_instruction = DEFAULT_SYSTEM_INSTRUCTION
@@ -225,7 +226,7 @@ def ask_ai(
 
     if use_world_context:
         try:
-            world_context = cg.prepare_world_context()
+            world_context = cg.prepare_world_context(is_dm=is_dm)
             if world_context:
                 config = config.model_copy(deep=True)
                 if world_context.get("type") == "file":
