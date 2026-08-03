@@ -1,4 +1,4 @@
-import os, threading, time, asyncio, sys, pystray
+import os, threading, time, asyncio, sys, pystray, sys, ctypes
 import core.ai_gemini as ag
 import core.cache_gemini as cg
 import core.memory as me
@@ -7,7 +7,6 @@ import engine.compiler as comp
 import engine.expander as ex
 import engine.wbuilder as wb
 import engine.project_utils as pu
-
 import ui.explorer as expl
 import ui.gui_logger as gl
 import ui.settings as st
@@ -1023,6 +1022,20 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
         )
 
     # ------------------------------------------------------------------
+    # Reduzindo Uso de memória para o Bot
+    # ------------------------------------------------------------------
+    def trim_memory():
+        """Força o Windows a liberar a memória RAM inativa do programa."""
+        if sys.platform == 'win32':
+            try:
+                # Obtém o identificador do processo do programa no Windows
+                handle = ctypes.windll.kernel32.GetCurrentProcess()
+                # Esvazia a memória de trabalho inativa
+                ctypes.windll.psapi.EmptyWorkingSet(handle)
+            except Exception as e:
+                print(f"Erro ao otimizar RAM: {e}")
+
+    # ------------------------------------------------------------------
     # BANDEJA DO SISTEMA (SYSTEM TRAY)
     # ------------------------------------------------------------------
     def setup_system_tray(self):
@@ -1057,7 +1070,8 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
         """Oculta a janela principal para a bandeja em vez de encerrar o programa."""
         self.explorer_pane.save_current_file()
         self.root.withdraw()  # Esconde a janela do Tkinter da barra de tarefas
-        self.toast("O bot continua rodando minimizado ao lado do relógio! 🟢")
+        self.toast("O bot continua rodando minimizado!")
+        self.trim_memory()
 
     def restore_from_tray(self, icon=None, item=None):
         """Restaura a janela principal a partir da bandeja."""
@@ -1094,6 +1108,9 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
         finally:
             self.root.after(0, self.root.destroy)
             
+
+    
+    
     # ------------------------------------------------------------------
     # Próxima evolução
     # ------------------------------------------------------------------

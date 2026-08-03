@@ -131,8 +131,6 @@ if DISCORD_ENABLED:
                     await responderreply(message, resposta)
                     print("Resposta enviada!")
                 
-                # Nota: Mantenha a variável ou cliente correto dependendo de como você definiu globalmente.
-                # Se você usa a variável global GEMINICLIENT da sua configuração, passe ela aqui.
                 memory.salvar_memoria(guild_id, guild_name, userid, user_name, prompt, resposta)
                 print("Memórias atualizadas com sucesso!")
             else:
