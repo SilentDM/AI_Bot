@@ -22,7 +22,10 @@ def filtrar_conteudo_por_permissao(texto_markdown: str, is_dm: bool = True) -> s
 
         if "status: segredo" in linha_lower:
             return ""
-
+        
+        if "tags:" in linha_lower and "segredo" in linha_lower:
+            return ""  # Oculta o arquivo inteiro se o YAML tiver tag 'segredo'
+        
         match_header = re.match(r'^(#{1,6})\s+(.*)$', linha_str)
 
         if match_header:
@@ -39,6 +42,9 @@ def filtrar_conteudo_por_permissao(texto_markdown: str, is_dm: bool = True) -> s
 
         elif any(tag in linha_lower for tag in TAGS_SEGREDO):
             continue
+        # Atualize a verificação do secret_filter para entender tags do YAML do Obsidian:
+        
+        
 
         if not ocultando_secao:
             linhas_limpas.append(linha)

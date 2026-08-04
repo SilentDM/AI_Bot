@@ -23,7 +23,7 @@ PASTA_PROJETO = None
 PROJECT_ROOT = BASE_DIR
 
 TAG_ALVO = ["<-- TO DO:", "<-- TO DO", "<-- TODO:", "<-- TODO", "<-- todo","<-- To do:", "<-- to-do:", "<-- to-do", "<-- to do:", "<-- to do","<-- To Do:", "<-- To Do", "<-- To-Do:", "<-- To-Do", "<-- To-do:", "<-- To-do", "<-- Todo:"]
-IGNORELIST = ["Templates", "status: rascunho"]
+IGNORELIST = ["Templates", "status: rascunho", ".obsidian", ".git", ".trash"]
 
 # Sinalizador global de cancelamento
 _CANCEL_EVENT = threading.Event()
