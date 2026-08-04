@@ -60,10 +60,10 @@ O **Silent Multiverse Nexus** é uma suíte completa de ferramentas para Mestres
 * **Assistente de Configuração Inicial (`setup_env.py`)**: Configura as chaves de API (`.env`) no primeiro acesso de forma 100% visual.
 
 ### 7. Sistema de Tags do Projeto
-"<-- TO DO: motivo"	Em qualquer arquivo .md	Sinaliza para o Expander preencher aquela lacuna com IA.
-"[SEGREDO]"	Em um título (## O Culto [SEGREDO])	Remove a seção e suas subseções mecanicamente das consultas dos jogadores.
-"status: segredo"	No cabeçalho YAML do arquivo	Oculta o arquivo inteiro das consultas dos jogadores.
-"status: rascunho"	No cabeçalho do arquivo	Oculta o arquivo das leituras do contexto de IA até estar pronto.
+* **<-- TO DO: motivo:**	Em qualquer arquivo .md,	sinaliza para o Expander preencher aquela lacuna com IA.
+* **[SEGREDO]:**	Em um título (## O Culto [SEGREDO]),	remove a seção e suas subseções mecanicamente das consultas dos jogadores.
+* **status: segredo:**	No cabeçalho YAML do arquivo,	oculta o arquivo inteiro das consultas dos jogadores.
+* **status: rascunho:**	No cabeçalho do arquivo,	oculta o arquivo das leituras do contexto de IA até estar pronto.
 
 ---
 
@@ -81,26 +81,27 @@ O **Silent Multiverse Nexus** é uma suíte completa de ferramentas para Mestres
 
 1. **Clone o repositório:**
    ```bash
-   git clone https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git
+   git clone https://github.com/SilentDM/AI_Bot
    cd SEU_REPOSITORIO
 2. **Crie e ative um ambiente virtual:**
 python -m venv venv
-# No Windows (CMD):
-venv\Scripts\activate.bat
-# No Windows (PowerShell):
-.\venv\Scripts\Activate.ps1
+- No Windows (CMD):
+> venv\Scripts\activate.bat
+- No Windows (PowerShell):
+> .\venv\Scripts\Activate.ps1
 
-3.**Instale as dependências:**
-pip install google-genai discord.py python-dotenv pydantic openai pystray Pillow
+3. **Instale as dependências:**
+> pip install google-genai discord.py python-dotenv pydantic openai pystray Pillow
 
-4.**Execute a aplicação:**
-Crie um arquivo run.vbs
-Set objShell = CreateObject("WScript.Shell")
-Set objFSO = CreateObject("Scripting.FileSystemObject")
-strPath = objFSO.GetParentFolderName(WScript.ScriptFullName)
-objShell.CurrentDirectory = strPath
-' Usa o pythonw de dentro da build_env para garantir que todas as bibliotecas existam
-objShell.Run "build_env\Scripts\pythonw.exe main.py", 0, False
+4. **Execute a aplicação:**
+- Crie um arquivo run.vbs
+   ```bash
+  Set objShell = CreateObject("WScript.Shell")
+  Set objFSO = CreateObject("Scripting.FileSystemObject")
+  strPath = objFSO.GetParentFolderName(WScript.ScriptFullName)
+  objShell.CurrentDirectory = strPath
+  ' Usa o pythonw de dentro da build_env para garantir que todas as bibliotecas existam
+  objShell.Run "build_env\Scripts\pythonw.exe main.py", 0, False
 
 ----
 
