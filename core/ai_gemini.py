@@ -1,4 +1,4 @@
-import os,threading, time, json
+import os,threading, time, json, concurrent.futures
 import engine.project_utils as pu
 from typing import Any, Optional, Type
 from pydantic import BaseModel
@@ -26,6 +26,15 @@ DEFAULT_CONTENTS = "Please repeat: I did not receive a correct prompt, your codi
 MAX_TOKENS = 20480
 _last_call_time = 0
 
+
+def _executar_com_timeout(func, kwargs=None, timeout_sec=30):
+    """Executa uma função em uma thread separada com tempo limite estrito."""
+    if kwargs is None:
+        kwargs = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(func, **kwargs)
+        return future.result(timeout=timeout_sec)
+
 def _is_rate_limit_error(e: Exception) -> bool:
     """Detecta se a exceção é referente a estouro de limite de taxa (HTTP 429 / Quota)."""
     err_str = str(e).lower()
@@ -38,7 +47,6 @@ def _is_rate_limit_error(e: Exception) -> bool:
     )
 
 def findmodel(file_path=pu.log_path("models.json")):
-    # 1. Check cache freshness
     print("Verificando lista de modelos disponíveis!")
     if os.path.exists(file_path):
         try:
@@ -52,39 +60,54 @@ def findmodel(file_path=pu.log_path("models.json")):
             print("Lista de modelos disponíveis OK!")
             return
     print("Lista de modelos disponíveis NOT OK! Criando nova lista!")
-    all_models = GEMINICLIENT.models.list()
-    print("all models ok!")
+    
+    try:
+        all_models = GEMINICLIENT.models.list()
+    except Exception as e:
+        print(f"Erro ao listar modelos da API: {e}")
+        return
+    
     working_models = []
 
     for model in all_models:
         model_name = model.name
         max_input_tokens = getattr(model, 'input_token_limit', 0) or 0
         print(f"Testando modelo: {model_name}")
-        if "gemini" not in model_name.lower() or "embedding" in model_name.lower():
+        if "gemini" not in model_name.lower() or "embedding" in model_name.lower() or "robotics" in model.name.lower():
+            print(f"Pulando {model_name}, não serve para escrita!")
             continue
         else:
             start_time = time.time()
             try:
-                GEMINICLIENT.models.generate_content(
-                    model=model_name,
-                    contents="ping"
-                )
+                _executar_com_timeout(
+                GEMINICLIENT.models.generate_content,
+                kwargs={"model": model_name, "contents": "ping"},
+                timeout_sec=10
+            )
                 response_time = round(time.time() - start_time, 4)
+            except concurrent.futures.TimeoutError:
+                print(f"Pulando {model_name}: Timeout de resposta (>30s)")
+                continue
             except Exception as e:
                 # Skip model if it fails to respond to a basic prompt
-                print(f"Skipping {model_name}: {e}")
+                #print(f"Skipping {model_name}: {e}")
+                print(f"Pulando {model_name}, não respondeu!")
                 continue
 
             # Step 2: Google Search Tool Test
             supports_tools = False
             try:
-                GEMINICLIENT.models.generate_content(
-                    model=model_name,
-                    contents="ping",
-                    config=types.GenerateContentConfig(
+                _executar_com_timeout(
+                GEMINICLIENT.models.generate_content,
+                kwargs={
+                    "model": model_name,
+                    "contents": "ping",
+                    "config": types.GenerateContentConfig(
                         tools=[types.Tool(google_search=types.GoogleSearch())]
                     )
-                )
+                },
+                timeout_sec=10
+            )
                 supports_tools = True
             except Exception:
                 supports_tools = False
@@ -98,11 +121,7 @@ def findmodel(file_path=pu.log_path("models.json")):
                 "attempts": 1,
                 "success":1
             })
-
-            # Brief pause to respect Free Tier RPM limits during model discovery
             time.sleep(1)
-
-            # Sort models: Most input tokens first, then fastest response time
             working_models.sort(
                 key=lambda x: (
                     not x.get("supports_tools", False),
@@ -110,7 +129,6 @@ def findmodel(file_path=pu.log_path("models.json")):
                     x.get("responsetime", 9999)
                 )
             )
-
     with open(file_path, "w", encoding="utf-8") as f:
         json.dump(working_models, f, indent=4)
     print("Lista de modelos disponíveis Criada!")

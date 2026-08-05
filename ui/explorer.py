@@ -137,6 +137,7 @@ class ExplorerFrame(ttk.Frame):
         self.tree.bind("<Button-2>", self.show_context_menu)
 
         self.tree.bind("<ButtonPress-1>", self.on_drag_start)
+        self.tree.bind("<B1-Motion>", self.on_drag_motion)
         self.tree.bind("<ButtonRelease-1>", self.on_drag_release)
 
         self.refresh_tree()
@@ -211,18 +212,81 @@ class ExplorerFrame(ttk.Frame):
                     self.populate_tree_recursive(node, item_path, allowed_paths)
         except Exception as e:
             self.log_callback(f"Erro ao acessar pasta {path}: {e}")
-
-    # --- ARRASTAR E SOLTAR ---
+    # ------------------------------------------------------------------
+    # ARRASTAR E SOLTAR COM EFEITOS VISUAIS (GHOST CARD + TARGET HIGHLIGHT)
+    # ------------------------------------------------------------------
     def on_drag_start(self, event):
         iid = self.tree.identify_row(event.y)
         if iid:
             values = self.tree.item(iid, "values")
+            text = self.tree.item(iid, "text")
             if values:
                 self._drag_item = iid
                 self._drag_path = values[0]
+                self._drag_text = text
+                self._drag_started = False  # Espera o mouse se mover para criar o fantasma
+
+    def _create_drag_ghost(self, x, y, text):
+        """Cria o cartão flutuante semi-transparente sob o cursor."""
+        self._destroy_drag_ghost()
+        try:
+            ghost = tk.Toplevel(self)
+            ghost.overrideredirect(True)
+            ghost.attributes("-topmost", True)
+            ghost.attributes("-alpha", 0.75)  # 🟢 75% de opacidade (transparente) no Windows
+            ghost.configure(bg="#0f766e")
+
+            lbl = tk.Label(
+                ghost, 
+                text=f"{text}", 
+                bg="#0f766e", 
+                fg="#ffffff", 
+                font=("Segoe UI", 9, "bold"),
+                padx=8,
+                pady=4,
+                bd=1,
+                relief="solid"
+            )
+            lbl.pack()
+            ghost.geometry(f"+{x + 12}+{y + 12}")
+            self._drag_ghost = ghost
+        except Exception:
+            self._drag_ghost = None
+
+    def on_drag_motion(self, event):
+        """Atualiza a posição do cartão fantasma e ilumina a pasta de destino."""
+        if not getattr(self, "_drag_item", None):
+            return
+
+        # Só ativa o efeito visual se o usuário realmente arrastar o mouse
+        if not getattr(self, "_drag_started", False):
+            self._drag_started = True
+            self._create_drag_ghost(event.x_root, event.y_root, getattr(self, "_drag_text", ""))
+
+        # 1. Move o cartão fantasma junto com o cursor
+        if hasattr(self, "_drag_ghost") and self._drag_ghost:
+            self._drag_ghost.geometry(f"+{event.x_root + 12}+{event.y_root + 12}")
+
+        # 2. Ilumina a pasta/item sob o ponteiro do mouse no Explorer
+        target_iid = self.tree.identify_row(event.y)
+        if target_iid and target_iid != self._drag_item:
+            self.tree.selection_set(target_iid)
+            self.tree.focus(target_iid)
+
+    def _destroy_drag_ghost(self):
+        """Remove o cartão fantasma flutuante da tela."""
+        if hasattr(self, "_drag_ghost") and self._drag_ghost:
+            try:
+                self._drag_ghost.destroy()
+            except Exception:
+                pass
+            self._drag_ghost = None
 
     def on_drag_release(self, event):
-        if not self._drag_item or not self._drag_path:
+        # Destrói o cartão flutuante assim que o mouse é solto
+        self._destroy_drag_ghost()
+
+        if not getattr(self, "_drag_item", None) or not getattr(self, "_drag_path", None):
             return
 
         target_iid = self.tree.identify_row(event.y)
@@ -237,6 +301,7 @@ class ExplorerFrame(ttk.Frame):
         src_parent_iid = self.tree.parent(self._drag_item)
         target_parent_iid = self.tree.parent(target_iid)
 
+        # Se soltou no mesmo nível, apenas reordena a posição
         if src_parent_iid == target_parent_iid:
             target_index = self.tree.index(target_iid)
             self.tree.move(self._drag_item, src_parent_iid, target_index)
@@ -248,15 +313,16 @@ class ExplorerFrame(ttk.Frame):
                 novos_filhos.append(os.path.basename(child_path))
 
             pu.salvar_ordem_pasta(parent_dir, novos_filhos)
-            self.toast("📌 Ordem salva em logs!")
+            self.toast("Ordem salva em logs!")
 
             self._drag_item = None
             self._drag_path = None
             return
 
+        # Se soltou sobre outra pasta, move o arquivo/pasta para dentro dela
         dest_dir = target_path if os.path.isdir(target_path) else os.path.dirname(target_path)
         if os.path.isdir(src_path) and dest_dir.startswith(src_path):
-            self.toast("⚠️ Não é possível mover uma pasta para dentro dela mesma.")
+            self.toast("Não é possível mover uma pasta para dentro dela mesma.")
             self._drag_item = None
             self._drag_path = None
             return
@@ -265,7 +331,7 @@ class ExplorerFrame(ttk.Frame):
         if os.path.abspath(src_path) != os.path.abspath(dest_path):
             try:
                 shutil.move(src_path, dest_path)
-                msg = f"📦 Movido '{os.path.basename(src_path)}' para '{os.path.basename(dest_dir)}'"
+                msg = f"Movido '{os.path.basename(src_path)}' para '{os.path.basename(dest_dir)}'"
                 self.log_callback(msg)
                 self.toast(msg)
                 self.refresh_tree()

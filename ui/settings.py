@@ -50,7 +50,12 @@ DEFAULT_SETTINGS = {
     "wb_allow_create_file": True,
     "wb_allow_improve_file": True,
     "tom_clima_perfil": "Dark Fantasy (Grimdark)",
-    "rpg_sistema_ativo": "D&D 5e"
+    "rpg_sistema_ativo": "D&D 5e",
+    "discord_prefix": "!ao",
+    "discord_channels_allowed": "",     # ex: "chat-com-ao; rpg-mesa"
+    "discord_channels_blocked": "",     # ex: "anuncios; geral"
+    "discord_roles_dm": "Mestre, DM, GM", # ex: "Mestre; Dungeon Master"
+    "discord_cooldown_seconds": 5       # tempo em segundos entre perguntas
 }
 
 def carregar_configuracoes():
@@ -95,7 +100,7 @@ class OptionsFrame(ttk.Frame):
         self.toast_callback = toast_callback
         self.settings = carregar_configuracoes()
 
-        page_header_callback(self, "Opções do Sistema", "Configure comportamentos automáticos e estilo do cenário.")
+        page_header_callback(self, "Opções do Sistema", "Configure comportamentos automáticos, estilo, sistema e opções do bot do Discord.")
 
         body = ttk.Frame(self)
         body.pack(fill=tk.BOTH, expand=True, padx=15, pady=5)
@@ -105,18 +110,8 @@ class OptionsFrame(ttk.Frame):
         # -------------------------------------------------------------
         tom_box = ttk.LabelFrame(body, text=" Tom e Clima do Cenário (Style/*.md) ")
         tom_box.pack(fill=tk.X, pady=(0, 15))
-
-        ttk.Label(
-            tom_box,
-            text="Escolha o tom do cenário. Esta opção atualiza o arquivo 'Tom_e_Clima.md' na pasta de Estilo:"
-        ).pack(anchor=tk.W, padx=10, pady=(10, 5))
-
-        self.combo_tom = ttk.Combobox(
-            tom_box,
-            state="readonly",
-            values=list(PERFIS_TOM.keys()),
-            font=("Segoe UI", 10)
-        )
+        ttk.Label(tom_box,text="Escolha o tom do cenário. Esta opção atualiza o arquivo 'Tom_e_Clima.md' na pasta de Estilo:").pack(anchor=tk.W, padx=10, pady=(10, 5))
+        self.combo_tom = ttk.Combobox(tom_box,state="readonly",values=list(PERFIS_TOM.keys()),font=("Segoe UI", 10))
         perfil_atual = self.settings.get("tom_clima_perfil", "Dark Fantasy (Grimdark)")
         self.combo_tom.set(perfil_atual)
         self.combo_tom.pack(fill=tk.X, padx=10, pady=(0, 12))
@@ -131,10 +126,7 @@ class OptionsFrame(ttk.Frame):
         sistem_box = ttk.LabelFrame(body, text=" Sistema de Regras de RPG ")
         sistem_box.pack(fill=tk.X, pady=(0, 15))
 
-        self.combo_sistema = ttk.Combobox(
-            sistem_box, state="readonly", 
-            values=list(SISTEMAS_RPG.keys()), font=("Segoe UI", 10)
-        )
+        self.combo_sistema = ttk.Combobox(sistem_box, state="readonly", values=list(SISTEMAS_RPG.keys()), font=("Segoe UI", 10))
         self.combo_sistema.set(self.settings.get("rpg_sistema_ativo", "D&D 5e"))
         self.combo_sistema.pack(fill=tk.X, padx=10, pady=10)
         # -------------------------------------------------------------
@@ -143,10 +135,7 @@ class OptionsFrame(ttk.Frame):
         expander_opt_box = ttk.LabelFrame(body, text=" Automação do Expander ")
         expander_opt_box.pack(fill=tk.X, pady=(0, 15))
 
-        ttk.Label(
-            expander_opt_box, 
-            text="Executar o Expander automaticamente ao salvar um arquivo com a tag <-- TODO:"
-        ).pack(anchor=tk.W, padx=10, pady=(10, 8))
+        ttk.Label(expander_opt_box, text="Executar o Expander automaticamente ao salvar um arquivo com a tag <-- TODO:").pack(anchor=tk.W, padx=10, pady=(10, 8))
 
         valor_inicial = bool(self.settings.get("auto_expander", False))
         self.auto_expander_var = tk.BooleanVar(value=valor_inicial)
@@ -154,15 +143,9 @@ class OptionsFrame(ttk.Frame):
         radio_frame = ttk.Frame(expander_opt_box)
         radio_frame.pack(anchor=tk.W, padx=10, pady=(0, 12))
 
-        ttk.Radiobutton(
-            radio_frame, text="Desabilitado", value=False,
-            variable=self.auto_expander_var, command=self._on_auto_expander_change
-        ).pack(side=tk.LEFT, padx=(0, 20))
+        ttk.Radiobutton(radio_frame, text="Desabilitado", value=False,variable=self.auto_expander_var, command=self._on_auto_expander_change).pack(side=tk.LEFT, padx=(0, 20))
 
-        ttk.Radiobutton(
-            radio_frame, text="Habilitado", value=True,
-            variable=self.auto_expander_var, command=self._on_auto_expander_change
-        ).pack(side=tk.LEFT)
+        ttk.Radiobutton(radio_frame, text="Habilitado", value=True,variable=self.auto_expander_var, command=self._on_auto_expander_change).pack(side=tk.LEFT)
 
         # -------------------------------------------------------------
         # GRUPO 4: Permissões do WorldBuilder
@@ -170,14 +153,68 @@ class OptionsFrame(ttk.Frame):
         wb_opt_box = ttk.LabelFrame(body, text=" WorldBuilder - Permissões de Ação ")
         wb_opt_box.pack(fill=tk.X, pady=(0, 15))
 
-        ttk.Label(
-            wb_opt_box,
-            text="Selecione quais ações o WorldBuilder está autorizado a executar autonomamente:"
-        ).pack(anchor=tk.W, padx=10, pady=(10, 8))
+        ttk.Label(wb_opt_box,text="Selecione quais ações o WorldBuilder está autorizado a executar autonomamente:").pack(anchor=tk.W, padx=10, pady=(10, 8))
 
         self._criar_opcao_wb(wb_opt_box, "Criar Pastas (CreateFolder):", "wb_allow_create_folder")
         self._criar_opcao_wb(wb_opt_box, "Criar Arquivos (CreateFile):", "wb_allow_create_file")
         self._criar_opcao_wb(wb_opt_box, "Melhorar Arquivos (ImproveFile):", "wb_allow_improve_file")
+
+    
+        # -------------------------------------------------------------
+        # GRUPO 5: Configurações do Bot do Discord
+        # -------------------------------------------------------------
+        discord_box = ttk.LabelFrame(body, text=" Bot do Discord - Regras e Gatilho ")
+        discord_box.pack(fill=tk.X, pady=(0, 15))
+
+        # 1. Prefixo / Gatilho
+        ttk.Label(discord_box, text="Gatilho de Comunicação (Prefixo):").pack(anchor=tk.W, padx=10, pady=(8, 2))
+        self.var_prefix = tk.StringVar(value=self.settings.get("discord_prefix", "!ao"))
+        entry_prefix = ttk.Entry(discord_box, textvariable=self.var_prefix, font=("Segoe UI", 10))
+        entry_prefix.pack(fill=tk.X, padx=10, pady=(0, 8))
+        entry_prefix.bind("<KeyRelease>", self._salvar_campos_discord)
+
+        # 2. Cargos de Mestre
+        ttk.Label(discord_box, text="Cargos de Mestre (Acesso com Segredos) - separados por vírgula:").pack(anchor=tk.W, padx=10, pady=(4, 2))
+        self.var_roles = tk.StringVar(value=self.settings.get("discord_roles_dm", "Mestre, DM, GM"))
+        entry_roles = ttk.Entry(discord_box, textvariable=self.var_roles, font=("Segoe UI", 10))
+        entry_roles.pack(fill=tk.X, padx=10, pady=(0, 8))
+        entry_roles.bind("<KeyRelease>", self._salvar_campos_discord)
+
+        # 3. Canais Permitidos (Whitelist)
+        ttk.Label(discord_box, text="Canais Permitidos (deixe em branco para TODOS):").pack(anchor=tk.W, padx=10, pady=(4, 2))
+        self.var_allowed = tk.StringVar(value=self.settings.get("discord_channels_allowed", ""))
+        entry_allowed = ttk.Entry(discord_box, textvariable=self.var_allowed, font=("Segoe UI", 10))
+        entry_allowed.pack(fill=tk.X, padx=10, pady=(0, 8))
+        entry_allowed.bind("<KeyRelease>", self._salvar_campos_discord)
+
+        # 4. Canais Proibidos (Blacklist)
+        ttk.Label(discord_box, text="Canais Proibidos/Ignorados:").pack(anchor=tk.W, padx=10, pady=(4, 2))
+        self.var_blocked = tk.StringVar(value=self.settings.get("discord_channels_blocked", ""))
+        entry_blocked = ttk.Entry(discord_box, textvariable=self.var_blocked, font=("Segoe UI", 10))
+        entry_blocked.pack(fill=tk.X, padx=10, pady=(0, 8))
+        entry_blocked.bind("<KeyRelease>", self._salvar_campos_discord)
+
+        # 5. Cooldown em segundos
+        ttk.Label(discord_box, text="Tempo de espera por usuário (segundos):").pack(anchor=tk.W, padx=10, pady=(4, 2))
+        self.var_cooldown = tk.StringVar(value=str(self.settings.get("discord_cooldown_seconds", 5)))
+        entry_cooldown = ttk.Entry(discord_box, textvariable=self.var_cooldown, font=("Segoe UI", 10))
+        entry_cooldown.pack(fill=tk.X, padx=10, pady=(0, 10))
+        entry_cooldown.bind("<KeyRelease>", self._salvar_campos_discord)
+
+
+    def _salvar_campos_discord(self, event):
+        prefixo = self.var_prefix.get().strip() or "!ao"
+        self.settings["discord_prefix"] = prefixo
+        self.settings["discord_roles_dm"] = self.var_roles.get().strip()
+        self.settings["discord_channels_allowed"] = self.var_allowed.get().strip()
+        self.settings["discord_channels_blocked"] = self.var_blocked.get().strip()
+        
+        try:
+            self.settings["discord_cooldown_seconds"] = int(self.var_cooldown.get().strip())
+        except ValueError:
+            self.settings["discord_cooldown_seconds"] = 5
+
+        salvar_configuracoes(self.settings)
 
     def _on_tom_change(self, event):
         novo_tom = self.combo_tom.get()
@@ -189,6 +226,20 @@ class OptionsFrame(ttk.Frame):
             self.log_callback(f"Tom do Cenário alterado para: {novo_tom}")
         if self.toast_callback:
             self.toast_callback(f"🎨 Estilo '{novo_tom}' salvo na pasta Style!")
+
+
+
+    def _on_prefix_change(self, event):
+        novo_prefixo = self.prefix_var.get().strip()
+        if not novo_prefixo:
+            novo_prefixo = "!ao"
+
+        self.settings["discord_prefix"] = novo_prefixo
+        salvar_configuracoes(self.settings)
+
+        if self.log_callback:
+            self.log_callback(f"Gatilho do Bot do Discord alterado para: {novo_prefixo}")
+            
 
     def is_auto_expander_enabled(self):
         return bool(self.auto_expander_var.get())
@@ -227,9 +278,12 @@ class OptionsFrame(ttk.Frame):
         habilitado = bool(var.get())
         self.settings[chave_setting] = habilitado
         salvar_configuracoes(self.settings)
-
         status_str = "HABILITADO" if habilitado else "DESABILITADO"
         if self.log_callback:
             self.log_callback(f"WorldBuilder -> {titulo} {status_str}")
         if self.toast_callback:
             self.toast_callback(f"⚙️ {titulo.split('(')[0].strip()}: {status_str.title()}!")
+        
+        
+        
+        
