@@ -24,16 +24,17 @@ DEFAULT_SYSTEM_INSTRUCTION = "You are a helpful assistant that explains things a
 DEFAULT_TEMPERATURE = 0.6  # Changed to a float (the API expects a float, not a string)
 DEFAULT_CONTENTS = "Please repeat: I did not receive a correct prompt, your coding has failed somewhere."
 MAX_TOKENS = 20480
-_last_call_time = 0
+# Cliente padrão com timeout de 30 segundos (30.000 ms)
+GEMINICLIENT = genai.Client(
+    api_key=GOOGLE_API_KEY,
+    http_options=types.HttpOptions(timeout=35_000)
+)
 
-
-def _executar_com_timeout(func, kwargs=None, timeout_sec=30):
-    """Executa uma função em uma thread separada com tempo limite estrito."""
-    if kwargs is None:
-        kwargs = {}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-        future = executor.submit(func, **kwargs)
-        return future.result(timeout=timeout_sec)
+# Cliente rápido para testes/pings no findmodel com timeout de 10 segundos (10.000 ms)
+GEMINICLIENT_FAST = genai.Client(
+    api_key=GOOGLE_API_KEY,
+    http_options=types.HttpOptions(timeout=30_000)
+)
 
 def _is_rate_limit_error(e: Exception) -> bool:
     """Detecta se a exceção é referente a estouro de limite de taxa (HTTP 429 / Quota)."""
@@ -79,35 +80,25 @@ def findmodel(file_path=pu.log_path("models.json")):
         else:
             start_time = time.time()
             try:
-                _executar_com_timeout(
-                GEMINICLIENT.models.generate_content,
-                kwargs={"model": model_name, "contents": "ping"},
-                timeout_sec=10
-            )
+                GEMINICLIENT_FAST.models.generate_content(
+                    model=model_name, 
+                    contents="ping"
+                )
                 response_time = round(time.time() - start_time, 4)
-            except concurrent.futures.TimeoutError:
-                print(f"Pulando {model_name}: Timeout de resposta (>30s)")
-                continue
             except Exception as e:
-                # Skip model if it fails to respond to a basic prompt
-                #print(f"Skipping {model_name}: {e}")
-                print(f"Pulando {model_name}, não respondeu!")
+                print(f"Pulando {model_name}, não respondeu ou deu Timeout: {e}")
                 continue
 
             # Step 2: Google Search Tool Test
             supports_tools = False
             try:
-                _executar_com_timeout(
-                GEMINICLIENT.models.generate_content,
-                kwargs={
-                    "model": model_name,
-                    "contents": "ping",
-                    "config": types.GenerateContentConfig(
-                        tools=[types.Tool(google_search=types.GoogleSearch())]
+                GEMINICLIENT_FAST.models.generate_content(
+                        model=model_name,
+                        contents="ping",
+                        config=types.GenerateContentConfig(
+                            tools=[types.Tool(google_search=types.GoogleSearch())]
+                        )
                     )
-                },
-                timeout_sec=10
-            )
                 supports_tools = True
             except Exception:
                 supports_tools = False
@@ -197,18 +188,22 @@ def generate_content_with_fallback(contents: Any, config: types.GenerateContentC
                 config=config_to_use
             )
             response_time = round(time.time() - start_time, 4)
-            improvemodel(model_name,True,response_time)
+            improvemodel(model_name, True, response_time)
             if response and response.text:
                 return response
 
         except Exception as e:
             response_time = round(time.time() - start_time, 4)
-            improvemodel(model_name,False,response_time)
-            if _is_rate_limit_error(e):
-                print(f"Rate Limit atingido no modelo {model_name}. Pulando imediatamente para o próximo...")
+            improvemodel(model_name, False, response_time)
+            
+            # Trata se foi timeout ou rate limit
+            err_msg = str(e).lower()
+            if "timed out" in err_msg or "timeout" in err_msg:
+                print(f"Timeout (30s) no {model_name}: Pulando para o próximo...")
+            elif _is_rate_limit_error(e):
+                print(f"Rate Limit atingido no modelo {model_name}. Pulando para o próximo...")
             else:
                 print(f"Erro no modelo {model_name}: {e}")
-        
         print(f"🔄 Passando para o próximo modelo da cadeia de fallback...")
 
     raise RuntimeError("Todos os modelos e tentativas de fallback falharam em gerar conteúdo.")

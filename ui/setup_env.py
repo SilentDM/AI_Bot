@@ -162,7 +162,7 @@ class SetupWizard:
 
         self.btn_voltar.config(state=(tk.NORMAL if indice > 0 else tk.DISABLED))
         ultimo = indice == len(passos) - 1
-        self.btn_avancar.config(text="Concluir ✅" if ultimo else "Avançar ▶")
+        self.btn_avancar.config(text="Concluir" if ultimo else "Avançar")
 
     def _voltar(self):
         if self.passo_atual > 0:
@@ -176,7 +176,7 @@ class SetupWizard:
         valor = self.combo.get() if tipo == "dropdown" else self.entry_var.get().strip()
 
         if obrigatorio and not valor:
-            self.lbl_erro.config(text="⚠️ Este campo é obrigatório.")
+            self.lbl_erro.config(text=" Este campo é obrigatório.")
             return
 
         self._salvar_passo_atual()
@@ -222,9 +222,9 @@ class SetupWizard:
         ENV_PATH.write_text("\n".join(linhas) + "\n", encoding="utf-8")
         self.concluido = True
 
-        aviso = "✅ Configuração concluída!\n\nO programa vai iniciar agora."
+        aviso = "Configuração concluída!\n\nO programa vai iniciar agora."
         if not self.valores.get("DISCORD_TOKEN"):
-            aviso += "\n\nℹ️ Nenhum token do Discord informado — o bot ficará desativado."
+            aviso += "\n\n Nenhum token do Discord informado — o bot ficará desativado."
         messagebox.showinfo("Tudo pronto!", aviso)
 
         self.root.destroy()

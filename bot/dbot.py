@@ -1,4 +1,4 @@
-import os, threading, asyncio, time
+import os, asyncio, time
 import core.ai_utils as au
 import core.memory as memory
 import engine.project_utils as pu
@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
-MESTRE_DISCORD_ID = int(os.getenv("MESTRE_DISCORD_ID", "0"))
+MESTRE_DISCORD_ID = int(os.getenv("MESTRE_DISCORD_ID") or "0")
 DISCORD_ENABLED = bool(TOKEN)
 
 # Dicionários de controle de tempo e presença
@@ -205,6 +205,7 @@ if DISCORD_ENABLED:
                     await responderreply(message, resposta)
                 
                 memory.salvar_memoria(guild_id, guild_name, userid, user_name, prompt, resposta)
+
 else:
     discordclient = None
     print("DISCORD_TOKEN não configurado — o bot do Discord está desativado.")

@@ -305,7 +305,7 @@ def carregar_projeto(is_dm: bool = True):
         content_filtrado = sf.filtrar_conteudo_por_permissao(content, is_dm=is_dm)
         if not content_filtrado:
             continue            
-        conteudo_total.append(f"\n==== {f_path.name} ====\n{content}\n")
+        conteudo_total.append(f"\n==== {f_path.name} ====\n{content_filtrado}\n")
         
     return "\n\n".join(conteudo_total)
 

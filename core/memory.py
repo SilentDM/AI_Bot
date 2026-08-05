@@ -70,7 +70,7 @@ def criar_resumo(memorias: str) -> str:
             contents=corpo_usuario,
             system_instruction=instrucao_sistema,
             temperature=0.3,
-            use_world_context=True
+            use_world_context=False
         )
         
         # Caso a função de limpeza de sentenças incompletas esteja no módulo de memória

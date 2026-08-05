@@ -86,7 +86,7 @@ def _markdown_para_html(md_texto: str) -> str:
 
     texto = re.sub(r'\[\[([^\|\]]+)(?:\|([^\]]+))?\]\]', _substituir_wikilink, texto)
     
-    return resultado
+    return texto
 
 def _obter_estrutura_ordenada(caminho_raiz):
     """
