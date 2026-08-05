@@ -39,21 +39,19 @@ def capturar_erros_fatais(exc_type, exc_value, exc_traceback):
     print(f"❌ Ocorreu um erro fatal! Log salvo em: {caminho_crash}")
 
 
-def bootstrap():
-    print("Iniciando Silent Multiverse Console...")
-    print(f"Diretório Raiz do App: {BASE_DIR}")
-
+def configurar_ambiente():
+    """Garante o .env e carrega variáveis."""
     from ui.setup_env import garantir_env
     garantir_env()
-
     from dotenv import load_dotenv
     load_dotenv(BASE_DIR / ".env")
+
+def criar_pastas():
+    """Cria todas as pastas necessárias para o funcionamento do app."""
     import engine.project_utils as pu
+    import os
     nome_estilo = os.getenv("PASTA_ESTILO", "Style").strip() or "Style"
-
-    # Garante a existência do projeto ativo
     pu.CAMINHO_PROJETO.mkdir(parents=True, exist_ok=True)
-
     pastas_obrigatorias = {
         "Logs": BASE_DIR / "logs",
         "Memories": BASE_DIR / "memories",
@@ -66,19 +64,13 @@ def bootstrap():
     for nome, caminho in pastas_obrigatorias.items():
         caminho.mkdir(parents=True, exist_ok=True)
         print(f"  └─ ✅ {nome}: {caminho}")
-
+    
     print("Pastas e configurações foram verificadas com sucesso!")
 
-
-
 def main():
-    # 1. Registra hook de crash global
     sys.excepthook = capturar_erros_fatais
-
-    # 2. Prepara o ambiente e pastas
-    bootstrap()
-
-    # 3. Carrega e inicia a interface gráfica
+    configurar_ambiente()
+    criar_pastas()
     from ui.gui import main as start_gui
     start_gui()
 
