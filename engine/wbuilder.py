@@ -248,16 +248,16 @@ def enactchoices(actions):
         objective = action.get("objective", "")
         template = action.get("template", "nenhum")
         
-        with open(pu.log_path("changelog.jsonl"), "a", encoding="utf-8") as f:
-            registro = {
-                "timestamp": pu.currentdate(),
-                "action": tipo,
-                "path": path,
-                "template": template,
-                "objective": objective
-            }
-            f.write(json.dumps(registro, ensure_ascii=False) + "\n")
-            
+        # Registro thread-safe no changelog.jsonl
+        registro = {
+            "timestamp": pu.currentdate(),
+            "action": tipo,
+            "path": path,
+            "template": template,
+            "objective": objective
+        }
+        pu.anexar_jsonl_seguro(pu.log_path("changelog.jsonl"), registro, pu.LOCK_CHANGELOG)
+
         if tipo == "CreateFolder":
             createfolder(action["path"], action.get("objective", ""))
         elif tipo == "CreateFile":
@@ -266,7 +266,7 @@ def enactchoices(actions):
             improvefile(action["path"], action.get("objective", ""))
     
         ex.processar_arquivos()
-        print("♻️ Reconstruindo contexto do cache para refletir as novas criações...")
+        print("Reconstruindo contexto do cache para refletir as novas criações...")
         cg.force_rebuild_world_context()
     
     print("Enactchoices Concluído!")

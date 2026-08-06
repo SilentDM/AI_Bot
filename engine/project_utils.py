@@ -34,6 +34,11 @@ STOP_WORDS = {
 
 ARQUIVO_ORDEM_GLOBAL = PASTA_LOGS / "folder_orders.json"
 
+# --- TRAVAS DE CONCORRÊNCIA PARA ARQUIVOS COMPARTILHADOS ---
+LOCK_MODELS = threading.Lock()
+LOCK_CHANGELOG = threading.Lock()
+LOCK_FOLDER_ORDERS = threading.Lock()
+
 def obter_projetos_recentes():
     """Retorna a lista de caminhos de projetos recentes salvos nas configurações."""
     arquivo_settings = PASTA_LOGS / "settings.json"
@@ -105,6 +110,44 @@ if not caminho_inicial:
         caminho_inicial = BASE_DIR / caminho_inicial
 
 definir_projeto_ativo(caminho_inicial)
+
+def ler_json_seguro(caminho: Path, lock: threading.Lock, padrao=None):
+    """Lê um arquivo JSON de forma thread-safe utilizando uma trava exclusiva."""
+    if padrao is None:
+        padrao = {}
+    with lock:
+        if not caminho.exists():
+            return padrao
+        try:
+            with open(caminho, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"⚠️ Erro ao ler JSON {caminho.name}: {e}")
+            return padrao
+
+def salvar_json_seguro(caminho: Path, dados, lock: threading.Lock, indent=4):
+    """Escreve dados em um arquivo JSON de forma thread-safe e atômica."""
+    with lock:
+        try:
+            caminho.parent.mkdir(parents=True, exist_ok=True)
+            caminho_tmp = caminho.with_suffix(".tmp")
+            with open(caminho_tmp, "w", encoding="utf-8") as f:
+                json.dump(dados, f, ensure_ascii=False, indent=indent)
+            caminho_tmp.replace(caminho)  # Substituição atômica no sistema de arquivos
+        except Exception as e:
+            print(f"❌ Erro ao salvar JSON {caminho.name}: {e}")
+
+def anexar_jsonl_seguro(caminho: Path, registro: dict, lock: threading.Lock):
+    """Anexa um novo objeto como linha (.jsonl) de forma thread-safe."""
+    with lock:
+        try:
+            caminho.parent.mkdir(parents=True, exist_ok=True)
+            linha = json.dumps(registro, ensure_ascii=False) + "\n"
+            with open(caminho, "a", encoding="utf-8") as f:
+                f.write(linha)
+        except Exception as e:
+            print(f"❌ Erro ao anexar em {caminho.name}: {e}")
+
 
 def obter_caminho_base():
     """Retorna o caminho raiz correto rodando como script .py ou como .exe compilado."""
@@ -322,17 +365,11 @@ def is_cancelled() -> bool:
     return _CANCEL_EVENT.is_set()
 
 def carregar_mapa_ordens():
-    """Lê o arquivo central de ordenação em logs/folder_orders.json."""
-    if ARQUIVO_ORDEM_GLOBAL.exists():
-        try:
-            with open(ARQUIVO_ORDEM_GLOBAL, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            return {}
-    return {}
+    """Lê o arquivo central de ordenação usando a trava thread-safe."""
+    return ler_json_seguro(ARQUIVO_ORDEM_GLOBAL, LOCK_FOLDER_ORDERS, padrao={})
 
 def salvar_ordem_pasta(caminho_pasta, lista_nomes_itens):
-    """Salva a lista ordenada de uma pasta específica no JSON central da pasta logs."""
+    """Salva a lista ordenada usando a gravação atômica e thread-safe."""
     try:
         caminho_obj = Path(caminho_pasta).resolve()
         raiz_obj = Path(CAMINHO_PROJETO).resolve()
@@ -345,12 +382,7 @@ def salvar_ordem_pasta(caminho_pasta, lista_nomes_itens):
 
     mapa = carregar_mapa_ordens()
     mapa[rel_key] = lista_nomes_itens
-
-    try:
-        with open(ARQUIVO_ORDEM_GLOBAL, "w", encoding="utf-8") as f:
-            json.dump(mapa, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        print(f"Erro ao salvar mapa de ordens central: {e}")
+    salvar_json_seguro(ARQUIVO_ORDEM_GLOBAL, mapa, LOCK_FOLDER_ORDERS, indent=2)
 
 def obter_itens_ordenados(caminho_pasta):
     """Retorna a lista de itens da pasta ordenados de acordo com a preferência salva."""

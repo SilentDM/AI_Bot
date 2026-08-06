@@ -1113,7 +1113,7 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
             self.root.after(0, self.root.destroy)
             
     # ------------------------------------------------------------------
-    # ABA DE PERFORMANCE DE MODELOS GEMINI (RESPONSIVE GRID DASHBOARD)
+    # ABA DE PERFORMANCE DE MODELOS GEMINI (RESPONSIVE DASHBOARD)
     # ------------------------------------------------------------------
     def _build_models_page(self, parent):
         frame = ttk.Frame(parent)
@@ -1126,8 +1126,14 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
         ttk.Label(title_box, text="Performance dos Modelos IA", font=("Segoe UI", 14, "bold"), foreground="#10b981").pack(anchor=tk.W)
         ttk.Label(title_box, text="Dashboard responsivo dos modelos Gemini testados e classificados por eficiência.", font=("Segoe UI", 9), foreground="#888888").pack(anchor=tk.W, pady=(3, 0))
         
-        btn_refresh = ttk.Button(header_frame, text="Atualizar Dados", command=self.refresh_models_cards)
-        btn_refresh.pack(side=tk.RIGHT)
+        btn_frame = ttk.Frame(header_frame)
+        btn_frame.pack(side=tk.RIGHT)
+
+        btn_run_test = ttk.Button(btn_frame, text="⚡ Testar Modelos Agora", command=self.run_findmodel_thread)
+        btn_run_test.pack(side=tk.LEFT, padx=(0, 5))
+
+        btn_refresh = ttk.Button(btn_frame, text="🔄 Atualizar Tela", command=self.refresh_models_cards)
+        btn_refresh.pack(side=tk.LEFT)
 
         # Área de rolagem vertical (Canvas + Scrollbar)
         self.models_canvas = tk.Canvas(frame, bg="#121212", highlightthickness=0, bd=0)
@@ -1139,12 +1145,11 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
             lambda e: self.models_canvas.configure(scrollregion=self.models_canvas.bbox("all"))
         )
         
-        self.models_canvas.create_window((0, 0), window=self.models_scroll_frame, anchor="nw")
+        self.models_canvas_window = self.models_canvas.create_window((0, 0), window=self.models_scroll_frame, anchor="nw")
         self.models_canvas.configure(yscrollcommand=scrollbar.set)
         
         self.models_canvas.bind("<Configure>", self._on_models_canvas_resize)
-
-        self.models_canvas.bind_all("<MouseWheel>", lambda e: self.models_canvas.yview_scroll(int(-1 * (e.delta / 120)), "units"))
+        self.models_canvas.bind_all("<MouseWheel>", lambda e: self.models_canvas.yview_scroll(int(-1 * (e.delta / 120)), "units") if self.current_page == "models" else None)
 
         self.models_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(15, 0), pady=(0, 15))
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y, padx=(0, 15), pady=(0, 15))
@@ -1155,65 +1160,97 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
         return frame
 
     def _on_models_canvas_resize(self, event):
-        """Disparado automaticamente quando a janela muda de tamanho."""
+        """Redimensiona o container e recalcula o grid quando a janela muda de tamanho."""
+        canvas_width = event.width
+        if hasattr(self, "models_canvas_window"):
+            self.models_canvas.itemconfig(self.models_canvas_window, width=canvas_width)
         if hasattr(self, "current_models_list") and self.current_models_list:
-            self.render_models_grid()
+            self.render_models_grid(force=False)
+
+    def run_findmodel_thread(self):
+        """Executa o teste de pings e capacidade nos modelos em segundo plano."""
+        if not os.getenv("GOOGLE_API_KEY", "").strip():
+            self.toast("⚠️ Cadastre a GOOGLE_API_KEY nas Opções primeiro!")
+            return
+
+        self.toast("⚡ Testando e ranqueando modelos do Gemini...")
+        self.log_activity("Iniciando benchmark de modelos da API...")
+        self.start_spinner("Testando Modelos IA")
+
+        def _worker():
+            try:
+                ag.findmodel()
+                self.log_activity("Benchmark de modelos concluído com sucesso!")
+                self.toast("✅ Teste de modelos concluído!")
+                self.root.after(0, self.refresh_models_cards)
+            except Exception as e:
+                self.log_activity(f"Erro ao testar modelos: {e}")
+                self.toast("❌ Erro ao testar modelos.")
+            finally:
+                self.stop_spinner("Modelos Prontos")
+
+        threading.Thread(target=_worker, daemon=True).start()
 
     def refresh_models_cards(self):
-        """Lê o arquivo logs/models.json e aciona a renderização do Grid."""
         file_path = pu.log_path("models.json")
-        if not file_path.exists():
-            self._show_models_message("Nenhum modelo registrado ainda em logs/models.json.\nAguarde a descoberta de modelos.\nVerifique a evolução pela aba Logs.")
+        has_key = bool(os.getenv("GOOGLE_API_KEY", "").strip())
+
+        if not has_key:
+            self._show_models_message(
+                "🔑 Nenhuma chave de API (GOOGLE_API_KEY) cadastrada.\n\n"
+                "Para visualizar e ranquear os modelos disponíveis do Gemini,\n"
+                "acesse a aba 'Opções' no menu lateral e salve sua chave de API."
+            )
             return
 
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                self.current_models_list = json.load(f)
-        except Exception as e:
-            self._show_models_message(f"Erro ao ler models.json: {e}")
-            return
+        self.current_models_list = pu.ler_json_seguro(file_path, pu.LOCK_MODELS, padrao=[])
 
         if not self.current_models_list:
-            self._show_models_message("A lista de modelos está vazia.")
+            self._show_models_message(
+                "⏳ Nenhum teste de modelos foi executado ainda.\n\n"
+                "Clique no botão '⚡ Testar Modelos Agora' no topo direito\n"
+                "para disparar o benchmark dos modelos disponíveis do Gemini."
+            )
             return
 
-        self.last_rendered_cols = 0  # Força o redesenho
-        self.render_models_grid()
+        self.render_models_grid(force=True)
 
     def _show_models_message(self, mensagem):
         for widget in self.models_scroll_frame.winfo_children():
             widget.destroy()
-        lbl = tk.Label(self.models_scroll_frame, text=mensagem, bg="#121212", fg="#888888", font=("Segoe UI", 10), justify="center")
-        lbl.pack(padx=20, pady=40)
+        lbl = tk.Label(
+            self.models_scroll_frame, 
+            text=mensagem, 
+            bg="#121212", 
+            fg="#888888", 
+            font=("Segoe UI", 10), 
+            justify="center",
+            pady=40
+        )
+        lbl.pack(fill=tk.BOTH, expand=True)
 
-    def render_models_grid(self):
-        """Calcula dinamicamente a quantidade de colunas que cabem na tela e posiciona os cartões."""
+    def render_models_grid(self, force=False):
+        """Calcula dinamicamente a quantidade de colunas e posiciona os cartões."""
         if not self.current_models_list:
             return
 
-        # Largura disponível no Canvas
-        canvas_width = self.models_canvas.winfo_width() - 25
-        if canvas_width < 100:  # Valor inicial padrão antes do desenho da janela
+        canvas_width = self.models_canvas.winfo_width() - 15
+        if canvas_width < 100:
             canvas_width = 800
 
-        # Largura mínima que cada cartão precisa para ficar bonito (ex: 350px)
-        CARD_MIN_WIDTH = 350
+        CARD_MIN_WIDTH = 340
         num_cols = max(1, canvas_width // CARD_MIN_WIDTH)
 
-        # Evita reclonar widgets se o número de colunas não mudou com a rolagem
-        if self.last_rendered_cols == num_cols:
+        if not force and self.last_rendered_cols == num_cols:
             return
         self.last_rendered_cols = num_cols
 
-        # Limpa widgets anteriores
         for widget in self.models_scroll_frame.winfo_children():
             widget.destroy()
 
-        # Configura as colunas do Grid para expandirem de forma igual
         for c in range(num_cols):
             self.models_scroll_frame.columnconfigure(c, weight=1, minsize=CARD_MIN_WIDTH)
 
-        # Posiciona cada cartão em sua respectiva linha e coluna
         for idx, model in enumerate(self.current_models_list, start=1):
             row = (idx - 1) // num_cols
             col = (idx - 1) % num_cols
@@ -1221,77 +1258,92 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
 
     def _render_model_card_grid(self, parent, model_data, rank, row, col):
         """Constrói um cartão individual formatado para o layout em Grid."""
-        is_top = (rank == 1)
-        border_color = "#10b981" if is_top else "#2d2d2d"
-        card_bg = "#18181c"
+        try:
+            is_top = (rank == 1)
+            border_color = "#10b981" if is_top else "#2d2d2d"
+            card_bg = "#18181c"
 
-        # Frame Container do Cartão usando .grid()
-        card = tk.Frame(parent, bg=card_bg, highlightbackground=border_color, highlightthickness=1)
-        card.grid(row=row, column=col, sticky="nsew", padx=6, pady=6)
+            card = tk.Frame(parent, bg=card_bg, highlightbackground=border_color, highlightthickness=1)
+            card.grid(row=row, column=col, sticky="nsew", padx=6, pady=6)
 
-        # Faixa lateral de cor (Destaque para o #1)
-        accent_bar = tk.Frame(card, bg="#10b981" if is_top else "#0f766e", width=4)
-        accent_bar.pack(side=tk.LEFT, fill=tk.Y)
+            accent_bar = tk.Frame(card, bg="#10b981" if is_top else "#0f766e", width=4)
+            accent_bar.pack(side=tk.LEFT, fill=tk.Y)
 
-        content = tk.Frame(card, bg=card_bg)
-        content.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+            content = tk.Frame(card, bg=card_bg)
+            content.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        # Cabeçalho: Selo de Posição + Nome
-        header_row = tk.Frame(content, bg=card_bg)
-        header_row.pack(fill=tk.X)
+            header_row = tk.Frame(content, bg=card_bg)
+            header_row.pack(fill=tk.X)
 
-        rank_text = "#1 PRINCIPAL" if is_top else f"#{rank} FALLBACK"
-        rank_fg = "#10b981" if is_top else "#888888"
-        tk.Label(header_row, text=rank_text, bg=card_bg, fg=rank_fg, font=("Segoe UI", 8, "bold")).pack(side=tk.LEFT)
+            rank_text = "#1 PRINCIPAL" if is_top else f"#{rank} FALLBACK"
+            rank_fg = "#10b981" if is_top else "#888888"
+            tk.Label(header_row, text=rank_text, bg=card_bg, fg=rank_fg, font=("Segoe UI", 8, "bold")).pack(side=tk.LEFT)
 
-        display_name = model_data.get("display_name") or model_data.get("name", "Modelo")
-        tk.Label(content, text=display_name, bg=card_bg, fg="#ffffff", font=("Segoe UI", 11, "bold"), anchor="w").pack(fill=tk.X, pady=(2, 0))
-        
-        name_id = model_data.get("name", "")
-        tk.Label(content, text=name_id, bg=card_bg, fg="#666666", font=("Consolas", 8), anchor="w").pack(fill=tk.X, pady=(0, 8))
+            display_name = model_data.get("display_name") or model_data.get("name", "Modelo")
+            tk.Label(content, text=display_name, bg=card_bg, fg="#ffffff", font=("Segoe UI", 11, "bold"), anchor="w").pack(fill=tk.X, pady=(2, 0))
+            
+            name_id = model_data.get("name", "")
+            tk.Label(content, text=name_id, bg=card_bg, fg="#666666", font=("Consolas", 8), anchor="w").pack(fill=tk.X, pady=(0, 8))
 
-        # Matriz 2x2 de Métricas no interior do Cartão
-        metrics_grid = tk.Frame(content, bg=card_bg)
-        metrics_grid.pack(fill=tk.X, pady=(4, 0))
-        metrics_grid.columnconfigure(0, weight=1)
-        metrics_grid.columnconfigure(1, weight=1)
+            metrics_grid = tk.Frame(content, bg=card_bg)
+            metrics_grid.pack(fill=tk.X, pady=(4, 0))
+            metrics_grid.columnconfigure(0, weight=1)
+            metrics_grid.columnconfigure(1, weight=1)
 
-        # Tempo Médio (Linha 0, Col 0)
-        resp_time = model_data.get("responsetime", 0)
-        col1 = tk.Frame(metrics_grid, bg=card_bg)
-        col1.grid(row=0, column=0, sticky="w", pady=2)
-        tk.Label(col1, text="⚡ Tempo Médio", bg=card_bg, fg="#aaaaaa", font=("Segoe UI", 8)).pack(anchor=tk.W)
-        tk.Label(col1, text=f"{resp_time:.2f}s", bg=card_bg, fg="#60a5fa", font=("Segoe UI", 9, "bold")).pack(anchor=tk.W)
+            # Tempo Médio
+            resp_time = model_data.get("responsetime") or 0.0
+            try:
+                resp_str = f"{float(resp_time):.2f}s"
+            except Exception:
+                resp_str = "0.00s"
 
-        # Taxa de Sucesso (Linha 0, Col 1)
-        attempts = model_data.get("attempts", 1)
-        success = model_data.get("success", 0)
-        rate = (success / attempts * 100) if attempts > 0 else 0
-        rate_color = "#10b981" if rate >= 80 else "#f59e0b" if rate >= 50 else "#ef4444"
+            col1 = tk.Frame(metrics_grid, bg=card_bg)
+            col1.grid(row=0, column=0, sticky="w", pady=2)
+            tk.Label(col1, text="⚡ Tempo Médio", bg=card_bg, fg="#aaaaaa", font=("Segoe UI", 8)).pack(anchor=tk.W)
+            tk.Label(col1, text=resp_str, bg=card_bg, fg="#60a5fa", font=("Segoe UI", 9, "bold")).pack(anchor=tk.W)
 
-        col2 = tk.Frame(metrics_grid, bg=card_bg)
-        col2.grid(row=0, column=1, sticky="w", pady=2)
-        tk.Label(col2, text="Sucesso", bg=card_bg, fg="#aaaaaa", font=("Segoe UI", 8)).pack(anchor=tk.W)
-        tk.Label(col2, text=f"{rate:.0f}% ({success}/{attempts})", bg=card_bg, fg=rate_color, font=("Segoe UI", 9, "bold")).pack(anchor=tk.W)
+            # Taxa de Sucesso
+            attempts = model_data.get("attempts") or 1
+            success = model_data.get("success") or 0
+            try:
+                attempts = int(attempts)
+                success = int(success)
+                rate = (success / max(1, attempts) * 100)
+            except Exception:
+                rate = 0.0
 
-        # Max Tokens (Linha 1, Col 0)
-        tokens = model_data.get("maxinputtokens", 0)
-        col3 = tk.Frame(metrics_grid, bg=card_bg)
-        col3.grid(row=1, column=0, sticky="w", pady=2)
-        tk.Label(col3, text="Max Tokens", bg=card_bg, fg="#aaaaaa", font=("Segoe UI", 8)).pack(anchor=tk.W)
-        tk.Label(col3, text=f"{tokens:,}", bg=card_bg, fg="#e3e3e3", font=("Segoe UI", 9, "bold")).pack(anchor=tk.W)
+            rate_color = "#10b981" if rate >= 80 else "#f59e0b" if rate >= 50 else "#ef4444"
 
-        # Busca Online (Linha 1, Col 1)
-        supports_tools = model_data.get("supports_tools", False)
-        tools_str = "Sim" if supports_tools else "Não"
-        tools_fg = "#34d399" if supports_tools else "#666666"
+            col2 = tk.Frame(metrics_grid, bg=card_bg)
+            col2.grid(row=0, column=1, sticky="w", pady=2)
+            tk.Label(col2, text="Sucesso", bg=card_bg, fg="#aaaaaa", font=("Segoe UI", 8)).pack(anchor=tk.W)
+            tk.Label(col2, text=f"{rate:.0f}% ({success}/{attempts})", bg=card_bg, fg=rate_color, font=("Segoe UI", 9, "bold")).pack(anchor=tk.W)
 
-        col4 = tk.Frame(metrics_grid, bg=card_bg)
-        col4.grid(row=1, column=1, sticky="w", pady=2)
-        tk.Label(col4, text="Busca Online", bg=card_bg, fg="#aaaaaa", font=("Segoe UI", 8)).pack(anchor=tk.W)
-        tk.Label(col4, text=tools_str, bg=card_bg, fg=tools_fg, font=("Segoe UI", 9, "bold")).pack(anchor=tk.W)
-    
-    
+            # Max Tokens
+            tokens = model_data.get("maxinputtokens") or 0
+            try:
+                tokens_str = f"{int(tokens):,}"
+            except Exception:
+                tokens_str = "0"
+
+            col3 = tk.Frame(metrics_grid, bg=card_bg)
+            col3.grid(row=1, column=0, sticky="w", pady=2)
+            tk.Label(col3, text="Max Tokens", bg=card_bg, fg="#aaaaaa", font=("Segoe UI", 8)).pack(anchor=tk.W)
+            tk.Label(col3, text=tokens_str, bg=card_bg, fg="#e3e3e3", font=("Segoe UI", 9, "bold")).pack(anchor=tk.W)
+
+            # Busca Online
+            supports_tools = bool(model_data.get("supports_tools", False))
+            tools_str = "Sim" if supports_tools else "Não"
+            tools_fg = "#34d399" if supports_tools else "#666666"
+
+            col4 = tk.Frame(metrics_grid, bg=card_bg)
+            col4.grid(row=1, column=1, sticky="w", pady=2)
+            tk.Label(col4, text="Busca Online", bg=card_bg, fg="#aaaaaa", font=("Segoe UI", 8)).pack(anchor=tk.W)
+            tk.Label(col4, text=tools_str, bg=card_bg, fg=tools_fg, font=("Segoe UI", 9, "bold")).pack(anchor=tk.W)
+
+        except Exception as e:
+            print(f"Erro ao renderizar cartão de modelo: {e}")
+            
     # ------------------------------------------------------------------
     # Próxima evolução
     # ------------------------------------------------------------------

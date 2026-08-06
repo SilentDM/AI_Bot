@@ -49,17 +49,11 @@ def prepare_world_context(is_dm: bool = True, ttl_hours=12):
 
     # 3. Attempt Explicit Context Caching (For Billing-Enabled Accounts)
     print("Fazendo upload do Bundle!")
-    try:
-        with open(pu.log_path("models.json"),"r",encoding="utf-8") as f:
-            data = json.load(f)
-        if not data:
-            raise ValueError("models.json está vazio")
-    except Exception as e:
-        print(f"Problema com models.json: {e}")
+    data = pu.ler_json_seguro(pu.log_path("models.json"), pu.LOCK_MODELS, padrao=[])
+    if not data:
         print("Recriando lista de modelos...")
         ag.findmodel()
-        with open(pu.log_path("models.json"),"r",encoding="utf-8") as f:
-            data = json.load(f)
+        data = pu.ler_json_seguro(pu.log_path("models.json"), pu.LOCK_MODELS, padrao=[])
 
     #for model in data:
         #model_name = model["name"]
@@ -104,6 +98,10 @@ def prepare_world_context(is_dm: bool = True, ttl_hours=12):
         f.write(context_player)
 
     try:
+        client = ag.get_gemini_client()
+        if not client:
+            print("Sem chave de API para upload do Bundle.")
+            return None
         uploaded_dm = ag.GEMINICLIENT.files.upload(file=bundle_dm_path)
         uploaded_player = ag.GEMINICLIENT.files.upload(file=bundle_player_path)
 

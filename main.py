@@ -38,7 +38,6 @@ def capturar_erros_fatais(exc_type, exc_value, exc_traceback):
     
     print(f"❌ Ocorreu um erro fatal! Log salvo em: {caminho_crash}")
 
-
 def configurar_ambiente():
     """Garante o .env e carrega variáveis."""
     from ui.setup_env import garantir_env
