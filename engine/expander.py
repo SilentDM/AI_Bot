@@ -34,8 +34,6 @@ def arquivar_versao_antiga(caminho_original):
 
 def obter_arquivos_relacionados(titulo):
     relacionados = []
-    titulo = re.sub(r'_v\d+$', '', titulo.lower())
-    titulo = re.sub(r'_',' ', titulo)
     for arquivo in Path(pu.PASTA_PROJETO).rglob("*.md"):
         if any(part in pu.IGNORELIST for part in arquivo.parts):
             continue
@@ -47,6 +45,8 @@ def obter_arquivos_relacionados(titulo):
             or any(ignore in conteudo for ignore in pu.IGNORELIST)
         ):
             continue
+        titulo = re.sub(r'_v\d+$', '', titulo.lower())
+        titulo = re.sub(r'_',' ', titulo)
         score = conteudo.lower().count(titulo)
         if score > 0:
             relacionados.append((arquivo.name, conteudo, score))

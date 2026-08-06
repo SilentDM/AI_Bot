@@ -1028,7 +1028,7 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
     # ------------------------------------------------------------------
     # Reduzindo Uso de memória para o Bot
     # ------------------------------------------------------------------
-    def trim_memory():
+    def trim_memory(self):
         """Força o Windows a liberar a memória RAM inativa do programa."""
         if sys.platform == 'win32':
             try:

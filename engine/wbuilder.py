@@ -12,20 +12,11 @@ from typing import Literal, List
 def resolver_caminho(path_str):
     """
     Normaliza um caminho sugerido pela IA para garantir que ele sempre
-    seja interpretado como relativo à pasta raiz do projeto (CAMINHO_PROJETO),
-    não relativo à pasta onde o Python está rodando (cwd).
-
-    A IA às vezes manda o caminho:
-    - sem o nome da pasta do projeto na frente: "4.Regions/Colwin/arquivo.md"
-    Esta função trata os dois casos da mesma forma, sempre resultando
-    no caminho real correto dentro de CAMINHO_PROJETO.
+    seja interpretado como relativo à pasta raiz do projeto (CAMINHO_PROJETO).
     """
     caminho = Path(path_str)
     raiz = Path(pu.CAMINHO_PROJETO).resolve()
 
-    # Se por algum motivo vier um caminho absoluto, apenas resolvemos ele
-    # (a checagem de segurança "is_relative_to" feita depois, em quem chamar
-    # esta função, ainda vai barrar se ele cair fora da raiz).
     if caminho.is_absolute():
         return caminho.resolve()
 
@@ -43,8 +34,7 @@ def obter_conteudo_template(nome_template: Optional[str]) -> str:
 
     nome_arquivo = f"{nome_template.lower().strip()}.md"
 
-    # Locais onde a pasta de Templates pode estar localizada
-    locais_possiveis = [Path(pu.CAMINHO_PROJETO) / "Templates" / nome_arquivo,pu.PASTA_TEMPLATES / nome_arquivo,]
+    locais_possiveis = [Path(pu.CAMINHO_PROJETO) / "Templates" / nome_arquivo, pu.PASTA_TEMPLATES / nome_arquivo]
 
     for caminho in locais_possiveis:
         if caminho.exists() and caminho.is_file():
@@ -62,7 +52,7 @@ def obter_conteudo_template(nome_template: Optional[str]) -> str:
 
 def iterationschoice(reason: Optional[str] = "O projeto esteja concluído"):
     print("Iterations Iniciado!")
-    numero=1
+    numero = 1
     instrucao_sistema = f"""
 Você é um especialista em worldbuilding para RPG.
 Analise o estado atual do projeto e estime quantas iterações de expansão são necessárias para que: 
@@ -80,15 +70,12 @@ Critérios:
 - Potencial para aventuras
 
 Objetivo:
-
 {reason}
 
 Quantas iterações ainda são necessárias?
-
 Responda apenas um número.
 """
     try:
-
         resposta = au.ask_ai(
             contents=corpo_usuario,
             system_instruction=instrucao_sistema,
@@ -107,12 +94,14 @@ Responda apenas um número.
         print(f"Erro ao determinar iterações: {e}")
         print("Iterations Concluído!")
         return numero
+
 class Action(BaseModel):
     type: Literal["CreateFolder", "CreateFile", "ImproveFile"]
     path: str
     priority: int
     objective: str
     template: Optional[Literal["aventura", "cidade", "local", "npc", "reinado", "nenhum"]] = "nenhum"
+
 class ActionPlan(BaseModel):
     actions: List[Action]
 
@@ -134,14 +123,22 @@ def taskplanner(reason: Optional[str] = "O projeto esteja concluído"):
     if allow_improve:
         ferramentas_permitidas.append("ImproveFile")
 
-    # Se todas as ferramentas estiverem desabilitadas, cancela o planejamento
     if not ferramentas_permitidas:
         print("⚠️ Todas as ferramentas do WorldBuilder estão desabilitadas nas Opções! Ação cancelada.")
         return
 
     texto_ferramentas = "\n".join(ferramentas_permitidas)
 
-    
+    # 🛡️ REGRA RESTRITIVA SE CRIAÇÃO DE PASTAS ESTIVER BLOQUEADA
+    instrucao_restricao_pastas = ""
+    if not allow_folder:
+        instrucao_restricao_pastas = """
+REGRA OBRIGATÓRIA E ABSOLUTA DE PASTAS:
+- A criação de novas pastas está DESABILITADA pelo Mestre.
+- Ao sugerir 'CreateFile', você DEVE OBRIGATORIAMENTE escolher apenas caminhos de PASTAS QUE JÁ EXISTEM no Índice/Estrutura.
+- É PROIBIDO inventar pastas ou subpastas novas no caminho de 'CreateFile'.
+"""
+
     if pu.is_cancelled():
         print("\n🛑 Processamento do Expander interrompido pelo usuário!")
         return
@@ -150,6 +147,8 @@ def taskplanner(reason: Optional[str] = "O projeto esteja concluído"):
 Você é um especialista em worldbuilding para RPG.
 Analise o projeto e identifique quais ações são necessárias para:
 {reason}
+
+{instrucao_restricao_pastas}
 
 REGRA IMPORTANTE SOBRE NOMES:
 Antes de sugerir CreateFolder ou CreateFile, verifique cuidadosamente o Índice
@@ -209,13 +208,13 @@ Crie o plano de ação no formato JSON estruturado com as próximas etapas prior
                 acoes_filtradas = []
                 for a in plano.actions:
                     if a.type == "CreateFolder" and not allow_folder:
-                        print(f"Ação '{a.type}' bloqueada pelas Opções.")
+                        print(f"🚫 Ação '{a.type}' bloqueada pelas Opções.")
                         continue
                     if a.type == "CreateFile" and not allow_file:
-                        print(f"Ação '{a.type}' bloqueada pelas Opções.")
+                        print(f"🚫 Ação '{a.type}' bloqueada pelas Opções.")
                         continue
                     if a.type == "ImproveFile" and not allow_improve:
-                        print(f"Ação '{a.type}' bloqueada pelas Opções.")
+                        print(f"🚫 Ação '{a.type}' bloqueada pelas Opções.")
                         continue
                     acoes_filtradas.append(a)
 
@@ -249,7 +248,7 @@ def enactchoices(actions):
         objective = action.get("objective", "")
         template = action.get("template", "nenhum")
         
-        with open(pu.log_path("changelog.jsonl"),"a",encoding="utf-8") as f:
+        with open(pu.log_path("changelog.jsonl"), "a", encoding="utf-8") as f:
             registro = {
                 "timestamp": pu.currentdate(),
                 "action": tipo,
@@ -257,8 +256,8 @@ def enactchoices(actions):
                 "template": template,
                 "objective": objective
             }
-            f.write(
-                json.dumps(registro,ensure_ascii=False)+ "\n")
+            f.write(json.dumps(registro, ensure_ascii=False) + "\n")
+            
         if tipo == "CreateFolder":
             createfolder(action["path"], action.get("objective", ""))
         elif tipo == "CreateFile":
@@ -267,7 +266,6 @@ def enactchoices(actions):
             improvefile(action["path"], action.get("objective", ""))
     
         ex.processar_arquivos()
-        # 🔄 RECONSTRUIR O CACHE APÓS O WORLD BUILDER ALTERAR O MUNDO
         print("♻️ Reconstruindo contexto do cache para refletir as novas criações...")
         cg.force_rebuild_world_context()
     
@@ -275,6 +273,11 @@ def enactchoices(actions):
 
 def createfolder(path, reason):
     print(f"Vamos criar uma pasta: {path}, por que {reason}")
+    config = st.carregar_configuracoes()
+    if not config.get("wb_allow_create_folder", True):
+        print("🚫 Ação Cancelada: A criação de pastas está desabilitada nas Opções.")
+        return False
+
     try:
         raiz = Path(pu.CAMINHO_PROJETO).resolve()
         destino = resolver_caminho(path)
@@ -283,8 +286,6 @@ def createfolder(path, reason):
             print("Tentativa de criar pasta fora da pasta raiz de conhecimento.")
             return False
 
-        # --- CHECAGEM DE NOME PARECIDO ---
-        # Evita criar "Segredos" quando já existe "Segredo" na mesma pasta pai.
         parecido = pu.existe_nome_parecido(destino.name, destino.parent)
         if parecido:
             print(f"Pasta não criada: '{destino.name}' é muito parecida com a já existente '{parecido}'.")
@@ -312,6 +313,17 @@ def createfile(path, reason, template="nenhum"):
 
         arquivo = arquivo.with_suffix(".md")
 
+        # 🛡️ TRAVA MECÂNICA DE SEGURANÇA (VERIFICA A PASTA PAI)
+        config = st.carregar_configuracoes()
+        allow_folder = config.get("wb_allow_create_folder", True)
+
+        if not arquivo.parent.exists():
+            if not allow_folder:
+                print(f"🚫 Arquivo '{arquivo.name}' CANCELADO: A pasta '{arquivo.parent.name}' NÃO EXISTE e a criação de novas pastas está DESABILITADA nas Opções.")
+                return False
+            else:
+                arquivo.parent.mkdir(parents=True, exist_ok=True)
+
         # --- CHECAGEM DE NOME PARECIDO ---
         parecido = pu.existe_nome_parecido(arquivo.name, arquivo.parent)
         if parecido:
@@ -322,7 +334,6 @@ def createfile(path, reason, template="nenhum"):
             print(f"⚠️ Arquivo já existe: {arquivo}")
             return False
 
-        arquivo.parent.mkdir(parents=True, exist_ok=True)
         titulo = re.sub(r"_v\d+$", "", arquivo.stem)
         conteudo_template = obter_conteudo_template(template)
 
@@ -345,7 +356,7 @@ status: rascunho
 
 def improvefile(path, reason="Melhorar o arquivo!"):
     print(f"Vamos melhorar o arquivo: {path}\nMotivo: {reason}")
-    arquivo = resolver_caminho(path)   # <-- normaliza o caminho recebido
+    arquivo = resolver_caminho(path)
 
     if not arquivo.exists():
         print(f"Arquivo não encontrado, ação ignorada: {arquivo}")
@@ -399,4 +410,3 @@ Retorne apenas o conteúdo final do arquivo.
     except Exception as e:
         print(f"Erro ao processar {arquivo.name}: {e}")
         return False
-        
