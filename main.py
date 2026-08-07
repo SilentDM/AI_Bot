@@ -1,4 +1,4 @@
-import sys, os, traceback, ctypes
+import sys, shutil, traceback, ctypes
 from pathlib import Path
 from datetime import datetime
 
@@ -63,7 +63,17 @@ def criar_pastas():
     for nome, caminho in pastas_obrigatorias.items():
         caminho.mkdir(parents=True, exist_ok=True)
         print(f"  └─ ✅ {nome}: {caminho}")
-    
+    if getattr(sys, 'frozen', False):
+        meipass_templates = Path(getattr(sys, '_MEIPASS', '')) / "Templates"
+        target_templates = BASE_DIR / "Templates"
+        if meipass_templates.exists() and meipass_templates.is_dir():
+            for src_file in meipass_templates.rglob("*"):
+                if src_file.is_file():
+                    rel = src_file.relative_to(meipass_templates)
+                    dest = target_templates / rel
+                    if not dest.exists():
+                        dest.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copy2(src_file, dest)
     print("Pastas e configurações foram verificadas com sucesso!")
 
 def main():

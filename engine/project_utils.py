@@ -148,7 +148,6 @@ def anexar_jsonl_seguro(caminho: Path, registro: dict, lock: threading.Lock):
         except Exception as e:
             print(f"❌ Erro ao anexar em {caminho.name}: {e}")
 
-
 def obter_caminho_base():
     """Retorna o caminho raiz correto rodando como script .py ou como .exe compilado."""
     if getattr(sys, 'frozen', False):

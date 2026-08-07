@@ -188,12 +188,22 @@ class ExplorerFrame(ttk.Frame):
 
         self.populate_tree_recursive(root_node, pasta_projeto, allowed_paths)
 
-    def populate_tree_recursive(self, parent_node, path, allowed_paths=None):
+    def populate_tree_recursive(self, parent_node, path, allowed_paths=None, depth=0, max_depth=15):
+        if depth > max_depth:
+            return
+
         try:
             itens_ordenados = pu.obter_itens_ordenados(path)
-            for item in itens_ordenados:                
+            for item in itens_ordenados:
+                if item in pu.IGNORELIST:
+                    continue
+
                 item_path = os.path.join(path, item)
                 item_abs = os.path.abspath(item_path)
+
+                if os.path.islink(item_path):
+                    continue
+
                 is_dir = os.path.isdir(item_path)
 
                 if allowed_paths is not None and item_abs not in allowed_paths:
@@ -209,9 +219,10 @@ class ExplorerFrame(ttk.Frame):
                 self.path_to_item[item_abs] = node
 
                 if is_dir:
-                    self.populate_tree_recursive(node, item_path, allowed_paths)
+                    self.populate_tree_recursive(node, item_path, allowed_paths, depth=depth + 1, max_depth=max_depth)
         except Exception as e:
             self.log_callback(f"Erro ao acessar pasta {path}: {e}")
+            
     # ------------------------------------------------------------------
     # ARRASTAR E SOLTAR COM EFEITOS VISUAIS (GHOST CARD + TARGET HIGHLIGHT)
     # ------------------------------------------------------------------
@@ -406,6 +417,8 @@ class ExplorerFrame(ttk.Frame):
 
             self.editor.delete("1.0", tk.END)
             self.editor.insert("1.0", texto)
+            self.editor.edit_reset()  # 🛡️ Limpa a pilha de Undo para o Ctrl+Z não apagar o arquivo
+            self.update_stats()
         else:
             self.current_file = None
             self.editor.delete("1.0", tk.END)
@@ -770,11 +783,24 @@ class ExplorerFrame(ttk.Frame):
         self.restore_current_file(current_file)
         self.log_callback("Árvore do diretório sincronizada.")
 
-    def populate_tree(self, parent_node, path):
+    def populate_tree(self, parent_node, path, depth=0, max_depth=15):
+        # 🛡️ Trava contra estouro de pilha por profundidade excessiva
+        if depth > max_depth:
+            return
+
         try:
             itens_ordenados = pu.obter_itens_ordenados(path)
-            for item in itens_ordenados:                
+            for item in itens_ordenados:
+                # 🛡️ Filtra pastas e arquivos presentes na IGNORELIST do projeto
+                if item in pu.IGNORELIST:
+                    continue
+
                 item_path = os.path.join(path, item)
+
+                # 🛡️ Proteção contra Symlinks que causam loops infinitos
+                if os.path.islink(item_path):
+                    continue
+
                 is_dir = os.path.isdir(item_path)
 
                 if not is_dir and not item.lower().endswith(".md"):
@@ -787,7 +813,7 @@ class ExplorerFrame(ttk.Frame):
                 self.path_to_item[os.path.abspath(item_path)] = node
 
                 if is_dir:
-                    self.populate_tree(node, item_path)
+                    self.populate_tree(node, item_path, depth=depth + 1, max_depth=max_depth)
         except Exception as e:
             self.log_callback(f"Erro ao acessar pasta {path}: {e}")
 

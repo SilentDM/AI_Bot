@@ -271,10 +271,63 @@ class SilentDesktopApp:
             return
         if name == "models":
             self.refresh_models_cards()
+        elif name == "chat":
+            self.reload_chat_history() 
         self.pages[name].tkraise()
         self.current_page = name
         for key, btn in self.nav_buttons.items():
             btn.configure(style="NavActive.TButton" if key == name else "Nav.TButton")
+            
+    def reload_chat_history(self):
+        """Carrega e formata as memórias salvas na pasta memories para a tela de chat."""
+        guild_id = "desktop_env"
+        guild_name = "Desktop_Console"
+        userid = "999999"
+        user_name = self.user_name
+
+        memorias = me.carregar_memorias(guild_id, guild_name, userid, user_name)
+
+        # Evita reprocessar se o texto de memória não sofreu alterações
+        if hasattr(self, "_last_loaded_memory") and self._last_loaded_memory == memorias:
+            return
+
+        self._last_loaded_memory = memorias
+
+        self.chat_display.config(state=tk.NORMAL)
+        self.chat_display.delete("1.0", tk.END)
+
+        if not memorias or not memorias.strip():
+            self.chat_display.insert(tk.END, "System: ", "System")
+            self.chat_display.insert(tk.END, "Console local conectado. Nenhuma memória anterior encontrada.\n\n")
+            self.chat_display.config(state=tk.DISABLED)
+            return
+
+        self.chat_display.insert(tk.END, "System: ", "System")
+        self.chat_display.insert(tk.END, "--- Histórico de Memórias do Usuário Carregado ---\n\n")
+
+        # Parse dos blocos de diálogo salvos
+        import re
+        parts = re.split(r'(Prompt Usuário:|Resposta:|Resumo de Memórias:)', memorias)
+
+        for i in range(1, len(parts), 2):
+            header = parts[i].strip()
+            content = parts[i + 1].strip() if i + 1 < len(parts) else ""
+
+            if not content:
+                continue
+
+            if header == "Prompt Usuário:":
+                self.chat_display.insert(tk.END, "You: ", "You")
+                self.chat_display.insert(tk.END, f"{content}\n\n")
+            elif header == "Resposta:":
+                self.chat_display.insert(tk.END, "Ao: ", "Ao")
+                self.chat_display.insert(tk.END, f"{content}\n\n")
+            elif header == "Resumo de Memórias:":
+                self.chat_display.insert(tk.END, "System: ", "System")
+                self.chat_display.insert(tk.END, f"[Resumo de Diálogos Anteriores]: {content}\n\n")
+
+        self.chat_display.see(tk.END)
+        self.chat_display.config(state=tk.DISABLED)
 
     # ------------------------------------------------------------------
     # PÁGINAS DA INTERFACE
@@ -296,90 +349,140 @@ class SilentDesktopApp:
     def _build_worldbuilder_page(self, parent):
         frame = ttk.Frame(parent)
         self._page_header(frame, "WorldBuilder & Expander", "Dispare ou interrompa tarefas de expansão automática do seu mundo.")
-        body = ttk.Frame(frame)
-        body.pack(fill=tk.BOTH, expand=True, padx=15, pady=5)
 
-        # BARRA DE EMERGÊNCIA
-        stop_box = ttk.LabelFrame(body, text=" Controle de Emergência ")
-        stop_box.pack(fill=tk.X, pady=(0, 15))
-        self.btn_stop = ttk.Button(stop_box, text="⛔⛔PARAR QUALQUER EXECUÇÃO ATUAL⛔⛔", command=self.stop_all_tasks)
+        # --- ÁREA DE ROLAGEM DINÂMICA (CANVAS + SCROLLBAR) ---
+        self.wb_canvas = tk.Canvas(frame, bg="#121212", highlightthickness=0, bd=0)
+        scrollbar = ttk.Scrollbar(frame, orient="vertical", command=self.wb_canvas.yview)
+
+        self.wb_scroll_frame = ttk.Frame(self.wb_canvas)
+        self.wb_scroll_frame.bind(
+            "<Configure>",
+            lambda e: self.wb_canvas.configure(scrollregion=self.wb_canvas.bbox("all"))
+        )
+
+        self.wb_canvas_window = self.wb_canvas.create_window((0, 0), window=self.wb_scroll_frame, anchor="nw")
+        self.wb_canvas.configure(yscrollcommand=scrollbar.set)
+
+        self.wb_canvas.bind("<Configure>", self._on_wb_canvas_resize)
+        self.wb_canvas.bind_all("<MouseWheel>", lambda e: self.wb_canvas.yview_scroll(int(-1 * (e.delta / 120)), "units") if self.current_page == "worldbuilder" else None)
+
+        self.wb_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(15, 0), pady=(0, 15))
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y, padx=(0, 15), pady=(0, 15))
+
+        self.wb_boxes = []
+        self.wb_last_rendered_cols = 0
+
+        # --- QUADRO 1: Controle de Emergência ---
+        stop_box = ttk.LabelFrame(self.wb_scroll_frame, text=" Controle de Emergência ")
+        self.btn_stop = ttk.Button(stop_box, text="⛔⛔ PARAR QUALQUER EXECUÇÃO ATUAL ⛔⛔", command=self.stop_all_tasks)
         self.btn_stop.pack(fill=tk.X, padx=10, pady=10)
 
-        # AUDITORIA DE LORE
-        audit_box = ttk.LabelFrame(body, text=" Auditoria e Consistência ")
-        audit_box.pack(fill=tk.X, pady=(0, 15))
-        self.btn_audit_lore = ttk.Button(
-            audit_box, 
-            text="Auditar Lore do Mundo (Buscar Incoerências e Furos)", 
-            command=self.start_lore_audit_thread
-        )
-        self.btn_audit_lore.pack(fill=tk.X, padx=10, pady=10)
-        self.lbl_audit = ttk.Label(audit_box, text="Status: Inativo")
-        self.lbl_audit.pack(anchor=tk.W, padx=10, pady=(0, 10))
-        
-        # Expander Box
-        expander_box = ttk.LabelFrame(body, text=" Expander (preenche lacunas marcadas com TO DO) ")
-        expander_box.pack(fill=tk.X, pady=(0, 15))
+        # --- QUADRO 2: Expander ---
+        expander_box = ttk.LabelFrame(self.wb_scroll_frame, text=" Expander (preenche lacunas marcadas com TO DO) ")
         self.btn_expander = ttk.Button(expander_box, text="▶ Executar Tarefa do Expander", command=self.start_expander_thread)
-        self.btn_expander.pack(fill=tk.X, padx=10, pady=10)
+        self.btn_expander.pack(fill=tk.X, padx=10, pady=(10, 5))
         self.lbl_expander = ttk.Label(expander_box, text="Status: Inativo")
-        self.lbl_expander.pack(anchor=tk.W, padx=10, pady=(0, 10))
+        self.lbl_expander.pack(anchor=tk.W, padx=10, pady=(0, 8))
         self.btn_rebuild_context = ttk.Button(expander_box, text="▶ Reconstruir Contexto do Mundo", command=self.rebuild_world_context)
-        self.btn_rebuild_context.pack(fill=tk.X, padx=10, pady=5)
-        
-        # WorldBuilder Box
-        wb_box = ttk.LabelFrame(body, text=" WorldBuilder (planeja e executa expansão autônoma) ")
-        wb_box.pack(fill=tk.X)
-        ttk.Label(wb_box, text="Objetivo:").pack(anchor=tk.W, padx=10, pady=(10, 0))
+        self.btn_rebuild_context.pack(fill=tk.X, padx=10, pady=(0, 10))
+
+        # --- QUADRO 3: WorldBuilder ---
+        wb_box = ttk.LabelFrame(self.wb_scroll_frame, text=" WorldBuilder (planeja e executa expansão autônoma) ")
+        ttk.Label(wb_box, text="Objetivo:").pack(anchor=tk.W, padx=10, pady=(10, 2))
         self.worldbuilder_objective = tk.StringVar(value="Completar o Projeto")
         self.objective_entry = ttk.Entry(wb_box, textvariable=self.worldbuilder_objective)
-        self.objective_entry.pack(fill=tk.X, padx=10, pady=5)
+        self.objective_entry.pack(fill=tk.X, padx=10, pady=(0, 8))
         self.btn_worldbuilder = ttk.Button(wb_box, text="▶ Executar WorldBuilder", command=self.start_worldbuilder_thread)
-        self.btn_worldbuilder.pack(fill=tk.X, padx=10, pady=(5, 10))
+        self.btn_worldbuilder.pack(fill=tk.X, padx=10, pady=(0, 5))
         self.lbl_worldbuilder = ttk.Label(wb_box, text="Status: Inativo")
         self.lbl_worldbuilder.pack(anchor=tk.W, padx=10, pady=(0, 10))
 
-        # Exportação do Livro
-        export_box = ttk.LabelFrame(body, text=" Exportação do Cenário ")
-        export_box.pack(fill=tk.X, pady=(15, 0))
+        # --- QUADRO 4: Auditoria de Lore ---
+        audit_box = ttk.LabelFrame(self.wb_scroll_frame, text=" Auditoria e Consistência ")
+        self.btn_audit_lore = ttk.Button(
+            audit_box, 
+            text="▶ Auditar Lore do Mundo (Buscar Incoerências)", 
+            command=self.start_lore_audit_thread
+        )
+        self.btn_audit_lore.pack(fill=tk.X, padx=10, pady=(10, 5))
+        self.lbl_audit = ttk.Label(audit_box, text="Status: Inativo")
+        self.lbl_audit.pack(anchor=tk.W, padx=10, pady=(0, 10))
+
+        # --- QUADRO 5: Exportação do Cenário ---
+        export_box = ttk.LabelFrame(self.wb_scroll_frame, text=" Exportação do Cenário ")
         self.btn_export_book = ttk.Button(export_box, text="▶ Gerar e Abrir Livro do Cenário (HTML/PDF)", command=self.export_sourcebook)
         self.btn_export_book.pack(fill=tk.X, padx=10, pady=10)
 
-        # Gerenciamento de Memórias
-        db_box = ttk.LabelFrame(body, text=" Gerenciamento ")
-        db_box.pack(fill=tk.X, pady=(15, 0))
-        
-        self.btn_create_backup = ttk.Button(db_box, text="▶ Criar Backup Completo do Projeto (.zip)", command=self.create_backup)
-        self.btn_create_backup.pack(fill=tk.X, padx=10, pady=5)        
-        
-        self.btn_delete_memories = ttk.Button(db_box, text="⛔Excluir Todas as Memórias⛔", command=self.delete_memories)
-        self.btn_delete_memories.pack(fill=tk.X, padx=10, pady=5)
+        # --- QUADRO 6: Gerenciamento do Projeto ---
+        db_box = ttk.LabelFrame(self.wb_scroll_frame, text=" Gerenciamento do Projeto ")
+        self.btn_create_backup = ttk.Button(db_box, text="▶ Criar Backup Completo (.zip)", command=self.create_backup)
+        self.btn_create_backup.pack(fill=tk.X, padx=10, pady=(10, 5))
+        self.btn_delete_memories = ttk.Button(db_box, text="⛔ Excluir Todas as Memórias ⛔", command=self.delete_memories)
+        self.btn_delete_memories.pack(fill=tk.X, padx=10, pady=(0, 10))
 
-        ttk.Label(body, text="Acompanhe o andamento detalhado no Log de Atividades.", foreground="#666666", wraplength=560, justify="left").pack(anchor=tk.W, pady=(15, 0))
+        self.wb_boxes = [stop_box, audit_box, expander_box, export_box, wb_box, db_box]
+        self.render_wb_grid()
+
         return frame
+
+    def _on_wb_canvas_resize(self, event):
+        """Ajusta a largura interna do container de acordo com o tamanho da janela."""
+        canvas_width = event.width
+        if hasattr(self, "wb_canvas_window"):
+            self.wb_canvas.itemconfig(self.wb_canvas_window, width=canvas_width)
+        self.render_wb_grid()
+
+    def render_wb_grid(self):
+        """Redesenha o grid de caixas em 1 ou 2 colunas conforme a largura disponível."""
+        canvas_width = self.wb_canvas.winfo_width()
+        if canvas_width < 100:
+            canvas_width = 800
+
+        num_cols = 2 if canvas_width >= 720 else 1
+
+        if self.wb_last_rendered_cols == num_cols:
+            return
+        self.wb_last_rendered_cols = num_cols
+
+        for c in range(2):
+            self.wb_scroll_frame.columnconfigure(c, weight=1 if c < num_cols else 0)
+
+        for idx, box in enumerate(self.wb_boxes):
+            box.grid_forget()
+            if num_cols == 2:
+                row = idx // 2
+                col = idx % 2
+            else:
+                row = idx
+                col = 0
+            box.grid(row=row, column=col, sticky="nsew", padx=8, pady=8)
     
     def _build_chat_page(self, parent):
         frame = ttk.Frame(parent)
-        self._page_header(frame, "💬 Conversa com Ao", "Fale diretamente com Ao sobre o seu mundo.")
-
-        self.chat_display = scrolledtext.ScrolledText(
-            frame, wrap=tk.WORD, state=tk.DISABLED, font=("Segoe UI", 10),
-            bg="#1e1e1e", fg="#e3e3e3", insertbackground="white",
-            selectbackground="#0f766e", selectforeground="white", bd=0, highlightthickness=0
-        )
-        self.chat_display.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 10))
-        self.chat_display.tag_config("You", foreground="#60a5fa", font=("Segoe UI", 10, "bold"))
-        self.chat_display.tag_config("Ao", foreground="#34d399", font=("Segoe UI", 10, "bold"))
-        self.chat_display.tag_config("System", foreground="#888888", font=("Segoe UI", 9, "italic"))
-        self.chat_display.tag_config("Thinking", foreground="#f59e0b", font=("Segoe UI", 9, "italic"))
-
+        self._page_header(frame, "Conversa com Ao", "Fale diretamente com Ao sobre o seu mundo.")
+        
+        # 🛡️ Ancorado no BOTTOM PRIMEIRO para nunca ser empurrado para fora da tela
         input_frame = ttk.Frame(frame)
-        input_frame.pack(fill=tk.X, padx=15, pady=(0, 15))
+        input_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=15, pady=(0, 15))
+
         self.input_entry = ttk.Entry(input_frame, font=("Segoe UI", 10))
         self.input_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
         self.input_entry.bind("<Return>", lambda event: self.send_chat_message())
         self.send_button = ttk.Button(input_frame, text="Enviar", command=self.send_chat_message)
         self.send_button.pack(side=tk.RIGHT)
+
+        # O display de texto ocupa o restante do espaço superior
+        self.chat_display = scrolledtext.ScrolledText(
+            frame, wrap=tk.WORD, state=tk.DISABLED, font=("Segoe UI", 10),
+            bg="#1e1e1e", fg="#e3e3e3", insertbackground="white",
+            selectbackground="#0f766e", selectforeground="white", bd=0, highlightthickness=0
+        )
+
+        self.chat_display.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 10))
+        self.chat_display.tag_config("You", foreground="#60a5fa", font=("Segoe UI", 10, "bold"))
+        self.chat_display.tag_config("Ao", foreground="#34d399", font=("Segoe UI", 10, "bold"))
+        self.chat_display.tag_config("System", foreground="#888888", font=("Segoe UI", 9, "italic"))
+        self.chat_display.tag_config("Thinking", foreground="#f59e0b", font=("Segoe UI", 9, "italic"))
 
         self.append_to_chat("System", "Console local conectado. Digite sua mensagem abaixo.")
         return frame
@@ -535,6 +638,12 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
             nome_arq = os.path.basename(caminho)
             with open(caminho, "r", encoding="utf-8") as f:
                 conteudo = f.read().strip()
+                
+            self.chat_attached_file = {
+                "name": nome_arq,
+                "content": conteudo
+            }
+
 
             self.switch_page("chat")
             
@@ -542,7 +651,7 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
             self.input_entry.insert(0, f"Analise o arquivo '{nome_arq}' e me ajude com o seguinte: ")
             self.input_entry.focus_set()
 
-            self.toast(f"💬 Contexto de '{nome_arq}' carregado na conversa!")
+            self.toast(f"Contexto de '{nome_arq}' carregado na conversa!")
             self.log_activity(f"Carregado arquivo '{nome_arq}' para o chat com Ao.")
         except Exception as e:
             self.log_activity(f"Erro ao carregar arquivo no chat: {e}")
@@ -609,6 +718,14 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
 
             system_instruction = f"{persona}\n\n{regras}"
             conteudo_prompt = ""
+            
+            # 🛡️ Injeta o conteúdo do arquivo anexado no prompt enviado ao Gemini
+            if hasattr(self, "chat_attached_file") and self.chat_attached_file:
+                arq = self.chat_attached_file
+                conteudo_prompt += f"--- ARQUIVO ANEXADO PELO USUÁRIO ({arq['name']}) ---\n{arq['content']}\n\n"
+                self.chat_attached_file = None  # Reseta o anexo após o envio
+            
+            
             if memorias:
                 conteudo_prompt += f"--- HISTÓRICO RECENTE DE CONVERSAS ---\n{memorias}\n\n"
             conteudo_prompt += f"--- MENSAGEM DO USUÁRIO ---\n{prompt}"
@@ -736,6 +853,12 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
             return
         try:
             me.delete_all_memories()
+            
+            # 🛡️ Limpa a memória interna e força a atualização do chat
+            if hasattr(self, "_last_loaded_memory"):
+                self._last_loaded_memory = None
+            self.reload_chat_history()
+
             self.log_activity("Todas as memórias foram removidas.")
             self.toast("🗑️ Memórias apagadas com sucesso.")
             messagebox.showinfo("Concluído", "Todas as memórias foram excluídas.")
@@ -750,6 +873,15 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
         self.root.bind("<Control-KeyPress-equal>", lambda e: self.change_font_size(1))
         self.root.bind("<Control-KeyPress-plus>", lambda e: self.change_font_size(1))
         self.root.bind("<Control-KeyPress-minus>", lambda e: self.change_font_size(-1))
+        self.root.bind("<Control-MouseWheel>", self._on_ctrl_mousewheel)
+        self.root.bind("<Control-Button-4>", lambda e: self.change_font_size(1))
+        self.root.bind("<Control-Button-5>", lambda e: self.change_font_size(-1))
+
+    def _on_ctrl_mousewheel(self, event):
+        if event.delta > 0:
+            self.change_font_size(1)
+        elif event.delta < 0:
+            self.change_font_size(-1)
 
     def change_font_size(self, delta):
         self.current_font_size = max(8, min(24, self.current_font_size + delta))
