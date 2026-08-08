@@ -84,9 +84,9 @@ def _markdown_para_html(md_texto: str) -> str:
         slug = f"doc-{re.sub(r'[^a-zA-Z0-9]', '', target.lower())}"
         return f'<a href="#{slug}" class="obsidian-link">{alias}</a>'
 
-    texto = re.sub(r'\[\[([^\|\]]+)(?:\|([^\]]+))?\]\]', _substituir_wikilink, texto)
+    resultado = re.sub(r'\[\[([^\|\]]+)(?:\|([^\]]+))?\]\]', _substituir_wikilink, resultado)
     
-    return texto
+    return resultado
 
 def _obter_estrutura_ordenada(caminho_raiz):
     """

@@ -906,12 +906,13 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
     def run_discord_bot(self):
         loop = None
         try:
-            self.log_activity("Iniciando bot do Discord em segundo plano...")
-            from bot.dbot import discordclient, TOKEN
-
-            if not TOKEN:
+            token = os.getenv("DISCORD_TOKEN", "").strip()
+            if not token:
                 self.root.after(0, lambda: self.lbl_discord.config(text="Discord: Desativado", fg="#888888"))
                 return
+
+            self.log_activity("Iniciando bot do Discord em segundo plano...")
+            from bot.dbot import discordclient
 
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
@@ -920,27 +921,11 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
             self.root.after(0, lambda: self.lbl_discord.config(text="Discord: Online", fg="#10b981"))
             self.log_activity("Instância do Discord online.")
 
-            loop.run_until_complete(discordclient.start(TOKEN))
+            loop.run_until_complete(discordclient.start(token))
 
         except Exception as e:
             self.log_activity(f"Exceção no Discord: {e}")
             self.root.after(0, lambda: self.lbl_discord.config(text="Discord: Offline/Erro", fg="#ef4444"))
-        finally:
-            if loop and not loop.is_closed():
-                try:
-                    pending = asyncio.all_tasks(loop)
-                    for task in pending:
-                        task.cancel()
-
-                    if pending:
-                        loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
-
-                    loop.run_until_complete(loop.shutdown_asyncgens())
-                except Exception as e:
-                    print(f"Limpeza de tarefas do Discord: {e}")
-                finally:
-                    loop.close()
-                    self.discord_loop = None
 
     def on_closing(self):
         self.log_activity("Encerrando aplicativo... salvando arquivos...")

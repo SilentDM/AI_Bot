@@ -14,6 +14,16 @@ DISCORD_ENABLED = bool(TOKEN)
 USER_COOLDOWNS = {}
 ULTIMO_STATUS_PRESENCA = None
 
+def obter_token_atual():
+    return os.getenv("DISCORD_TOKEN", "").strip()
+
+def iniciar_bot_discord():
+    token = obter_token_atual()
+    if not token:
+        print("DISCORD_TOKEN não configurado — o bot do Discord está desativado.")
+        return False
+    return True
+
 def _parse_lista_texto(raw_str: str) -> list[str]:
     """Auxiliar para converter 'canal1; canal2, canal3' em ['canal1', 'canal2', 'canal3']."""
     if not raw_str:

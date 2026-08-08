@@ -41,8 +41,11 @@ def obter_arquivos_relacionados(titulo):
     for arquivo in Path(pu.PASTA_PROJETO).rglob("*.md"):
         if any(part in pu.IGNORELIST for part in arquivo.parts):
             continue
-        with open(arquivo, encoding="utf-8") as f:
-            conteudo = f.read()
+        try:
+            with open(arquivo, encoding="utf-8", errors="ignore") as f:
+                conteudo = f.read()
+        except Exception:
+            continue
         if (
             arquivo.stem.lower() == titulo
             or any(tag in conteudo for tag in pu.TAG_ALVO)

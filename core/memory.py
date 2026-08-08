@@ -1,8 +1,9 @@
 import os, time, re, glob
 import core.ai_utils as au
+import engine.project_utils as pu
 from pathlib import Path
 
-MEMORIES_DIR = "memories"
+MEMORIES_DIR = pu.PASTA_MEMORIES
 os.makedirs(MEMORIES_DIR, exist_ok=True)
 
 def sanitize_name(name):
