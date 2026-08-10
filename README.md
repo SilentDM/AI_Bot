@@ -73,7 +73,6 @@ O **Silent Multiverse Nexus** é uma suíte completa de ferramentas para Mestres
 1. Vá até a aba [**Releases**](../../releases) do repositório.
 2. Baixe o arquivo `SilentMultiverse.zip`.
 3. Descompacte e execute o `SilentMultiverse.exe`. 
-4. O assistente de configuração abrirá automaticamente para você inserir sua chave de API gratuita do Google Gemini e/ou Token do Discord.
 
 ---
 
