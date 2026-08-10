@@ -217,15 +217,30 @@ class SilentDesktopApp:
         tk.Label(sidebar, text="🜂 Silent Console", bg="#0a0a0a", fg="#10b981", font=("Segoe UI", 13, "bold")).pack(anchor=tk.W, padx=16, pady=(22, 26))
 
         self.setup_project_selector(sidebar)
-        nav_items = [
+
+        # 1. BOTOES NAVEGAÇÃO SUPERIOR
+        top_nav_items = [
             ("editor", "Editor"),
             ("worldbuilder", "WorldBuilders"),
             ("chat", "Converse com Ao"),
-            ("log", "Logs"),
             ("options", "Opções"),
             ("models", "Performance IA"),
         ]
-        for key, label in nav_items:
+        for key, label in top_nav_items:
+            btn = ttk.Button(sidebar, text=label, style="Nav.TButton", command=lambda k=key: self.switch_page(k))
+            btn.pack(fill=tk.X, padx=8, pady=2)
+            self.nav_buttons[key] = btn
+
+        # 2. ESPAÇADOR FLEXÍVEL (Empurra os itens abaixo para o rodapé)
+        nav_spacer = tk.Frame(sidebar, bg="#0a0a0a")
+        nav_spacer.pack(fill=tk.BOTH, expand=True)
+
+        # 3. BOTOES NAVEGAÇÃO INFERIOR (No rodapé)
+        bottom_nav_items = [
+            ("log", "Log de Atividades"),
+            ("manual", "📖 Manual & Guia"),
+        ]
+        for key, label in bottom_nav_items:
             btn = ttk.Button(sidebar, text=label, style="Nav.TButton", command=lambda k=key: self.switch_page(k))
             btn.pack(fill=tk.X, padx=8, pady=2)
             self.nav_buttons[key] = btn
@@ -256,6 +271,7 @@ class SilentDesktopApp:
         self.pages["log"] = self._build_log_page(content_area)
         self.pages["options"] = self.options_pane
         self.pages["models"] = self._build_models_page(content_area)
+        self.pages["manual"] = self._build_manual_page(content_area)  # 📖 Nova página de Manual
 
         for page in self.pages.values():
             page.place(relx=0, rely=0, relwidth=1, relheight=1)
@@ -280,8 +296,8 @@ class SilentDesktopApp:
             
     def reload_chat_history(self):
         """Carrega e formata as memórias salvas na pasta memories para a tela de chat."""
-        guild_id = "desktop_env"
-        guild_name = "Desktop_Console"
+        guild_id = f"desktop_{pu.PASTA_PROJETO}"  # 🛡️ Isolado por projeto!
+        guild_name = f"Console_{pu.PASTA_PROJETO}"
         userid = "999999"
         user_name = self.user_name
 
@@ -698,8 +714,8 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
 
     def query_ao_api(self, prompt):
         try:
-            guild_id = "desktop_env"
-            guild_name = "Desktop_Console"
+            guild_id = f"desktop_{pu.PASTA_PROJETO}"  
+            guild_name = f"Console_{pu.PASTA_PROJETO}"
             userid = "999999"
             user_name = self.user_name
 
@@ -1460,7 +1476,117 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
 
         except Exception as e:
             print(f"Erro ao renderizar cartão de modelo: {e}")
-            
+
+    # ------------------------------------------------------------------
+    # ABA Do Manual sobre o programa
+    # ------------------------------------------------------------------
+    def _build_manual_page(self, parent):
+        frame = ttk.Frame(parent)
+        self._page_header(frame, "📖 Manual de Operações & Guia Prático", "Documentação oficial de recursos, sintaxe do editor, atalhos, segredos e automações.")
+
+        display = scrolledtext.ScrolledText(
+            frame, wrap=tk.WORD, font=("Segoe UI", 10),
+            bg="#1e1e1e", fg="#e3e3e3", insertbackground="white",
+            selectbackground="#0f766e", selectforeground="white", bd=0, highlightthickness=0
+        )
+        display.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 15))
+
+        # Estilos do Manual
+        display.tag_config("h1", font=("Segoe UI", 13, "bold"), foreground="#10b981", spacing1=14, spacing3=6)
+        display.tag_config("h2", font=("Segoe UI", 11, "bold"), foreground="#38bdf8", spacing1=10, spacing3=4)
+        display.tag_config("bold", font=("Segoe UI", 10, "bold"), foreground="#ffffff")
+        display.tag_config("code", font=("Consolas", 10, "bold"), foreground="#f97316", background="#2a1205")
+        display.tag_config("kbd", font=("Consolas", 9, "bold"), foreground="#ffffff", background="#333333")
+        display.tag_config("bullet", font=("Segoe UI", 10), foreground="#cccccc", lmargin1=15, lmargin2=25)
+        display.tag_config("note", font=("Segoe UI", 9, "italic"), foreground="#34d399", lmargin1=15)
+
+        def add_p(text, tags=None):
+            display.insert(tk.END, text + "\n", tags)
+
+        # CONTEÚDO DO MANUAL
+        add_p("SILENT MULTIVERSE NEXUS", "h1")
+        add_p("  - Maneje todos os arquivos .md dentro de um projeto de forma fácil, rápida e segura.", "bullet")
+        add_p("  - Exporte seu projeto inteiro como um arquivo HTML com índice, hiperlinks navegáveis e na ordem que você configurar.", "bullet")
+        add_p("  - Use IA como achar melhor, onde quiser, sob suas ordens, respondendo como você quiser.", "bullet")
+        add_p("  - Converse com Ao para tirar dúvidas, pedir variações de idéias e brainstorming.", "bullet")
+        add_p("  - Crie um bot no Discord para seus jogadores e amigos perguntarem qualquer coisa sobre o projeto.", "bullet")
+        add_p("  - Faça arquivos com regras de servidor para o Bot também responder quaisquer dúvidas.", "bullet")
+        
+        add_p("1. INÍCIO RÁPIDO & ESTRUTURA DO PROJETO", "h1")
+        add_p("• Projeto Atual: O projeto ativo fica selecionado no topo do menu lateral. Você pode criar ou alternar entre projetos a qualquer momento clicando no ícone de pasta 📁.", "bullet")
+        add_p("  - Estrutura de Pastas:", "bullet")
+        add_p("  - Pasta do Projeto: Guarda as pastas e os arquivos em Markdown (.md). Pode ter quantos projetos quiser!", "bullet")
+        add_p("  - Templates/: Armazena modelos de criação (ex: cidade.md, npc.md, reinado.md). O programa já vem com modelos prontos, mas você pode editá-los e adicionar novos diretamente nesta pasta.", "bullet")
+        add_p("  - Style/: Armazena diretrizes de escrita e clima (ex: Tom_e_Clima.md). O arquivo base é alterado de acordo a opção selecionada na aba de Opções, mas você pode inserir outros documentos dentro da pasta que eles também serão usados para melhorar e focar as respostas de IA.", "bullet")
+        add_p("  - memories/: Guarda o histórico recente de conversas locais e do Discord. Na aba Converse com Ao, a conversa só é apagada se usar o botão Excluir Memórias na Aba Worldbuilders.", "bullet")
+        add_p("  - exports/: Guarda os livros do cenário em HTML compilados e relatórios. Só aparece algo aqui ao usar a opção Gerar e Abrir Livro do cenário na aba Worldbuilders.", "bullet")
+
+        add_p("2. SINTAXE DO EDITOR & REGRAS DE ESCRITA", "h1")
+        add_p("• Wikilinks [[Nome Do Arquivo]]:", "h2")
+        add_p("  Sempre que quiser citar outra entidade do seu mundo, use colchetes duplos (ex: [[Reino de Phaeton]]). Clique no link no editor para navegar direto até ele. Se o documento não existir, o programa perguntará se deseja criá-lo!", "bullet")
+        add_p("• Tags de Expansão (<-- TODO: Motivo):", "h2")
+        add_p("  Com o botão direito do Mouse dentro do editor, exista a opção de inserir a tag <-- TODO:, você também pode digitar manualmente, após os dois pontos, insira o que é para ser feito em uma frase, pode ser uma ordem simples ou complexa.", "bullet")
+        add_p("  A função Expander detectará a tag e usará a IA para preencher o trecho automaticamente seguindo suas direções.", "bullet")
+        add_p("• Segredos do Mestre vs Jogadores:", "h2")
+        add_p("  - Função interna que serve para manejar o Bot do Discord quando ele estiver respondendo perguntas de jogadores.", "bullet")
+        add_p("  - Para ocultar um arquivo inteiro dos jogadores no Discord, coloque status: segredo ou tags: [segredo] no cabeçalho.", "bullet")
+        add_p("  - Para ocultar uma seção específica em um arquivo público, insira o título com [segredo] (ex: ### O Culto Oculto [segredo]).", "bullet")
+        add_p("  - Se nunca usar a tag segredo, o projeto continuará funcionando normalmente.", "bullet")
+        
+        add_p("3. CONVERSA COM AO & BOT DO DISCORD", "h1")
+        add_p("• Chat Local:", "h2")
+        add_p("  - Ao, dentro do programa, é uma simulação de como seria o Bot do Discord se ele estiver configurado, a conversa com ele é para ser um brainstorming, tirar dúvidas e discutir sobre o projeto em si.", "bullet")
+        add_p("  - É possível focar a resposta no chat para um arquivo específico, Clique com o botão direito em qualquer arquivo no Explorer e escolha 'Perguntar sobre este arquivo ao Ao' para anexar o documento completo na conversa!", "bullet")
+        add_p("• Bot do Discord:", "h2")
+        add_p("  Na aba de opções, existem vários campos para configurar o Bot:", "bullet")
+        add_p("  - Gatilho de Comunicação(Prefixo): é a forma que os jogadores acionam o bot dentro do servidor Discord. ex: !ao, $ao, &ao, %João, &Supremo. O que estiver configurado nessa caixa, é como o Bot é acionado.", "bullet")
+        add_p("  - Cargos de Mestre: Aqui você coloca o título de cargos do Discord que quem possuir, receberá respostas do Bot com o projeto inteiro, incluindo as partes marcadas como Segredo. Quem não tiver esses cargos, recebe respostas com os segredos removidos.", "bullet")
+        add_p("  - Canais Permitidos/Proibidos: O nome exato de canais onde você quer que o Bot possa ou não enviar respostas. Útil para focar o bot em um único chat ou permitir comunicação secreta.", "bullet")
+        add_p("  - Tempo de Espera: Limite de cooldown para cada usuário poder falar com o Bot, para impedir Spam.", "bullet")
+
+        add_p("4. WORLDBUILDERS (EXPANDER, TAREFAS E AUDITORIA)", "h1")
+        add_p("• Expander - Executar Tarefa: varre todos os arquivos na pasta do projeto buscando por tags <-- TODO:, ao encontrar uma, ele inicia o processo da IA e gera o conteúdo respeitando a coesão do mundo e do arquivo, então gera um novo arquivo de versão acima(ex:Reino_Lucian_v03.md) e salva o anterior(ex:Reino_Lucian_v02.md) na pasta Logs/history.", "bullet")
+        add_p("• Expander - Executar Tarefa: Essa ação pode ser automatizada na aba Opções, onde ao deixar um arquivo com essa Tag, o expander já irá ser acionado no momento que o arquivo for salvo.", "bullet")
+        add_p("• Expander - Reconstruir Contexto: acesso interno do programa ao estado atual do seu projeto, perguntas ao Ao e ao Bot do Discord usam esse contexto para gerar respostas, ao realizar muitas mudanças, esse botão as força para o estado atual. É como um botão Salvar para o projeto inteiro. O contexto dura 12h de sua criação, passado esse tempo, ele é recriado automaticamente. O botão é apenas para acelerar o processo.", "bullet")
+        add_p("• WorldBuilder: Executa um plano autônomo completo (cria pastas, arquivos e expande a lore) com base no objetivo que você definir.", "bullet")
+        add_p("• WorldBuilder: A criação de pastas, arquivos e melhoria de arquivos podem ser habilitadas ou desabilitadas na aba Opções, para melhor controlar o que o Worldbuilder irá fazer.", "bullet")
+        add_p("• Auditoria de Lore: Analisa todo o universo do seu projeto em busca de incoerências históricas, furos de cronologia ou contradições geográficas.", "bullet")
+        add_p("• Gerar e Abrir Livro do Cenário:  Compila todos os arquivos Markdown, cria um arquivo HTML de todo o projeto com índice e links, e já abre ele no seu Browser padrão, esse documento pode ser salvo como PDF.", "bullet")
+        add_p("• Backup do Projeto: Gera um arquivo .zip completo com todas as suas pastas e memórias gravado na raiz do disco onde o executável está rodando, pode dar erro se tentar no C:/, mas funciona bem em outros volumes.", "bullet")
+        add_p("• Excluir todas as Memórias: Deleta todos os arquivos da pasta memories, que contém a conversa local da aba Converse com Ao e todas as conversas do Bot do Discord com qualquer usuário em qualquer servidor.", "bullet")
+        add_p("• Excluir todas as Memórias: É possível deletar esses arquivos manualmente direto na pasta.", "bullet")
+
+        add_p("5. ATALHOS DE TECLADO & NAVEGAÇÃO", "h1")
+        add_p("  [F2]                 : Renomear o arquivo ou pasta selecionada no Explorer.", "bullet")
+        add_p("  [Ctrl + Scroll Mouse]: Aumentar ou diminuir o zoom da tela.", "bullet")
+        add_p("  [Alt + Seta Esquerda]: Voltar para o documento anterior no histórico.", "bullet")
+        add_p("  [Alt + Seta Direita] : Avançar no histórico de documentos.", "bullet")
+        add_p("  [Ctrl + Z]           : Desfazer edições no texto.", "bullet")
+        add_p("  [Botão Lateral Mouse]: Voltar / Avançar na navegação entre arquivos.(Talvez funcione)", "bullet")
+        
+        add_p("6. COMANDOS MARKDOWN(.md)", "h1")
+        add_p("• Guia Completo: https://github.com/mende1/guia-definitivo-de-markdown\n", "bullet")
+        md_cheatsheet = (
+            "# Título 1\n"
+            "## Título 2\n"
+            "### Título 3\n\n"
+            "- Item de lista 1\n"
+            "- Item de lista 2\n\n"
+            "**texto em negrito**\n"
+            "*texto em itálico*\n"
+            "~~texto riscado~~\n\n"
+            "Linhas separadoras:\n"
+            "--- ou *** ou ___\n\n"
+            "Citação / Caixa de Lore:\n"
+            "> texto de citação\n"
+            "> - item dentro de citação\n"
+            ">> citação aninhada"
+        )
+        add_p(md_cheatsheet, "code")
+
+        display.config(state=tk.DISABLED)
+        return frame
+    
     # ------------------------------------------------------------------
     # Próxima evolução
     # ------------------------------------------------------------------

@@ -378,9 +378,11 @@ def salvar_ordem_pasta(caminho_pasta, lista_nomes_itens):
 
     if rel_key == ".":
         rel_key = "ROOT"
+        
+    chave_projeto = f"{PASTA_PROJETO}::{rel_key}"
 
     mapa = carregar_mapa_ordens()
-    mapa[rel_key] = lista_nomes_itens
+    mapa[chave_projeto] = lista_nomes_itens
     salvar_json_seguro(ARQUIVO_ORDEM_GLOBAL, mapa, LOCK_FOLDER_ORDERS, indent=2)
 
 def obter_itens_ordenados(caminho_pasta):
@@ -399,18 +401,15 @@ def obter_itens_ordenados(caminho_pasta):
 
     if rel_key == ".":
         rel_key = "ROOT"
-
+    chave_projeto = f"{PASTA_PROJETO}::{rel_key}"
     mapa = carregar_mapa_ordens()
 
-    if rel_key in mapa:
-        ordem_salva = mapa[rel_key]
-        
-        # Itens já mapeados ficam na posição gravada; novos arquivos vão para o final
+    if chave_projeto in mapa:
+        ordem_salva = mapa[chave_projeto]
         def sort_key(nome_item):
             if nome_item in ordem_salva:
                 return (0, ordem_salva.index(nome_item))
             return (1, nome_item.lower())
-
         return sorted(todos_itens, key=sort_key)
 
     # Caso não tenha ordem gravada ainda, usa ordem alfabética padrão

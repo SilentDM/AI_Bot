@@ -220,6 +220,11 @@ Substitua essa tag pelo conteúdo expandido, mantendo total coesão com <context
 <regras_de_resposta>
 1. Retorne APENAS o conteúdo final do arquivo editado em Markdown.
 2. Não inclua comentários, prefácios nem tags XML na sua resposta final.
+3. FORMATAÇÃO E WIKILINKS:
+    - Organize o texto com títulos (#, ##, ###).
+    - Use citações (> texto) para caixas de lore, rumores, manuscritos ou diários.
+    - Use negrito (**palavra**) em termos e itens de destaque.
+    - CRIE WIKILINKS [[Nome do Conceito]]: Sempre que mencionar personagens, cidades, locais, facções, deuses ou relíquias do universo, envolva o nome em colchetes duplos (ex: [[Reino de Phaeton]], [[Mestre Varis]], [[Catedral de Prata]]).
 </regras_de_resposta>
 """
             try:

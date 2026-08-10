@@ -1,9 +1,10 @@
-import os, sys, shutil, subprocess, threading
+import os, sys, shutil, subprocess, threading, re
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog, scrolledtext
 from pathlib import Path
 import engine.project_utils as pu
 import engine.wbuilder as wb
+
 class NewFileDialog(tk.Toplevel):
     """Janela modal para criar um novo arquivo definindo nome e template."""
     def __init__(self, parent, templates_disponiveis):
@@ -14,28 +15,24 @@ class NewFileDialog(tk.Toplevel):
         self.configure(bg="#121212")
         self.transient(parent)
         self.grab_set()
-
+        
         self.result_filename = None
         self.result_template = None
 
-        # Container principal
         container = ttk.Frame(self)
         container.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
 
-        # Campo: Nome do Arquivo
         ttk.Label(container, text="Nome do Arquivo:", font=("Segoe UI", 9, "bold")).pack(anchor=tk.W, pady=(0, 4))
         self.entry_nome = ttk.Entry(container, font=("Segoe UI", 10))
         self.entry_nome.pack(fill=tk.X, pady=(0, 14))
         self.entry_nome.focus_set()
         self.entry_nome.bind("<Return>", lambda e: self.on_confirm())
 
-        # Campo: Seleção de Template
         ttk.Label(container, text="Modelo / Template:", font=("Segoe UI", 9, "bold")).pack(anchor=tk.W, pady=(0, 4))
         self.combo_template = ttk.Combobox(container, values=templates_disponiveis, state="readonly", font=("Segoe UI", 10))
         self.combo_template.set(templates_disponiveis[0] if templates_disponiveis else "Nenhum (Padrão)")
         self.combo_template.pack(fill=tk.X, pady=(0, 20))
 
-        # Botões de Ação
         btn_frame = ttk.Frame(container)
         btn_frame.pack(fill=tk.X, side=tk.BOTTOM)
 
@@ -68,17 +65,23 @@ class ExplorerFrame(ttk.Frame):
         self.autosave_timer = None
         self.clipboard_item = None
 
+        # Histórico de navegação (Voltar / Avançar)
+        #self.history_back = []
+        #self.history_forward = []
+        self.history = []
+        self.history_index = -1
+        self._navigating_history = False
+        
         self._drag_item = None
         self._drag_path = None
 
         self.pane = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
         self.pane.pack(fill=tk.BOTH, expand=True)
 
-        # --- SUBCOLUNA A: Árvore de Diretórios (Esquerda) ---
-        self.tree_frame = ttk.LabelFrame(self.pane, text=" Explorer ")
+        # SUBCOLUNA A: Árvore de Diretórios
+        self.tree_frame = ttk.LabelFrame(self.pane)
         self.pane.add(self.tree_frame, weight=1)
 
-        # 🔍 BUSCADOR GLOBAL NO TOPO DO EXPLORER
         search_bar_frame = ttk.Frame(self.tree_frame)
         search_bar_frame.pack(fill=tk.X, padx=5, pady=(5, 2))
 
@@ -91,8 +94,7 @@ class ExplorerFrame(ttk.Frame):
         self.btn_clear_search = ttk.Button(search_bar_frame, text="✕", width=3, command=self.clear_search)
         self.btn_clear_search.pack(side=tk.RIGHT, padx=(2, 0))
 
-        # ÁRVORE DE DIRETÓRIOS
-        self.tree = ttk.Treeview(self.tree_frame, selectmode="browse",show="tree")
+        self.tree = ttk.Treeview(self.tree_frame, selectmode="browse", show="tree")
         self.tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=2)
 
         self.tree_ysb = ttk.Scrollbar(self.tree, orient="vertical", command=self.tree.yview)
@@ -102,21 +104,63 @@ class ExplorerFrame(ttk.Frame):
         self.btn_refresh = ttk.Button(self.tree_frame, text="Atualizar Diretório", command=self.refresh_tree)
         self.btn_refresh.pack(fill=tk.X, padx=5, pady=5)
 
-        # --- SUBCOLUNA B: Painel do Editor de Texto (Direita) ---
-        self.editor_frame = ttk.LabelFrame(self.pane, text=" Editor Dinâmico (Auto-salva ao alternar) ")
+        # SUBCOLUNA B: Editor de Texto com Barra de Navegação Superior
+        self.editor_frame = ttk.Frame(self.pane)
         self.pane.add(self.editor_frame, weight=2)
 
+        # Barra Superior de Ferramentas / Navegação
+        editor_header = ttk.Frame(self.editor_frame)
+        editor_header.pack(fill=tk.X, padx=5, pady=(5, 2))
+
+        self.btn_nav_back = ttk.Button(editor_header, text="◀ Voltar", width=8, command=self.go_back)
+        self.btn_nav_back.pack(side=tk.LEFT, padx=(0, 2))
+
+        self.btn_nav_forward = ttk.Button(editor_header, text="Avançar ▶", width=8, command=self.go_forward)
+        self.btn_nav_forward.pack(side=tk.LEFT, padx=(0, 8))
+
+        self.lbl_editor_title = ttk.Label(editor_header, text="Editor Dinâmico", font=("Segoe UI", 9, "bold"), foreground="#10b981",anchor="center")
+        self.lbl_editor_title.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        # ScrolledText do Editor
         self.editor = scrolledtext.ScrolledText(
             self.editor_frame, wrap=tk.WORD, font=("Consolas", 12), undo=True,
             bg="#1e1e1e", fg="#e3e3e3", insertbackground="white",
             selectbackground="#0f766e", selectforeground="white", bd=0, highlightthickness=0
         )
-        self.editor.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        self.editor.insert("1.0", "--- Selecione um arquivo para visualizar e editar ---")
+        self.editor.pack(fill=tk.BOTH, expand=True, padx=5, pady=(2, 5))
+
+        #self.editor.insert("1.0", "--- Selecione um arquivo para visualizar e editar ---")
         self.editor.config(state=tk.DISABLED)
         self.editor.bind("<KeyRelease>", self.on_key_release)
 
-        # MENUS DE CONTEXTO
+        # Syntax Highlighting
+        self.editor.tag_configure("md_h1", font=("Consolas", 15, "bold"), foreground="#10b981")
+        self.editor.tag_configure("md_h2", font=("Consolas", 13, "bold"), foreground="#34d399")
+        self.editor.tag_configure("md_h3", font=("Consolas", 12, "bold"), foreground="#60a5fa")
+        self.editor.tag_configure("md_bold", font=("Consolas", 12, "bold"), foreground="#ffffff")
+        self.editor.tag_configure("md_italic", font=("Consolas", 12, "italic"), foreground="#cbd5e1")
+        self.editor.tag_configure("md_wikilink", font=("Consolas", 12, "bold", "underline"), foreground="#38bdf8")
+        self.editor.tag_configure("md_todo", font=("Consolas", 12, "bold"), foreground="#f97316", background="#2a1205")
+        self.editor.tag_configure("md_quote", font=("Consolas", 12, "italic"), foreground="#94a3b8")
+
+        self.editor.tag_bind("md_wikilink", "<Enter>", lambda e: self.editor.config(cursor="hand2"))
+        self.editor.tag_bind("md_wikilink", "<Leave>", lambda e: self.editor.config(cursor="xterm"))
+        self.editor.tag_bind("md_wikilink", "<Button-1>", self.on_wikilink_click)
+
+        # 🛡️ REGISTRO DE ATALHOS: F2 (Renomear) e Navegação Voltar/Avançar
+        self.tree.bind("<F2>", self.on_f2_rename)
+
+        for w in [self, self.editor, self.tree]:
+            w.bind("<Alt-Left>", self.go_back)
+            w.bind("<Alt-Right>", self.go_forward)
+            
+            # Tenta registrar botões de mouse estendidos caso a versão do Tcl/SO suporte
+            try:
+                w.bind("<Button-8>", self.go_back)
+                w.bind("<Button-9>", self.go_forward)
+            except tk.TclError:
+                pass
+
+        # Menus de contexto
         self.context_menu = tk.Menu(self, tearoff=0, bg="#1e1e1e", fg="#e3e3e3", activebackground="#0f766e", activeforeground="white")
         self.editor_context_menu = tk.Menu(self, tearoff=0, bg="#1e1e1e", fg="#e3e3e3", activebackground="#0f766e", activeforeground="white")
 
@@ -146,6 +190,206 @@ class ExplorerFrame(ttk.Frame):
         if self.toast_callback:
             self.toast_callback(msg)
 
+    # --- ATALHOS F2 E NAVEGAÇÃO VOLTAR / AVANÇAR ---
+    def on_f2_rename(self, event=None):
+        """Aperta F2 para abrir o diálogo de renomear item selecionado."""
+        selected = self.tree.selection()
+        if selected:
+            item_values = self.tree.item(selected[0], "values")
+            if item_values:
+                self.rename_item(item_values[0])
+        return "break"
+    
+    def _add_to_history(self, caminho):
+        """Adiciona o arquivo ao histórico de forma segura."""
+        if not hasattr(self, "history"):
+            self.history = []
+        if not hasattr(self, "history_index"):
+            self.history_index = -1
+        if not hasattr(self, "_is_navigating"):
+            self._is_navigating = False
+
+        if not caminho or not os.path.isfile(caminho) or self._is_navigating:
+            return
+
+        caminho_abs = os.path.abspath(caminho)
+
+        if 0 <= self.history_index < len(self.history):
+            if os.path.abspath(self.history[self.history_index]) == caminho_abs:
+                return
+
+        self.history = self.history[:self.history_index + 1]
+        self.history.append(caminho_abs)
+        if len(self.history) > 50:
+            self.history.pop(0)
+        self.history_index = len(self.history) - 1
+
+    def go_back(self, event=None):
+        if self.history_index <= 0:
+            self.toast("◀ Início do histórico de navegação.")
+            return "break"
+
+        self.save_current_file()
+
+        # Recua o ponteiro para o arquivo anterior válido no disco
+        target_idx = self.history_index - 1
+        while target_idx >= 0 and not os.path.isfile(self.history[target_idx]):
+            self.history.pop(target_idx)
+            target_idx -= 1
+
+        if target_idx < 0:
+            self.history_index = 0
+            self.toast("◀ Início do histórico de navegação.")
+            return "break"
+
+        self.history_index = target_idx
+        target_file = self.history[self.history_index]
+
+        self._is_navigating = True
+        try:
+            self.select_path_in_tree(target_file)
+            self.toast(f"◀ Voltar: '{os.path.basename(target_file)}'")
+        finally:
+            # Reseta a flag com delay para cobrir o evento assíncrono do Tkinter
+            self.after(50, self._reset_navigating_flag)
+
+        return "break"
+
+    def go_forward(self, event=None):
+        if self.history_index >= len(self.history) - 1:
+            self.toast("▶ Fim do histórico de navegação.")
+            return "break"
+
+        self.save_current_file()
+
+        # Avança o ponteiro para o próximo arquivo válido
+        target_idx = self.history_index + 1
+        while target_idx < len(self.history) and not os.path.isfile(self.history[target_idx]):
+            self.history.pop(target_idx)
+
+        if target_idx >= len(self.history):
+            self.history_index = len(self.history) - 1
+            self.toast("▶ Fim do histórico de navegação.")
+            return "break"
+
+        self.history_index = target_idx
+        target_file = self.history[self.history_index]
+
+        self._is_navigating = True
+        try:
+            self.select_path_in_tree(target_file)
+            self.toast(f"▶ Avançar: '{os.path.basename(target_file)}'")
+        finally:
+            self.after(50, self._reset_navigating_flag)
+
+        return "break"
+
+    def _reset_navigating_flag(self):
+        self._is_navigating = False
+
+    # --- SYNTAX HIGHLIGHTING & WIKILINKS ---
+    def apply_syntax_highlighting(self):
+        if str(self.editor.cget("state")) == "disabled":
+            return
+
+        for tag in ["md_h1", "md_h2", "md_h3", "md_bold", "md_italic", "md_wikilink", "md_todo", "md_quote"]:
+            self.editor.tag_remove(tag, "1.0", tk.END)
+
+        texto = self.editor.get("1.0", tk.END)
+        if not texto.strip():
+            return
+
+        for match in re.finditer(r'^(#{1,3})\s+(.*)$', texto, re.MULTILINE):
+            start_idx = f"1.0 + {match.start()} chars"
+            end_idx = f"1.0 + {match.end()} chars"
+            level = len(match.group(1))
+            self.editor.tag_add(f"md_h{level}", start_idx, end_idx)
+
+        for match in re.finditer(r'^(>.*)$', texto, re.MULTILINE):
+            start_idx = f"1.0 + {match.start()} chars"
+            end_idx = f"1.0 + {match.end()} chars"
+            self.editor.tag_add("md_quote", start_idx, end_idx)
+
+        for match in re.finditer(r'(<--\s*(?:TODO|TO DO|To Do|To-Do|todo):?.*)', texto, re.IGNORECASE):
+            start_idx = f"1.0 + {match.start()} chars"
+            end_idx = f"1.0 + {match.end()} chars"
+            self.editor.tag_add("md_todo", start_idx, end_idx)
+
+        for match in re.finditer(r'\[\[([^\|\]]+)(?:\|([^\]]+))?\]\]', texto):
+            start_idx = f"1.0 + {match.start()} chars"
+            end_idx = f"1.0 + {match.end()} chars"
+            self.editor.tag_add("md_wikilink", start_idx, end_idx)
+
+        for match in re.finditer(r'(\*\*[^\*\n]+\*\*)', texto):
+            start_idx = f"1.0 + {match.start()} chars"
+            end_idx = f"1.0 + {match.end()} chars"
+            self.editor.tag_add("md_bold", start_idx, end_idx)
+
+    def on_wikilink_click(self, event):
+        try:
+            index_clicado = self.editor.index(f"@{event.x},{event.y}")
+            intervalo = self.editor.tag_prevrange("md_wikilink", f"{index_clicado}+1c")
+            if not intervalo:
+                return
+
+            texto_link = self.editor.get(intervalo[0], intervalo[1]).strip()
+            match = re.match(r'\[\[([^\|\]]+)(?:\|([^\]]+))?\]\]', texto_link)
+            if not match:
+                return
+
+            nome_alvo = match.group(1).strip()
+            caminho_encontrado = self._encontrar_arquivo_por_nome(nome_alvo)
+
+            if caminho_encontrado:
+                self.save_current_file()
+                self.select_path_in_tree(str(caminho_encontrado))
+                self.toast(f"🔗 Navegando para '{caminho_encontrado.name}'...")
+            else:
+                resposta = messagebox.askyesno(
+                    "Criar Novo Documento",
+                    f"O documento para '[[{nome_alvo}]]' não existe.\n\nDeseja criá-lo agora em '{pu.PASTA_PROJETO}'?",
+                    parent=self
+                )
+                if resposta:
+                    pasta_destino = os.path.dirname(self.current_file) if self.current_file else str(pu.CAMINHO_PROJETO)
+                    nome_md = nome_alvo if nome_alvo.lower().endswith(".md") else f"{nome_alvo}.md"
+                    novo_caminho = os.path.join(pasta_destino, nome_md)
+                    
+                    titulo = nome_alvo.replace('.md', '').replace('_', ' ').title()
+                    nome_origem = os.path.basename(self.current_file) if self.current_file else "origem"
+                    conteudo_inicial = f"# {titulo}\n\nDocumento criado a partir de wikilink em [[{nome_origem}]]."
+                    
+                    with open(novo_caminho, "w", encoding="utf-8") as f:
+                        f.write(conteudo_inicial)
+
+                    self.toast(f"📄 Documento '{nome_md}' criado com sucesso!")
+                    self.refresh_tree()
+                    self.select_path_in_tree(novo_caminho)
+
+        except Exception as e:
+            self.log_callback(f"Erro ao navegar por wikilink: {e}")
+
+    def _encontrar_arquivo_por_nome(self, nome_alvo):
+        alvo_norm = pu.normalizar_nome(nome_alvo)
+        raiz = Path(pu.CAMINHO_PROJETO)
+        
+        candidatos = []
+        for arq in raiz.rglob("*.md"):
+            if any(part in pu.IGNORELIST for part in arq.parts):
+                continue
+            if pu.normalizar_nome(arq.stem) == alvo_norm:
+                candidatos.append(arq.resolve())
+
+        if not candidatos:
+            return None
+
+        def get_version(path_obj):
+            match = re.search(r'_v(\d+)$', path_obj.stem, flags=re.IGNORECASE)
+            return int(match.group(1)) if match else 0
+
+        candidatos.sort(key=get_version, reverse=True)
+        return candidatos[0]
+
     # --- LÓGICA DO BUSCADOR GLOBAL ---
     def on_search_key_release(self, event):
         query = self.search_var.get().strip().lower()
@@ -158,10 +402,9 @@ class ExplorerFrame(ttk.Frame):
             if any(part in pu.IGNORELIST for part in arq.parts):
                 continue
             try:
-                with open(arq, "r", encoding="utf-8") as f:
+                with open(arq, "r", encoding="utf-8", errors="ignore") as f:
                     content = f.read().lower()
                 if query in arq.name.lower() or query in content:
-                    # Adiciona o arquivo e todas as suas pastas pai até a raiz
                     p = arq.resolve()
                     matching_paths.add(str(p))
                     for parent in p.parents:
@@ -222,10 +465,8 @@ class ExplorerFrame(ttk.Frame):
                     self.populate_tree_recursive(node, item_path, allowed_paths, depth=depth + 1, max_depth=max_depth)
         except Exception as e:
             self.log_callback(f"Erro ao acessar pasta {path}: {e}")
-            
-    # ------------------------------------------------------------------
-    # ARRASTAR E SOLTAR COM EFEITOS VISUAIS (GHOST CARD + TARGET HIGHLIGHT)
-    # ------------------------------------------------------------------
+
+    # --- DRAG AND DROP ---
     def on_drag_start(self, event):
         iid = self.tree.identify_row(event.y)
         if iid:
@@ -235,28 +476,20 @@ class ExplorerFrame(ttk.Frame):
                 self._drag_item = iid
                 self._drag_path = values[0]
                 self._drag_text = text
-                self._drag_started = False  # Espera o mouse se mover para criar o fantasma
+                self._drag_started = False
 
     def _create_drag_ghost(self, x, y, text):
-        """Cria o cartão flutuante semi-transparente sob o cursor."""
         self._destroy_drag_ghost()
         try:
             ghost = tk.Toplevel(self)
             ghost.overrideredirect(True)
             ghost.attributes("-topmost", True)
-            ghost.attributes("-alpha", 0.75)  # 🟢 75% de opacidade (transparente) no Windows
+            ghost.attributes("-alpha", 0.75)
             ghost.configure(bg="#0f766e")
 
             lbl = tk.Label(
-                ghost, 
-                text=f"{text}", 
-                bg="#0f766e", 
-                fg="#ffffff", 
-                font=("Segoe UI", 9, "bold"),
-                padx=8,
-                pady=4,
-                bd=1,
-                relief="solid"
+                ghost, text=f"{text}", bg="#0f766e", fg="#ffffff", 
+                font=("Segoe UI", 9, "bold"), padx=8, pady=4, bd=1, relief="solid"
             )
             lbl.pack()
             ghost.geometry(f"+{x + 12}+{y + 12}")
@@ -265,27 +498,22 @@ class ExplorerFrame(ttk.Frame):
             self._drag_ghost = None
 
     def on_drag_motion(self, event):
-        """Atualiza a posição do cartão fantasma e ilumina a pasta de destino."""
         if not getattr(self, "_drag_item", None):
             return
 
-        # Só ativa o efeito visual se o usuário realmente arrastar o mouse
         if not getattr(self, "_drag_started", False):
             self._drag_started = True
             self._create_drag_ghost(event.x_root, event.y_root, getattr(self, "_drag_text", ""))
 
-        # 1. Move o cartão fantasma junto com o cursor
         if hasattr(self, "_drag_ghost") and self._drag_ghost:
             self._drag_ghost.geometry(f"+{event.x_root + 12}+{event.y_root + 12}")
 
-        # 2. Ilumina a pasta/item sob o ponteiro do mouse no Explorer
         target_iid = self.tree.identify_row(event.y)
         if target_iid and target_iid != self._drag_item:
             self.tree.selection_set(target_iid)
             self.tree.focus(target_iid)
 
     def _destroy_drag_ghost(self):
-        """Remove o cartão fantasma flutuante da tela."""
         if hasattr(self, "_drag_ghost") and self._drag_ghost:
             try:
                 self._drag_ghost.destroy()
@@ -294,7 +522,6 @@ class ExplorerFrame(ttk.Frame):
             self._drag_ghost = None
 
     def on_drag_release(self, event):
-        # Destrói o cartão flutuante assim que o mouse é solto
         self._destroy_drag_ghost()
 
         if not getattr(self, "_drag_item", None) or not getattr(self, "_drag_path", None):
@@ -312,7 +539,6 @@ class ExplorerFrame(ttk.Frame):
         src_parent_iid = self.tree.parent(self._drag_item)
         target_parent_iid = self.tree.parent(target_iid)
 
-        # Se soltou no mesmo nível, apenas reordena a posição
         if src_parent_iid == target_parent_iid:
             target_index = self.tree.index(target_iid)
             self.tree.move(self._drag_item, src_parent_iid, target_index)
@@ -330,7 +556,6 @@ class ExplorerFrame(ttk.Frame):
             self._drag_path = None
             return
 
-        # Se soltou sobre outra pasta, move o arquivo/pasta para dentro dela
         dest_dir = target_path if os.path.isdir(target_path) else os.path.dirname(target_path)
         if os.path.isdir(src_path) and dest_dir.startswith(src_path):
             self.toast("Não é possível mover uma pasta para dentro dela mesma.")
@@ -356,6 +581,7 @@ class ExplorerFrame(ttk.Frame):
     # --- AUTO-SAVE E EDIÇÃO ---
     def on_key_release(self, event):
         self.update_stats()
+        self.apply_syntax_highlighting()
         if self.autosave_timer:
             self.after_cancel(self.autosave_timer)
         self.autosave_timer = self.after(5000, self.save_current_file_on_timer)
@@ -378,73 +604,118 @@ class ExplorerFrame(ttk.Frame):
             except Exception as e:
                 self.log_callback(f"Falha ao auto-salvar {self.current_file}: {e}")
 
-    def on_select(self, event):
-        selected_item = self.tree.selection()
-        if not selected_item:
-            return
+    def on_select(self, event=None):
+        """Seleciona e carrega o arquivo no editor de forma blindada."""
+        try:
+            selected_item = self.tree.selection()
+            if not selected_item:
+                return
 
-        item_values = self.tree.item(selected_item[0], "values")
-        if not item_values:
-            return
+            item_values = self.tree.item(selected_item[0], "values")
+            if not item_values:
+                return
 
-        novo_caminho = item_values[0]
-        if self.current_file and os.path.abspath(self.current_file) == os.path.abspath(novo_caminho):
-            return
+            novo_caminho = str(item_values[0])
+            if self.current_file and os.path.abspath(self.current_file) == os.path.abspath(novo_caminho):
+                return
 
-        arquivo_anterior = self.current_file
-        if self.autosave_timer:
-            self.after_cancel(self.autosave_timer)
-            self.autosave_timer = None
+            arquivo_anterior = self.current_file
+            if self.autosave_timer:
+                self.after_cancel(self.autosave_timer)
+                self.autosave_timer = None
 
-        self.save_current_file()
-
-        if arquivo_anterior:
-            self.process_saved_file(arquivo_anterior)
-
-        if os.path.isfile(novo_caminho):
-            self.current_file = novo_caminho
-            self.editor.config(state=tk.NORMAL)
+            # Salva o arquivo anterior se existir
             try:
-                with open(novo_caminho, "r", encoding="utf-8") as f:
-                    texto = f.read()
-                self.update_stats()
-            except UnicodeDecodeError:
-                try:
-                    with open(novo_caminho, "r", encoding="latin1") as f:
-                        texto = f.read()
-                except Exception:
-                    texto = ""
+                self.save_current_file()
+            except Exception as e:
+                self.log_callback(f"Erro ao salvar arquivo anterior: {e}")
 
-            self.editor.delete("1.0", tk.END)
-            self.editor.insert("1.0", texto)
-            self.editor.edit_reset()  # 🛡️ Limpa a pilha de Undo para o Ctrl+Z não apagar o arquivo
-            self.update_stats()
-        else:
-            self.current_file = None
-            self.editor.delete("1.0", tk.END)
-            self.editor.insert("1.0", f"--- Diretório Selecionado: {os.path.basename(novo_caminho)} ---")
-            self.editor.config(state=tk.DISABLED)
+            if arquivo_anterior and os.path.isfile(arquivo_anterior):
+                try:
+                    self.process_saved_file(arquivo_anterior)
+                except Exception as e:
+                    self.log_callback(f"Erro ao processar arquivo salvo: {e}")
+
+            # Se for um ARQUIVO no disco
+            if os.path.isfile(novo_caminho):
+                self.current_file = novo_caminho
+
+                # Registra no histórico sem travar o leitor caso falhe
+                try:
+                    self._add_to_history(novo_caminho)
+                except Exception as e:
+                    self.log_callback(f"Erro ao adicionar ao histórico: {e}")
+
+                # 1. Habilita o editor
+                self.editor.config(state=tk.NORMAL)
+                self.editor.delete("1.0", tk.END)
+
+                # 2. Leitura do arquivo
+                texto = ""
+                try:
+                    with open(novo_caminho, "r", encoding="utf-8", errors="ignore") as f:
+                        texto = f.read()
+                except Exception as e:
+                    self.log_callback(f"Erro ao ler arquivo {novo_caminho}: {e}")
+
+                # 3. Insere o texto garantidamente
+                self.editor.insert("1.0", texto)
+
+                # 4. Ajustes visuais secundários
+                try:
+                    self.editor.edit_reset()
+                except Exception:
+                    pass
+
+                try:
+                    self.apply_syntax_highlighting()
+                except Exception as e:
+                    self.log_callback(f"Erro na sintaxe: {e}")
+
+                try:
+                    self.update_stats()
+                except Exception:
+                    pass
+
+            # Se for uma PASTA / DIRETÓRIO
+            else:
+                self.current_file = None
+                self.editor.config(state=tk.NORMAL)
+                self.editor.delete("1.0", tk.END)
+                self.editor.insert("1.0", f"--- Diretório Selecionado: {os.path.basename(novo_caminho)} ---")
+                self.editor.config(state=tk.DISABLED)
+
+        except Exception as e:
+            self.log_callback(f"Erro no on_select: {e}")
 
     def process_saved_file(self, path):
         if self.auto_expander_callback and not self.auto_expander_callback():
             return
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, "r", encoding="utf-8", errors="ignore") as f:
                 texto = f.read()
             if any(tag in texto for tag in pu.TAG_ALVO):
                 nome_arq = os.path.basename(path)
+
+                if getattr(self, "_processing_auto_expander", False):
+                    return
+                self._processing_auto_expander = True
+
                 self.log_callback(f"'<--TO DO:' encontrado em {nome_arq}")
                 self.toast(f"Tag '<--TO DO:' detectada em '{nome_arq}'! Executando Expander!")
             
-            def _worker():
-                wb.improvefile(path)
-                self.after(0, self.refresh_tree)
+                def _worker():
+                    try:
+                        wb.improvefile(path)
+                    finally:
+                        self._processing_auto_expander = False
+                        self.after(0, self.refresh_tree)
 
-            threading.Thread(target=_worker, daemon=True).start()
+                threading.Thread(target=_worker, daemon=True).start()
         except Exception as e:
             self.log_callback(f"Erro analisando TODO: {e}")
 
-    # --- MENU DE CONTEXTO DA ÁRVORE ---
+    # --- MENU DE CONTEXTO ---
     def show_context_menu(self, event):
         iid = self.tree.identify_row(event.y)
         if iid:
@@ -457,7 +728,6 @@ class ExplorerFrame(ttk.Frame):
 
             self.context_menu.delete(0, tk.END)
 
-            # 💬 NOVO ITEM: Perguntar sobre este arquivo ao Ao
             if os.path.isfile(caminho) and caminho.lower().endswith(".md"):
                 self.context_menu.add_command(
                     label="💬 Perguntar sobre este arquivo ao Ao",
@@ -471,7 +741,7 @@ class ExplorerFrame(ttk.Frame):
                 self.context_menu.add_separator()
 
             self.context_menu.add_command(label="❌ Deletar", command=lambda: self.delete_item(caminho))
-            self.context_menu.add_command(label="✏️ Renomear", command=lambda: self.rename_item(caminho))
+            self.context_menu.add_command(label="✏️ Renomear (F2)", command=lambda: self.rename_item(caminho))
             self.context_menu.add_separator()
             
             self.context_menu.add_command(label="📋 Copiar", command=lambda: self.copy_item(caminho))
@@ -490,7 +760,6 @@ class ExplorerFrame(ttk.Frame):
             self.context_menu.post(event.x_root, event.y_root)
 
     def ask_ao_about_file(self, caminho):
-        """Dispara o callback para o gui.py alternar para a aba de chat com o contexto do arquivo."""
         if self.ask_ao_callback:
             self.save_current_file()
             self.ask_ao_callback(caminho)
@@ -614,7 +883,6 @@ class ExplorerFrame(ttk.Frame):
             self.log_callback(f"Erro ao abrir explorador nativo: {e}")
 
     def create_new_file(self, parent_dir):
-        # 1. Varre dinamicamente a pasta Templates para buscar modelos .md
         opcoes_templates = ["Nenhum (Padrão)"]
         locais_templates = [
             pu.PASTA_TEMPLATES,
@@ -629,10 +897,9 @@ class ExplorerFrame(ttk.Frame):
         
         opcoes_templates.extend(sorted(list(modelos_encontrados)))
 
-        # 2. Abre a janela modal de criação
         dialog = NewFileDialog(self, opcoes_templates)
         if not dialog.result_filename:
-            return  # Usuário cancelou
+            return
 
         nome = dialog.result_filename
         template_escolhido = dialog.result_template
@@ -647,8 +914,6 @@ class ExplorerFrame(ttk.Frame):
 
         try:
             titulo = nome.replace('.md', '').replace('_', ' ').title()
-            
-            # 3. Busca o conteúdo do template via wbuilder
             conteudo_template = wb.obter_conteudo_template(template_escolhido)
 
             if conteudo_template:
@@ -737,7 +1002,6 @@ class ExplorerFrame(ttk.Frame):
             except Exception as e:
                 messagebox.showerror("Erro", f"Falha ao deletar item: {e}")
 
-    # --- NAVEGAÇÃO E ATUALIZAÇÃO ---
     def get_open_folders(self):
         abertas = []
         def walk(item):
@@ -784,20 +1048,17 @@ class ExplorerFrame(ttk.Frame):
         self.log_callback("Árvore do diretório sincronizada.")
 
     def populate_tree(self, parent_node, path, depth=0, max_depth=15):
-        # 🛡️ Trava contra estouro de pilha por profundidade excessiva
         if depth > max_depth:
             return
 
         try:
             itens_ordenados = pu.obter_itens_ordenados(path)
             for item in itens_ordenados:
-                # 🛡️ Filtra pastas e arquivos presentes na IGNORELIST do projeto
                 if item in pu.IGNORELIST:
                     continue
 
                 item_path = os.path.join(path, item)
 
-                # 🛡️ Proteção contra Symlinks que causam loops infinitos
                 if os.path.islink(item_path):
                     continue
 
@@ -866,6 +1127,14 @@ class ExplorerFrame(ttk.Frame):
 
     def update_editor_font(self, font_size):
         self.editor.configure(font=("Consolas", font_size))
+        self.editor.tag_configure("md_h1", font=("Consolas", font_size + 3, "bold"))
+        self.editor.tag_configure("md_h2", font=("Consolas", font_size + 2, "bold"))
+        self.editor.tag_configure("md_h3", font=("Consolas", font_size + 1, "bold"))
+        self.editor.tag_configure("md_bold", font=("Consolas", font_size, "bold"))
+        self.editor.tag_configure("md_italic", font=("Consolas", font_size, "italic"))
+        self.editor.tag_configure("md_wikilink", font=("Consolas", font_size, "bold", "underline"))
+        self.editor.tag_configure("md_todo", font=("Consolas", font_size, "bold"))
+        self.editor.tag_configure("md_quote", font=("Consolas", font_size, "italic"))
         
     def show_editor_context_menu(self, event):
         if str(self.editor.cget("state")) == "disabled":
@@ -894,7 +1163,7 @@ class ExplorerFrame(ttk.Frame):
                 palavras = len(texto.split())
                 caracteres = len(texto.replace("\n", ""))
                 linhas = int(self.editor.index("end-1c").split(".")[0])
-                tokens = palavras/4
+                tokens = palavras / 4
                 self.stats_callback(palavras, caracteres, linhas, tokens)
             except Exception:
                 pass

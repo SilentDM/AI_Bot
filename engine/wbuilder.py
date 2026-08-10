@@ -157,6 +157,10 @@ ou com pequenas variações de grafia/acentuação de algo que já existe.
 Se um conceito já existe com outro nome, use ImproveFile no arquivo existente
 em vez de criar um novo.
 
+REGRA DE NOMES E WIKILINKS:
+Antes de sugerir CreateFolder ou CreateFile, verifique cuidadosamente o Índice.
+Ao sugerir a criação de arquivos, prefira nomes curtos e elegantes que possam ser citados facilmente como Wikilinks (ex: "Catedral de Prata", "Arquimago Varis").
+
 REGRA SOBRE TEMPLATES (Apenas para CreateFile):
 Ao sugerir 'CreateFile', escolha obrigatoriamente um dos seguintes valores para o campo 'template':
 - "aventura": para quests, missões, módulos de aventura
@@ -375,12 +379,17 @@ def improvefile(path, reason="Melhorar o arquivo!"):
 
     instrucoes_globais = f"""
 Você é um Mestre de Mesa (DM) de D&D experiente.
-Seu objetivo é melhorar o arquivo:
-{arquivo.name}
-Seguindo a motivação:
-{reason}
+Seu objetivo é melhorar o arquivo: {arquivo.name}
+Seguindo a motivação: {reason}
 Não contradiga informações existentes.
 Mantenha consistência com o restante do mundo.
+# REGRAS DE FORMATAÇÃO E WIKILINKS:
+- Organize o texto com títulos (#, ##, ###).
+- Use citações (> texto) para caixas de lore, citações, diários ou rumores.
+- Use negrito (**termo**) em nomes importantes.
+- Crie Wikilinks [[Nome do Conceito]] sempre que citar NPCs, lugares, facções, deuses ou raças do universo (ex: [[Reino de Phaeton]], [[Ordem da Penumbra]]).
+- Não contradiga informações existentes.
+- Mantenha consistência com o restante do mundo.
 """
     prompt_conteudo = f"""
 OBJETIVO:
