@@ -101,9 +101,3 @@ python -m venv venv
   objShell.CurrentDirectory = strPath
   ' Usa o pythonw de dentro da build_env para garantir que todas as bibliotecas existam
   objShell.Run "build_env\Scripts\pythonw.exe main.py", 0, False
-
-----
-
-# Melhorias futuras
-
-- Permitir escolher a invocação de comando para fazer perguntas ao bot do discord (Atualmente !ao está hardcoded)
