@@ -73,7 +73,6 @@ O **Silent Multiverse Nexus** é uma suíte completa de ferramentas para Mestres
 1. Vá até a aba [**Releases**](../../releases) do repositório.
 2. Baixe o arquivo `SilentMultiverse.zip`.
 3. Descompacte e execute o `SilentMultiverse.exe`. 
-4. O assistente de configuração abrirá automaticamente para você inserir sua chave de API gratuita do Google Gemini e/ou Token do Discord.
 
 ---
 
@@ -102,9 +101,3 @@ python -m venv venv
   objShell.CurrentDirectory = strPath
   ' Usa o pythonw de dentro da build_env para garantir que todas as bibliotecas existam
   objShell.Run "build_env\Scripts\pythonw.exe main.py", 0, False
-
-----
-
-# Melhorias futuras
-
-- Permitir escolher a invocação de comando para fazer perguntas ao bot do discord (Atualmente !ao está hardcoded)
