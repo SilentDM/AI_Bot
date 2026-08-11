@@ -1,7 +1,6 @@
 import os
 # AI_PROVIDER decide, em UM ÚNICO LUGAR, qual implementação de IA o programa
 # inteiro vai usar. Valores esperados: "gemini" (padrão/gratuito) ou "pro"
-# (chave de outro provedor, ex: a conta paga de um amigo).
 AI_PROVIDER = os.getenv("AI_PROVIDER", "gemini").strip().lower()
 # Importamos SÓ o módulo do provedor escolhido. Isso é importante porque
 # cada módulo de provedor faz sua própria checagem de chave obrigatória
@@ -10,6 +9,8 @@ AI_PROVIDER = os.getenv("AI_PROVIDER", "gemini").strip().lower()
 # quando só uma está sendo usada.
 if AI_PROVIDER == "pro":
     from core.ai_pro import ask_ai as _ask_ai_impl
+elif AI_PROVIDER == "claude":
+    from core.ai_claude import ask_ai as _ask_ai_impl
 else:
     from core.ai_gemini import ask_ai as _ask_ai_impl
 

@@ -407,7 +407,7 @@ def compilar_livro_cenario():
         <div class="cover-page">
             <h1>{nome_mundo}</h1>
             <p>Compêndio Oficial de Cenário</p>
-            <p style="font-size: 0.9rem; margin-top: 40px; color: #6b7280;">Gerado por Ao Multiverse Console</p>
+            <p style="font-size: 0.9rem; margin-top: 40px; color: #6b7280;">Gerado por Silent Multiverse Console</p>
         </div>
 
         <div class="toc-box">

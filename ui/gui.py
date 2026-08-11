@@ -224,7 +224,7 @@ class SilentDesktopApp:
             ("worldbuilder", "WorldBuilders"),
             ("chat", "Converse com Ao"),
             ("options", "Opções"),
-            ("models", "Performance IA"),
+            ("models", "Performance Gemini"),
         ]
         for key, label in top_nav_items:
             btn = ttk.Button(sidebar, text=label, style="Nav.TButton", command=lambda k=key: self.switch_page(k))
@@ -404,7 +404,7 @@ class SilentDesktopApp:
 
         # --- QUADRO 3: WorldBuilder ---
         wb_box = ttk.LabelFrame(self.wb_scroll_frame, text=" WorldBuilder (planeja e executa expansão autônoma) ")
-        ttk.Label(wb_box, text="Objetivo:").pack(anchor=tk.W, padx=10, pady=(10, 2))
+        ttk.Label(wb_box, text="Escreva abaixo qual é o objetivo para o WorldBuilder realizar:").pack(anchor=tk.W, padx=10, pady=(10, 2))
         self.worldbuilder_objective = tk.StringVar(value="Completar o Projeto")
         self.objective_entry = ttk.Entry(wb_box, textvariable=self.worldbuilder_objective)
         self.objective_entry.pack(fill=tk.X, padx=10, pady=(0, 8))
@@ -815,10 +815,10 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
             self.log_activity("Reconstruindo contexto do mundo...")
             contexto = cg.force_rebuild_world_context()
             self.log_activity(f"Contexto recriado com sucesso: {contexto['id']}")
-            self.toast("✅ Contexto do Mundo reconstruído!")
+            self.toast("Contexto do Mundo reconstruído!")
         except Exception as e:
             self.log_activity(f"Falha ao reconstruir contexto: {e}")
-            self.toast("❌ Erro ao recriar contexto.")
+            self.toast("Erro ao recriar contexto.")
 
     def start_worldbuilder_thread(self):
         self.worldbuilder_objective_value = self.worldbuilder_objective.get().strip()
@@ -1256,8 +1256,8 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
         
         title_box = ttk.Frame(header_frame)
         title_box.pack(side=tk.LEFT)
-        ttk.Label(title_box, text="Performance dos Modelos IA", font=("Segoe UI", 14, "bold"), foreground="#10b981").pack(anchor=tk.W)
-        ttk.Label(title_box, text="Dashboard responsivo dos modelos Gemini testados e classificados por eficiência.", font=("Segoe UI", 9), foreground="#888888").pack(anchor=tk.W, pady=(3, 0))
+        ttk.Label(title_box, text="Performance dos Modelos Gemini", font=("Segoe UI", 14, "bold"), foreground="#10b981").pack(anchor=tk.W)
+        ttk.Label(title_box, text="Dashboard dos modelos Gemini classificados por eficiência.", font=("Segoe UI", 9), foreground="#888888").pack(anchor=tk.W, pady=(3, 0))
         
         btn_frame = ttk.Frame(header_frame)
         btn_frame.pack(side=tk.RIGHT)
@@ -1523,7 +1523,7 @@ Se o universo estiver 100% coerente, elogie a consistência da lore!
 
         add_p("2. SINTAXE DO EDITOR & REGRAS DE ESCRITA", "h1")
         add_p("• Wikilinks [[Nome Do Arquivo]]:", "h2")
-        add_p("  Sempre que quiser citar outra entidade do seu mundo, use colchetes duplos (ex: [[Reino de Phaeton]]). Clique no link no editor para navegar direto até ele. Se o documento não existir, o programa perguntará se deseja criá-lo!", "bullet")
+        add_p("  Sempre que quiser citar outra entidade do seu mundo, use colchetes duplos (ex: [[Reino de Lucius]]). Clique no link no editor para navegar direto até ele. Se o documento não existir, o programa perguntará se deseja criá-lo!", "bullet")
         add_p("• Tags de Expansão (<-- TODO: Motivo):", "h2")
         add_p("  Com o botão direito do Mouse dentro do editor, exista a opção de inserir a tag <-- TODO:, você também pode digitar manualmente, após os dois pontos, insira o que é para ser feito em uma frase, pode ser uma ordem simples ou complexa.", "bullet")
         add_p("  A função Expander detectará a tag e usará a IA para preencher o trecho automaticamente seguindo suas direções.", "bullet")

@@ -57,7 +57,14 @@ DEFAULT_SETTINGS = {
     "discord_channels_allowed": "",
     "discord_channels_blocked": "",
     "discord_roles_dm": "Mestre, DM, GM",
-    "discord_cooldown_seconds": 5
+    "discord_cooldown_seconds": 15,
+    "ai_provider_ativo": "Gemini"
+}
+
+PROVEDORES_IA = {
+    "Gemini": "gemini",
+    "Pro (OpenAI)": "pro",
+    "Claude (Anthropic)": "claude"
 }
 
 def carregar_configuracoes():
@@ -163,11 +170,49 @@ class OptionsFrame(ttk.Frame):
     def _build_boxes(self):
         # 1. Credenciais (.env)
         cred_box = ttk.LabelFrame(self.scroll_frame, text=" Credenciais de API e Discord (.env) ")
-        ttk.Label(cred_box, text="Chave da IA (GOOGLE_API_KEY / PRO_API_KEY):").pack(anchor=tk.W, padx=10, pady=(8, 2))
-        self.entry_ia_key = ttk.Entry(cred_box, show="*", font=("Segoe UI", 10))
-        self.entry_ia_key.pack(fill=tk.X, padx=10, pady=(0, 6))
+        
+        ttk.Label(cred_box, text="Provedor de IA Ativo:").pack(anchor=tk.W, padx=10, pady=(8, 2))
+        self.combo_provider = ttk.Combobox(
+            cred_box, state="readonly",
+            values=list(PROVEDORES_IA.keys()), font=("Segoe UI", 10)
+        )
+        provider_atual_env = os.getenv("AI_PROVIDER", "gemini").strip().lower()
+        provider_label = next(
+            (label for label, val in PROVEDORES_IA.items() if val == provider_atual_env),
+            "Gemini"
+        )
+        self.combo_provider.set(provider_label)
+        self.combo_provider.pack(fill=tk.X, padx=10, pady=(0, 4))
+        self.combo_provider.bind("<<ComboboxSelected>>", self._on_provider_change)
+        ttk.Label(
+            cred_box,
+            text="⚠️ Requer reiniciar o programa para o novo provedor ter efeito.",
+            foreground="#f59e0b", font=("Segoe UI", 8, "italic")
+        ).pack(anchor=tk.W, padx=10, pady=(0, 10))
+        
+        ttk.Separator(cred_box, orient="horizontal").pack(fill=tk.X, padx=10, pady=(0, 8))
+        # --- Gemini ---
+        ttk.Label(cred_box, text="Gemini", font=("Segoe UI", 9, "bold"), foreground="#10b981").pack(anchor=tk.W, padx=10)
+        ttk.Label(cred_box, text="Chave da API Gemini:").pack(anchor=tk.W, padx=10, pady=(4, 2))
+        self.entry_gemini_key = ttk.Entry(cred_box, show="*", font=("Segoe UI", 10))
+        self.entry_gemini_key.pack(fill=tk.X, padx=10, pady=(0, 8))
 
-        ttk.Label(cred_box, text="Token do Bot do Discord (DISCORD_TOKEN):").pack(anchor=tk.W, padx=10, pady=(4, 2))
+        # --- Claude ---
+        ttk.Label(cred_box, text="Claude (Anthropic)", font=("Segoe UI", 9, "bold"), foreground="#10b981").pack(anchor=tk.W, padx=10)
+        ttk.Label(cred_box, text="Token da API Claude:").pack(anchor=tk.W, padx=10, pady=(4, 2))
+        self.entry_claude_key = ttk.Entry(cred_box, show="*", font=("Segoe UI", 10))
+        self.entry_claude_key.pack(fill=tk.X, padx=10, pady=(0, 8))
+
+        # --- OpenAI (Pro) ---
+        ttk.Label(cred_box, text="OpenAI (Pro)", font=("Segoe UI", 9, "bold"), foreground="#10b981").pack(anchor=tk.W, padx=10)
+        ttk.Label(cred_box, text="Chave da API OpenAI:").pack(anchor=tk.W, padx=10, pady=(4, 2))
+        self.entry_openai_key = ttk.Entry(cred_box, show="*", font=("Segoe UI", 10))
+        self.entry_openai_key.pack(fill=tk.X, padx=10, pady=(0, 10))
+
+        ttk.Separator(cred_box, orient="horizontal").pack(fill=tk.X, padx=10, pady=(0, 8))
+
+        # --- Discord ---
+        ttk.Label(cred_box, text="Token Bot Discord:").pack(anchor=tk.W, padx=10, pady=(4, 2))
         self.entry_discord_key = ttk.Entry(cred_box, show="*", font=("Segoe UI", 10))
         self.entry_discord_key.pack(fill=tk.X, padx=10, pady=(0, 6))
 
@@ -175,7 +220,7 @@ class OptionsFrame(ttk.Frame):
         self.entry_discord_dmid = ttk.Entry(cred_box, font=("Segoe UI", 10))
         self.entry_discord_dmid.pack(fill=tk.X, padx=10, pady=(0, 10))
 
-        btn_salvar_env = ttk.Button(cred_box, text="💾 Salvar Credenciais no .env", command=self._salvar_credenciais_env)
+        btn_salvar_env = ttk.Button(cred_box, text="Salvar Credenciais", command=self._salvar_credenciais_env)
         btn_salvar_env.pack(anchor=tk.E, padx=10, pady=(0, 10))
 
         # 2. Bot do Discord - Regras e Gatilho
@@ -249,24 +294,47 @@ class OptionsFrame(ttk.Frame):
 
         # Lista organizada dos quadros para o grid responsivo
         self.boxes = [cred_box, discord_box, tom_box, sistem_box, expander_opt_box, wb_opt_box]
+    def _on_provider_change(self, event):
+        label_escolhido = self.combo_provider.get()
+        valor_env = PROVEDORES_IA.get(label_escolhido, "gemini")
+        self.settings["ai_provider_ativo"] = label_escolhido
+        salvar_configuracoes(self.settings)
+        atualizar_env({"AI_PROVIDER": valor_env})
+
+        if self.log_callback:
+            self.log_callback(f"Provedor de IA alterado para: {label_escolhido} (AI_PROVIDER={valor_env})")
+        if self.toast_callback:
+            self.toast_callback(f"🤖 Provedor '{label_escolhido}' salvo! Reinicie o programa para aplicar.")
+    
+    def _on_provider_change(self, event):
+        label_escolhido = self.combo_provider.get()
+        valor_env = PROVEDORES_IA.get(label_escolhido, "gemini")
+        self.settings["ai_provider_ativo"] = valor_env
+        salvar_configuracoes(self.settings)
+        atualizar_env({"AI_PROVIDER": valor_env})
+
+        if self.log_callback:
+            self.log_callback(f"Provedor de IA alterado para: {label_escolhido} (AI_PROVIDER={valor_env})")
+        if self.toast_callback:
+            self.toast_callback(f"Provedor '{label_escolhido}' salvo! Reinicie o programa para aplicar.")
 
     def _salvar_credenciais_env(self):
-        ia_key = self.entry_ia_key.get().strip()
+        gemini_key = self.entry_gemini_key.get().strip()
+        claude_key = self.entry_claude_key.get().strip()
+        openai_key = self.entry_openai_key.get().strip()
         discord_key = self.entry_discord_key.get().strip()
         discord_dmid = self.entry_discord_dmid.get().strip()
 
         novos_valores = {}
-        provider = os.getenv("AI_PROVIDER", "gemini").strip().lower()
 
-        if ia_key:
-            if provider == "pro":
-                novos_valores["PRO_API_KEY"] = ia_key
-            else:
-                novos_valores["GOOGLE_API_KEY"] = ia_key
-
+        if gemini_key:
+            novos_valores["GOOGLE_API_KEY"] = gemini_key
+        if claude_key:
+            novos_valores["CLAUDE_TOKEN"] = claude_key
+        if openai_key:
+            novos_valores["PRO_API_KEY"] = openai_key
         if discord_key:
             novos_valores["DISCORD_TOKEN"] = discord_key
-
         if discord_dmid:
             novos_valores["MESTRE_DISCORD_ID"] = discord_dmid
 
@@ -277,7 +345,9 @@ class OptionsFrame(ttk.Frame):
 
         atualizar_env(novos_valores)
 
-        self.entry_ia_key.delete(0, tk.END)
+        self.entry_gemini_key.delete(0, tk.END)
+        self.entry_claude_key.delete(0, tk.END)
+        self.entry_openai_key.delete(0, tk.END)
         self.entry_discord_key.delete(0, tk.END)
         self.entry_discord_dmid.delete(0, tk.END)
 

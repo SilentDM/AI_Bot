@@ -105,7 +105,7 @@ if arquivo_settings.exists():
         pass
 
 if not caminho_inicial:
-    caminho_inicial = os.getenv("PASTA_PROJETO", "Phaeton")
+    caminho_inicial = os.getenv("PASTA_PROJETO", "Projeto")
     if not os.path.isabs(caminho_inicial):
         caminho_inicial = BASE_DIR / caminho_inicial
 
@@ -197,7 +197,7 @@ def existe_nome_parecido(nome_proposto: str, pasta_destino: Path, limiar: float 
         if similaridade >= limiar:
             return item.name
 
-        # 2. Inclusão por Substring (ex: "Eras" em "Eras_de_Phaeton" ou vice-versa)
+        # 2. Inclusão por Substring (ex: "Eras" em "Eras_de_Tauril" ou vice-versa)
         if len(existente_norm) >= 3 and len(alvo_norm) >= 3:
             if existente_norm in alvo_norm or alvo_norm in existente_norm:
                 return item.name

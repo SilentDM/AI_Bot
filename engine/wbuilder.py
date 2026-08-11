@@ -387,7 +387,7 @@ Mantenha consistência com o restante do mundo.
 - Organize o texto com títulos (#, ##, ###).
 - Use citações (> texto) para caixas de lore, citações, diários ou rumores.
 - Use negrito (**termo**) em nomes importantes.
-- Crie Wikilinks [[Nome do Conceito]] sempre que citar NPCs, lugares, facções, deuses ou raças do universo (ex: [[Reino de Phaeton]], [[Ordem da Penumbra]]).
+- Crie Wikilinks [[Nome do Conceito]] sempre que citar NPCs, lugares, facções, deuses ou raças do universo (ex: [[Reino de Lucian]], [[Ordem da Penumbra]]).
 - Não contradiga informações existentes.
 - Mantenha consistência com o restante do mundo.
 """

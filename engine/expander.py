@@ -224,7 +224,7 @@ Substitua essa tag pelo conteúdo expandido, mantendo total coesão com <context
     - Organize o texto com títulos (#, ##, ###).
     - Use citações (> texto) para caixas de lore, rumores, manuscritos ou diários.
     - Use negrito (**palavra**) em termos e itens de destaque.
-    - CRIE WIKILINKS [[Nome do Conceito]]: Sempre que mencionar personagens, cidades, locais, facções, deuses ou relíquias do universo, envolva o nome em colchetes duplos (ex: [[Reino de Phaeton]], [[Mestre Varis]], [[Catedral de Prata]]).
+    - CRIE WIKILINKS [[Nome do Conceito]]: Sempre que mencionar personagens, cidades, locais, facções, deuses ou relíquias do universo, envolva o nome em colchetes duplos (ex: [[Reino de Lucius]], [[Mestre Varis]], [[Catedral de Prata]]).
 </regras_de_resposta>
 """
             try:
