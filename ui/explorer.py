@@ -766,6 +766,12 @@ class ExplorerFrame(ttk.Frame):
 
     def run_improve_file(self, caminho):
         nome_arq = os.path.basename(caminho)
+
+        # 🛡️ Trava de execução em duplicidade
+        if wb.ex.esta_em_processamento(caminho):
+            self.toast(f"'{nome_arq}' já está sendo processado pela IA! Aguarde a conclusão.")
+            return
+
         motivo = simpledialog.askstring(
             "Melhorar Arquivo com IA",
             f"Qual o objetivo da melhoria para '{nome_arq}'?\n(Deixe em branco para uma melhoria geral de coesão e detalhes):",
@@ -779,7 +785,7 @@ class ExplorerFrame(ttk.Frame):
         if self.current_file and os.path.abspath(self.current_file) == os.path.abspath(caminho):
             self.save_current_file()
 
-        self.toast(f"✨ Executando ImproveFile em '{nome_arq}'...")
+        self.toast(f"Executando ImproveFile em '{nome_arq}'...")
         self.log_callback(f"Iniciando ImproveFile manual para: {nome_arq}")
 
         def _worker():
@@ -787,13 +793,13 @@ class ExplorerFrame(ttk.Frame):
                 sucesso = wb.improvefile(caminho, reason=motivo)
                 if sucesso:
                     self.log_callback(f"✅ ImproveFile concluído para: {nome_arq}")
-                    self.toast(f"✅ Nova versão criada para '{nome_arq}'!")
+                    self.toast(f"Nova versão criada para '{nome_arq}'!")
                     self.after(0, self.refresh_tree)
                 else:
-                    self.toast(f"⚠️ ImproveFile não gerou alterações para '{nome_arq}'.")
+                    self.toast(f"ImproveFile cancelado ou sem alterações para '{nome_arq}'.")
             except Exception as e:
                 self.log_callback(f"Erro ao executar ImproveFile: {e}")
-                self.toast(f"❌ Erro ao melhorar '{nome_arq}'.")
+                self.toast(f"Erro ao melhorar '{nome_arq}'.")
 
         threading.Thread(target=_worker, daemon=True).start()
     

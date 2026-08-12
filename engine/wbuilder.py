@@ -362,36 +362,35 @@ def improvefile(path, reason="Melhorar o arquivo!"):
     print(f"Vamos melhorar o arquivo: {path}\nMotivo: {reason}")
     arquivo = resolver_caminho(path)
 
-    if not arquivo.exists():
-        print(f"Arquivo não encontrado, ação ignorada: {arquivo}")
+    # 🛡️ 1. Trava de concorrência contra execuções paralelas no mesmo arquivo
+    if ex.esta_em_processamento(arquivo):
+        print(f"O arquivo '{arquivo.name}' já está em processamento pela IA. Ignorando requisição duplicada.")
         return False
 
-    if not arquivo.is_file():
-        print(f"O caminho informado não é um arquivo, ação ignorada: {arquivo}")
+    if not arquivo.exists() or not arquivo.is_file():
+        print(f"Arquivo não encontrado ou inválido, ação cancelada: {arquivo}")
         return False
+
+    ex.marcar_processamento(arquivo, True)
 
     try:
-        with open(arquivo, "r", encoding="utf-8") as f:
+        with open(arquivo, "r", encoding="utf-8", errors="ignore") as f:
             arquivoatual = f.read()
-    except Exception as e:
-        print(f"Erro ao ler o arquivo {arquivo.name}: {e}")
-        return False
 
-    instrucoes_globais = f"""
+        instrucoes_globais = f"""
 Você é um Mestre de Mesa (DM) de D&D experiente.
 Seu objetivo é melhorar o arquivo: {arquivo.name}
 Seguindo a motivação: {reason}
-Não contradiga informações existentes.
-Mantenha consistência com o restante do mundo.
+
 # REGRAS DE FORMATAÇÃO E WIKILINKS:
 - Organize o texto com títulos (#, ##, ###).
 - Use citações (> texto) para caixas de lore, citações, diários ou rumores.
 - Use negrito (**termo**) em nomes importantes.
-- Crie Wikilinks [[Nome do Conceito]] sempre que citar NPCs, lugares, facções, deuses ou raças do universo (ex: [[Reino de Lucian]], [[Ordem da Penumbra]]).
+- Crie Wikilinks [[Nome do Conceito]] sempre que citar NPCs, lugares, facções, deuses ou raças do universo (ex: [[Reino de Phaeton]], [[Ordem da Penumbra]]).
 - Não contradiga informações existentes.
 - Mantenha consistência com o restante do mundo.
 """
-    prompt_conteudo = f"""
+        prompt_conteudo = f"""
 OBJETIVO:
 {reason}
 O PROJETO COMPLETO está no cache para ser analisado!
@@ -402,20 +401,36 @@ CONTEÚDO ORIGINAL:
 Retorne apenas o conteúdo final do arquivo.
 """
 
-    try:
         texto_expandido = au.ask_ai(
             contents=prompt_conteudo,
             system_instruction=instrucoes_globais,
             temperature=0.4
         )
-        texto_limpo = ex.remover_markdown_fences(texto_expandido)
-        novo_arquivo_path = ex.obter_proximo_nome_versao(arquivo)
 
-        with open(novo_arquivo_path, "w", encoding="utf-8") as f:
-            f.write(texto_limpo)
-        ex.arquivar_versao_antiga(arquivo)
-        print(f"Nova versão criada!! {novo_arquivo_path.name}")
-        return True
+        if texto_expandido:
+            texto_limpo = ex.remover_markdown_fences(texto_expandido)
+            
+            # 🛡️ 2. Calcula o próximo nome de versão (se o original sumiu, vira _v01.md)
+            novo_arquivo_path = ex.obter_proximo_nome_versao(arquivo)
+            novo_arquivo_path.parent.mkdir(parents=True, exist_ok=True)
+
+            with open(novo_arquivo_path, "w", encoding="utf-8") as f:
+                f.write(texto_limpo)
+
+            # Arquiva o original caso ele ainda exista
+            if arquivo.exists():
+                ex.arquivar_versao_antiga(arquivo)
+                print(f"Nova versão criada: {novo_arquivo_path.name}")
+            else:
+                print(f"O arquivo original foi deletado durante a geração. Resultado recuperado e salvo como: {novo_arquivo_path.name}")
+
+            return True
+        else:
+            print(f"O retorno do modelo para {arquivo.name} foi vazio.")
+            return False
+
     except Exception as e:
         print(f"Erro ao processar {arquivo.name}: {e}")
         return False
+    finally:
+        ex.marcar_processamento(arquivo, False)

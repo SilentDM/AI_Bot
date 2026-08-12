@@ -1,0 +1,40 @@
+#Bugs
+- Deletar arquivo enquanto a IA está executando alguma melhoria no arquivo. O arquivo novo é salvo como "Nome"_v01.md quando a execução é concluída.
+- Requisitar alguma melhoria de IA 2x seguidas no mesmo arquivo. É gerada uma mensagem de erro bloqueando a segunda tentativa, pedindo para que aguarde a primeira execução terminar.
+
+
+# Bot do discord
+- Lista de canais para ler todas as mensagens e adicionar ao projeto.
+- Conexão entre Servidor:Projeto (Lista de projetos dinâmica toda vez que um for selecionado + Lista de servidores que o bot está acessando e uma lista de conexão)
+- Atividades gerais dentro do Discord (Rolar Dados, Level up de usuários)
+
+
+# Tradução
+- Atualizar todo o gui.py e settings.py para remover toda e qualquer palavra do código.
+- Gerar pasta Locales para os arquivos JSON de cada língua.
+> Começar com pt_BR.json e en_US.json
+
+
+
+# "Vazamento" de Lógica para a Interface:
+- Prompts e Montagem de Persona no gui.py:
+	No método query_ao_api() e run_lore_audit_task(), o gui.py é quem escreve o texto de instruções do sistema, formata a persona do Ao e define a estrutura do relatório.
+	Onde deveria estar: Em um arquivo engine/lore_auditor.py e core/ao_persona.py. O gui.py deveria apenas chamar lore_auditor.executar() sem saber qual é o texto do prompt.
+- Manipulação de Arquivos de Estilo no settings.py:
+	O settings.py (que é um quadro de interface do Tkinter) contém a função escrever_arquivo_estilo_tom() que abre o disco e escreve o arquivo Style/Tom_e_Clima.md.
+	Onde deveria estar: Em um gerenciador de configurações no engine/style_manager.py.
+
+# A lógica do Worldbuilder está errada...
+Ao passar decisões para o planner, elas tem que ser validadas, então colocadas em uma fila, não executadas(ainda)
+Então vem a próxima iteração, com o projeto e as decisões da fila... não, tem que parar com a iteração, tem que ser apenas um 'round' de melhorias.
+Tem que colocar as decisões na fila de prioridade (Pasta > Arquivos > Melhorias) e então executar.
+Salva as mudanças no .jsonl E precisamos alterar totalmente o UI do programa.
+O Worldbuilder precisa ter a sua aba própria, fazer o topo da 'pagina' ser as opções dele, a caixa de objetivo, exibir as decisões que ele está escolhendo e mostrar o arquivo .jsonl ao final.
+
+Isso faz com que a aba atual, removendo o Worldbuilder, tenha que se chamar apenas "Ações" ou algo como isso.
+- Parar execuções
+- Executar o Expander
+- Executar o Auditor de Lore
+- Montar o HTML
+- Criar Backup
+- Excluir Memórias

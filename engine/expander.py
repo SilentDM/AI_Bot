@@ -74,16 +74,20 @@ def obter_arquivos_relacionados(titulo):
     )
 
 def obter_proximo_nome_versao(caminho_original):
-    diretorio = caminho_original.parent
-    nome_base = re.sub(r'_v\d+$','',caminho_original.stem)
-    extensao = caminho_original.suffix
+    caminho_obj = Path(caminho_original)
+    diretorio = caminho_obj.parent
+    nome_base = re.sub(r'_v\d+$', '', caminho_obj.stem)
+    extensao = caminho_obj.suffix or ".md"
     maior_versao = 0
-    for arquivo in diretorio.glob(f"{nome_base}_v*{extensao}"):
-        match = re.search(r'_v(\d+)$',arquivo.stem)
-        if match:
-            maior_versao = max(maior_versao,int(match.group(1)))
+    
+    if diretorio.exists():
+        for arquivo in diretorio.glob(f"{nome_base}_v*{extensao}"):
+            match = re.search(r'_v(\d+)$', arquivo.stem)
+            if match:
+                maior_versao = max(maior_versao, int(match.group(1)))
+                
     nova_versao = maior_versao + 1
-    return (diretorio /f"{nome_base}_v{nova_versao:02d}{extensao}")
+    return (diretorio / f"{nome_base}_v{nova_versao:02d}{extensao}")
     
 def carregar_diretrizes_estilo():
     """Carrega e unifica as diretrizes de estilo contidas na pasta designada."""
