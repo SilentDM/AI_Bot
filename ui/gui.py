@@ -1,4 +1,4 @@
-import os, threading, time, asyncio, sys, pystray, sys, ctypes, json
+import os, threading, time, asyncio, sys, ctypes, pystray
 import core.ai_gemini as ag
 import core.cache_gemini as cg
 import core.memory as me

@@ -305,18 +305,6 @@ class OptionsFrame(ttk.Frame):
             self.log_callback(f"Provedor de IA alterado para: {label_escolhido} (AI_PROVIDER={valor_env})")
         if self.toast_callback:
             self.toast_callback(f"🤖 Provedor '{label_escolhido}' salvo! Reinicie o programa para aplicar.")
-    
-    def _on_provider_change(self, event):
-        label_escolhido = self.combo_provider.get()
-        valor_env = PROVEDORES_IA.get(label_escolhido, "gemini")
-        self.settings["ai_provider_ativo"] = valor_env
-        salvar_configuracoes(self.settings)
-        atualizar_env({"AI_PROVIDER": valor_env})
-
-        if self.log_callback:
-            self.log_callback(f"Provedor de IA alterado para: {label_escolhido} (AI_PROVIDER={valor_env})")
-        if self.toast_callback:
-            self.toast_callback(f"Provedor '{label_escolhido}' salvo! Reinicie o programa para aplicar.")
 
     def _salvar_credenciais_env(self):
         gemini_key = self.entry_gemini_key.get().strip()

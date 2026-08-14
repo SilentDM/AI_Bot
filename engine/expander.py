@@ -5,6 +5,17 @@ import engine.project_utils as pu
 
 ARQUIVOS_EM_PROCESSAMENTO = set()
 
+def esta_em_processamento(caminho) -> bool:
+    caminho_abs = str(Path(caminho).resolve())
+    return caminho_abs in ARQUIVOS_EM_PROCESSAMENTO
+
+def marcar_processamento(caminho, ativo: bool):
+    caminho_abs = str(Path(caminho).resolve())
+    if ativo:
+        ARQUIVOS_EM_PROCESSAMENTO.add(caminho_abs)
+    else:
+        ARQUIVOS_EM_PROCESSAMENTO.discard(caminho_abs)
+
 def arquivar_versao_antiga(caminho_original):
     """
     Move a versão antiga/original de um arquivo para a pasta logs/history/,
@@ -116,35 +127,6 @@ def remover_markdown_fences(texto: str) -> str:
         linhas.pop(0)
         
     # Se a última linha terminar com as crases, nós a removemos
-    if linhas and linhas[-1].strip().startswith("```"):
-        linhas.pop()
-        
-    return "\n".join(linhas).strip()
-
-def carregar_diretrizes_estilo():
-    pasta_estilo = pu.CAMINHO_ESTILO
-    conteudo_estilo = []
-    if pasta_estilo.exists() and pasta_estilo.is_dir():
-        for arquivo in sorted(pasta_estilo.glob("*.md")):
-            try:
-                with open(arquivo, "r", encoding="utf-8") as f:
-                    titulo = arquivo.stem.replace(" ", "_").replace("-", "_").lower()
-                    conteudo_estilo.append(f"\n<diretrizes_de_{titulo}>\n{f.read().strip()}\n</diretrizes_de_{titulo}>\n")
-            except Exception as e:
-                print(f"Erro ao carregar diretriz {arquivo.name}: {e}")
-    return "".join(conteudo_estilo)
-
-def nome_base(path):
-    return re.sub(r'_v\d+$', '', path.stem.lower())
-
-def remover_markdown_fences(texto: str) -> str:
-    linhas = texto.strip().splitlines()
-    if not linhas:
-        return texto
-
-    if linhas[0].strip().startswith("```"):
-        linhas.pop(0)
-        
     if linhas and linhas[-1].strip().startswith("```"):
         linhas.pop()
         
