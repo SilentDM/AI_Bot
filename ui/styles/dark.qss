@@ -1,0 +1,167 @@
+/* --- TEMA DARK FANTASY PYSIDE6 --- */
+
+QMainWindow, QDialog, QWidget {
+    background-color: #121212;
+    color: #e3e3e3;
+    font-family: 'Segoe UI', 'Consolas', sans-serif;
+    font-size: 10pt;
+}
+
+QFrame#Sidebar {
+    background-color: #0a0a0a;
+    border-right: 1px solid #1e1e1e;
+}
+
+/* BOTOES E NAVEGAÇÃO */
+QPushButton {
+    background-color: #1e1e1e;
+    color: #e3e3e3;
+    border: 1px solid #2d2d2d;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-weight: 500;
+}
+
+QPushButton:hover {
+    background-color: #252526;
+    color: #ffffff;
+    border-color: #10b981;
+}
+
+QPushButton:pressed {
+    background-color: #0f766e;
+    color: #ffffff;
+}
+
+QPushButton#NavBtn {
+    background-color: transparent;
+    border: none;
+    text-align: left;
+    padding: 10px 16px;
+    font-size: 10pt;
+}
+
+QPushButton#NavBtn:hover {
+    background-color: #1e1e1e;
+    color: #10b981;
+}
+
+QPushButton#NavBtnActive {
+    background-color: #1e1e1e;
+    color: #10b981;
+    font-weight: bold;
+    border-left: 3px solid #10b981;
+    text-align: left;
+    padding: 10px 16px;
+}
+
+/* ÁRVORE E TABELAS */
+QTreeWidget {
+    background-color: #1e1e1e;
+    border: 1px solid #2d2d2d;
+    border-radius: 4px;
+    padding: 4px;
+}
+
+QTreeWidget::item {
+    padding: 4px;
+    border-radius: 2px;
+}
+
+QTreeWidget::item:hover {
+    background-color: #252526;
+}
+
+QTreeWidget::item:selected {
+    background-color: #0f766e;
+    color: #ffffff;
+}
+
+/* ABAS DE MÚLTIPLOS ARQUIVOS (QTabWidget) */
+QTabWidget::pane {
+    border: 1px solid #2d2d2d;
+    background-color: #1e1e1e;
+    top: -1px;
+}
+
+QTabBar::tab {
+    background-color: #121212;
+    color: #888888;
+    border: 1px solid #2d2d2d;
+    border-bottom: none;
+    padding: 8px 16px;
+    margin-right: 2px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+}
+
+QTabBar::tab:selected {
+    background-color: #1e1e1e;
+    color: #10b981;
+    font-weight: bold;
+    border-top: 2px solid #10b981;
+}
+
+QTabBar::tab:hover {
+    background-color: #18181c;
+    color: #ffffff;
+}
+
+/* EDITORES E ENTRADAS */
+QLineEdit, QTextEdit, QPlainTextEdit {
+    background-color: #1e1e1e;
+    color: #e3e3e3;
+    border: 1px solid #2d2d2d;
+    border-radius: 4px;
+    padding: 6px;
+    selection-background-color: #0f766e;
+    selection-color: #ffffff;
+}
+
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus {
+    border-color: #10b981;
+}
+
+/* BARRA DE FERRAMENTAS DO EDITOR */
+QToolBar {
+    background-color: #121212;
+    border: 1px solid #2d2d2d;
+    border-radius: 4px;
+    spacing: 4px;
+    padding: 2px;
+}
+
+QToolButton {
+    background-color: #1e1e1e;
+    color: #e3e3e3;
+    border: 1px solid #2d2d2d;
+    border-radius: 3px;
+    padding: 4px 8px;
+}
+
+QToolButton:hover {
+    background-color: #0f766e;
+    color: #ffffff;
+}
+
+/* BARRA DE STATUS */
+QStatusBar {
+    background-color: #0a0a0a;
+    color: #888888;
+    border-top: 1px solid #1e1e1e;
+}
+
+/* PAINÉIS DE OPÇÕES */
+QGroupBox {
+    border: 1px solid #2d2d2d;
+    border-radius: 6px;
+    margin-top: 12px;
+    font-weight: bold;
+    color: #10b981;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 0 6px;
+}

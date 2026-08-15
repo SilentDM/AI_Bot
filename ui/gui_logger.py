@@ -1,17 +1,16 @@
-# gui_logger.py
-import sys
+from PySide6.QtCore import QObject, Signal
 
-class GuiOutput:
-    def __init__(self, callback):
-        self.callback = callback
+class GuiOutput(QObject):
+    """Captura stdout/stderr e emite um Sinal Qt seguro para a interface."""
+    text_written = Signal(str)
+
+    def __init__(self):
+        super().__init__()
 
     def write(self, text):
-        text = text.strip()
-        if text:
-            try:
-                self.callback(text)
-            except Exception:
-                pass  
+        text_str = str(text).strip()
+        if text_str:
+            self.text_written.emit(text_str)
 
     def flush(self):
         pass
