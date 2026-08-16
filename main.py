@@ -40,8 +40,9 @@ def capturar_erros_fatais(exc_type, exc_value, exc_traceback):
 
 def configurar_ambiente():
     """Garante o .env e carrega variáveis."""
-    from ui.setup_env import garantir_env
+    from ui.setup_env import garantir_env, garantir_icones_svg
     garantir_env()
+    garantir_icones_svg()
     from dotenv import load_dotenv
     load_dotenv(BASE_DIR / ".env")
 

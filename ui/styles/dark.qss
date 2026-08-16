@@ -12,7 +12,7 @@ QFrame#Sidebar {
     border-right: 1px solid #1e1e1e;
 }
 
-/* BOTOES E NAVEGAÇÃO */
+/* BOTEIS E NAVEGAÇÃO */
 QPushButton {
     background-color: #1e1e1e;
     color: #e3e3e3;
@@ -55,9 +55,10 @@ QPushButton#NavBtnActive {
     padding: 10px 16px;
 }
 
-/* ÁRVORE E TABELAS */
+/* ÁRVORE E TABELAS DO EXPLORER */
 QTreeWidget {
     background-color: #1e1e1e;
+    color: #e3e3e3;
     border: 1px solid #2d2d2d;
     border-radius: 4px;
     padding: 4px;
@@ -75,6 +76,23 @@ QTreeWidget::item:hover {
 QTreeWidget::item:selected {
     background-color: #0f766e;
     color: #ffffff;
+}
+
+/* SETAS DAS PASTAS (REFERÊNCIA A ARQUIVOS SVG LOCAIS) */
+QTreeWidget::branch:has-children:closed {
+    image: url("ui/styles/arrow_right.svg");
+}
+
+QTreeWidget::branch:has-children:closed:hover {
+    image: url("ui/styles/arrow_right_hover.svg");
+}
+
+QTreeWidget::branch:has-children:open {
+    image: url("ui/styles/arrow_down.svg");
+}
+
+QTreeWidget::branch:has-children:open:hover {
+    image: url("ui/styles/arrow_down_hover.svg");
 }
 
 /* ABAS DE MÚLTIPLOS ARQUIVOS (QTabWidget) */
