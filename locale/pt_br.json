@@ -70,7 +70,7 @@
 
   "options.title": "Opções do Sistema",
   "options.subtitle": "Configure credenciais (.env), comportamentos automáticos e regras do bot do Discord.",
-  "options.language_box": " 🌐 Idioma do Sistema (Language) ",
+  "options.language_box": "Idioma do Sistema (Language) ",
   "options.select_language": "Selecione o idioma da interface:",
   "options.cred_box": " Credenciais de API e Discord (.env) ",
   "options.provider_label": "Provedor de IA Ativo:",

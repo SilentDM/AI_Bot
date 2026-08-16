@@ -3,7 +3,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel,
     QLineEdit, QPushButton, QComboBox, QGroupBox, QCheckBox, QRadioButton, QScrollArea
 )
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 import engine.project_utils as pu
 from ui.setup_env import atualizar_env
 
@@ -94,25 +94,25 @@ class OptionsWidget(QWidget):
         container = QWidget()
         scroll.setWidget(container)
 
-        self.grid = QGridLayout(container)
+        # 🟢 LAYOUT PRINCIPAL DO CONTAINER COM ALINHAMENTO COMPACTO
+        container_layout = QVBoxLayout(container)
+        container_layout.setContentsMargins(15, 15, 15, 15)
+
+        self.grid = QGridLayout()
+        self.grid.setSpacing(12)
+        container_layout.addLayout(self.grid)
+
         self._build_boxes()
 
-    def _build_boxes(self):
-        # 0. IDIOMA DO SISTEMA (i18n)
-        box_lang = QGroupBox(pu.tr("options.language_box"))
-        l_lang = QVBoxLayout(box_lang)
-        l_lang.addWidget(QLabel(pu.tr("options.select_language")))
-        self.combo_lang = QComboBox()
-        idiomas_disponiveis = pu.obter_idiomas_disponiveis()
-        self.combo_lang.addItems([i.upper() for i in idiomas_disponiveis])
-        idioma_atual = self.settings.get("idioma_ativo", "pt_br").upper()
-        self.combo_lang.setCurrentText(idioma_atual)
-        self.combo_lang.currentTextChanged.connect(self._on_idioma_change)
-        l_lang.addWidget(self.combo_lang)
+        # 🟢 EMPURRA TODAS AS CAIXAS PARA O TOPO DA TELA
+        container_layout.addStretch()
 
+    def _build_boxes(self):
         # 1. CREDENCIAIS (.env)
         box_cred = QGroupBox(pu.tr("options.cred_box"))
         l_cred = QVBoxLayout(box_cred)
+        l_cred.setAlignment(Qt.AlignTop)
+        l_cred.setSpacing(6)
 
         l_cred.addWidget(QLabel(pu.tr("options.provider_label")))
         self.combo_provider = QComboBox()
@@ -149,6 +149,8 @@ class OptionsWidget(QWidget):
         # 2. DISCORD
         box_disc = QGroupBox(pu.tr("options.discord_box"))
         l_disc = QVBoxLayout(box_disc)
+        l_disc.setAlignment(Qt.AlignTop)
+        l_disc.setSpacing(6)
         l_disc.addWidget(QLabel(pu.tr("options.prefix_label")))
         self.txt_prefix = QLineEdit(self.settings.get("discord_prefix", "!ao"))
         self.txt_prefix.textChanged.connect(self._salvar_campos_discord)
@@ -159,27 +161,62 @@ class OptionsWidget(QWidget):
         self.txt_roles.textChanged.connect(self._salvar_campos_discord)
         l_disc.addWidget(self.txt_roles)
 
-        # 3. TOM E CLIMA
+        l_disc.addWidget(QLabel(pu.tr("options.allowed_channels")))
+        self.txt_allowed = QLineEdit(self.settings.get("discord_channels_allowed", ""))
+        self.txt_allowed.textChanged.connect(self._salvar_campos_discord)
+        l_disc.addWidget(self.txt_allowed)
+
+        l_disc.addWidget(QLabel(pu.tr("options.blocked_channels")))
+        self.txt_blocked = QLineEdit(self.settings.get("discord_channels_blocked", ""))
+        self.txt_blocked.textChanged.connect(self._salvar_campos_discord)
+        l_disc.addWidget(self.txt_blocked)
+
+        l_disc.addWidget(QLabel(pu.tr("options.cooldown_label")))
+        self.txt_cooldown = QLineEdit(str(self.settings.get("discord_cooldown_seconds", 15)))
+        self.txt_cooldown.textChanged.connect(self._salvar_campos_discord)
+        l_disc.addWidget(self.txt_cooldown)
+        
+        # 3. IDIOMA DO SISTEMA
+        box_lang = QGroupBox(pu.tr("options.language_box"))
+        l_lang = QVBoxLayout(box_lang)
+        l_lang.setAlignment(Qt.AlignTop)
+        l_lang.setSpacing(6)
+        l_lang.addWidget(QLabel(pu.tr("options.select_language")))
+        self.combo_lang = QComboBox()
+        idiomas_disponiveis = pu.obter_idiomas_disponiveis()
+        self.combo_lang.addItems([i.upper() for i in idiomas_disponiveis])
+        idioma_atual = self.settings.get("idioma_ativo", "pt_br").upper()
+        self.combo_lang.setCurrentText(idioma_atual)
+        self.combo_lang.currentTextChanged.connect(self._on_idioma_change)
+        l_lang.addWidget(self.combo_lang)
+
+        # 4. TOM E CLIMA
         box_tom = QGroupBox(pu.tr("options.tone_box"))
         l_tom = QVBoxLayout(box_tom)
+        l_tom.setAlignment(Qt.AlignTop)
+        l_tom.setSpacing(6)
         self.combo_tom = QComboBox()
         self.combo_tom.addItems(list(PERFIS_TOM.keys()))
         self.combo_tom.setCurrentText(self.settings.get("tom_clima_perfil", "Dark Fantasy (Grimdark)"))
         self.combo_tom.currentTextChanged.connect(self._on_tom_change)
         l_tom.addWidget(self.combo_tom)
 
-        # 4. SISTEMA DE REGRAS
+        # 5. SISTEMA DE REGRAS
         box_sis = QGroupBox(pu.tr("options.system_box"))
         l_sis = QVBoxLayout(box_sis)
+        l_sis.setAlignment(Qt.AlignTop)
+        l_sis.setSpacing(6)
         self.combo_sis = QComboBox()
         self.combo_sis.addItems(list(SISTEMAS_RPG.keys()))
         self.combo_sis.setCurrentText(self.settings.get("rpg_sistema_ativo", "D&D 5e"))
         self.combo_sis.currentTextChanged.connect(self._on_sistema_change)
         l_sis.addWidget(self.combo_sis)
 
-        # 5. AUTOMAÇÃO EXPANDER
+        # 6. AUTOMAÇÃO EXPANDER
         box_exp = QGroupBox(pu.tr("options.expander_auto_box"))
         l_exp = QHBoxLayout(box_exp)
+        l_exp.setAlignment(Qt.AlignTop)
+        l_exp.setSpacing(10)
         self.rb_exp_off = QRadioButton("Desabilitado")
         self.rb_exp_on = QRadioButton("Habilitado")
         if self.settings.get("auto_expander", False): self.rb_exp_on.setChecked(True)
@@ -187,9 +224,11 @@ class OptionsWidget(QWidget):
         self.rb_exp_on.toggled.connect(self._on_auto_expander_change)
         l_exp.addWidget(self.rb_exp_off); l_exp.addWidget(self.rb_exp_on)
 
-        # 6. PERMISSÕES WORLDBUILDER
+        # 7. PERMISSÕES WORLDBUILDER
         box_wb = QGroupBox(pu.tr("options.wb_permissions_box"))
         l_wb = QVBoxLayout(box_wb)
+        l_wb.setAlignment(Qt.AlignTop)
+        l_wb.setSpacing(6)
         self.chk_wb_folder = QCheckBox("Criar Pastas (CreateFolder)")
         self.chk_wb_folder.setChecked(self.settings.get("wb_allow_create_folder", True))
         self.chk_wb_folder.toggled.connect(lambda v: self._salvar_perm_wb("wb_allow_create_folder", v))
@@ -204,9 +243,9 @@ class OptionsWidget(QWidget):
 
         l_wb.addWidget(self.chk_wb_folder); l_wb.addWidget(self.chk_wb_file); l_wb.addWidget(self.chk_wb_improve)
 
-        self.grid.addWidget(box_lang, 0, 0)
+        self.grid.addWidget(box_disc, 0, 0)
         self.grid.addWidget(box_cred, 0, 1)
-        self.grid.addWidget(box_disc, 1, 0)
+        self.grid.addWidget(box_lang, 1, 0)
         self.grid.addWidget(box_tom, 1, 1)
         self.grid.addWidget(box_sis, 2, 0)
         self.grid.addWidget(box_exp, 2, 1)
