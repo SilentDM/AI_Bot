@@ -15,6 +15,8 @@ import core.cache_gemini as cg
 import core.memory as me
 
 
+# --- WORKERS NATIVOS DO QT (QTHREAD) ---
+
 class ExpanderWorker(QObject):
     finished = Signal(str)
     log = Signal(str)
@@ -39,7 +41,7 @@ class WorldBuilderWorker(QObject):
 
     def run(self):
         try:
-            self.log.emit(f"Iniciando WorldBuilder autônomo com objetivo: '{self.objective}'")
+            self.log.emit(f"Iniciando WorldBuilder autônomo. Objetivo: '{self.objective}'")
             wb.taskplanner(self.objective)
             self.finished.emit("WorldBuilder Concluído")
         except Exception as e:
@@ -114,6 +116,8 @@ class BackupWorker(QObject):
             self.finished.emit("Erro", None, 0)
 
 
+# --- PAINEL PRINCIPAL DEDICADO DO WORLDBUILDER ---
+
 class WorldBuilderWidget(QWidget):
     signal_log = Signal(str)
     signal_toast = Signal(str)
@@ -138,97 +142,119 @@ class WorldBuilderWidget(QWidget):
         self.txt_wb_log.append(formatted_msg)
         self.signal_log.emit(msg)
 
-    def append_wb_log(self, msg): self.signal_wb_log.emit(msg)
+    def append_wb_log(self, msg):
+        self.signal_wb_log.emit(msg)
 
     def _start_worker_thread(self, worker, on_finished=None):
         thread = QThread(self)
         worker.moveToThread(thread)
+
         ref = (thread, worker)
         self.running_threads.add(ref)
 
         thread.started.connect(worker.run)
         worker.log.connect(self.append_wb_log)
-        if on_finished: worker.finished.connect(on_finished)
+
+        if on_finished:
+            worker.finished.connect(on_finished)
+
         worker.finished.connect(thread.quit)
 
         def _cleanup():
             self.running_threads.discard(ref)
-            worker.deleteLater(); thread.deleteLater()
+            worker.deleteLater()
+            thread.deleteLater()
 
         thread.finished.connect(_cleanup)
         thread.start()
 
     def setup_ui(self):
         main_layout = QVBoxLayout(self)
+
         scroll = QScrollArea(self)
         scroll.setWidgetResizable(True)
         main_layout.addWidget(scroll)
 
         container = QWidget()
         scroll.setWidget(container)
+
         layout = QVBoxLayout(container)
 
         # 1. CONTROLE DE EMERGÊNCIA
-        box_stop = QGroupBox(pu.tr("worldbuilder.emergency_stop"))
+        box_stop = QGroupBox(pu.tr("actions.stop_all", " Controle de Emergência "))
         l_stop = QVBoxLayout(box_stop)
-        btn_stop = QPushButton(pu.tr("worldbuilder.stop_btn"))
+        btn_stop = QPushButton(pu.tr("actions.stop_all", "⛔ PARAR QUALQUER EXECUÇÃO ATUAL"))
         btn_stop.setStyleSheet("background-color: #7f1d1d; color: white; font-weight: bold;")
         btn_stop.clicked.connect(self.stop_all)
         l_stop.addWidget(btn_stop)
         layout.addWidget(box_stop)
 
         # 2. EXPANDER E CONTEXTO
-        box_exp = QGroupBox(pu.tr("worldbuilder.expander_box"))
+        box_exp = QGroupBox(pu.tr("actions.expander_title", " Expander & Contexto "))
         l_exp = QVBoxLayout(box_exp)
-        btn_exp = QPushButton(pu.tr("worldbuilder.run_expander"))
+        btn_exp = QPushButton(pu.tr("actions.expander_btn", "▶ Executar Tarefa do Expander"))
         btn_exp.clicked.connect(self.run_expander_worker)
-        btn_reb = QPushButton(pu.tr("worldbuilder.rebuild_context"))
+        btn_reb = QPushButton(pu.tr("actions.rebuild_ctx_btn", "🌐 Reconstruir Contexto do Mundo"))
         btn_reb.clicked.connect(self.rebuild_context)
-        l_exp.addWidget(btn_exp); l_exp.addWidget(btn_reb)
+        l_exp.addWidget(btn_exp)
+        l_exp.addWidget(btn_reb)
         layout.addWidget(box_exp)
 
-        # 3. WORLDBUILDER
-        box_wb = QGroupBox(pu.tr("worldbuilder.wb_box"))
+        # 3. WORLDBUILDER AUTÔNOMO
+        box_wb = QGroupBox(pu.tr("wb.title", " WorldBuilder "))
         l_wb = QVBoxLayout(box_wb)
-        self.txt_wb_obj = QLineEdit("Completar o Projeto")
-        btn_wb = QPushButton(pu.tr("worldbuilder.run_wb"))
+        self.txt_wb_obj = QLineEdit(pu.tr("wb.goal_placeholder", "Completar o Projeto"))
+        btn_wb = QPushButton(pu.tr("wb.btn_run", "▶ Executar WorldBuilder"))
         btn_wb.clicked.connect(lambda: self.run_worldbuilder_worker(self.txt_wb_obj.text()))
-        l_wb.addWidget(QLabel(pu.tr("worldbuilder.wb_objective_label")))
-        l_wb.addWidget(self.txt_wb_obj); l_wb.addWidget(btn_wb)
+        l_wb.addWidget(QLabel(pu.tr("wb.goal_label", "Objetivo do WorldBuilder:")))
+        l_wb.addWidget(self.txt_wb_obj)
+        l_wb.addWidget(btn_wb)
         layout.addWidget(box_wb)
 
         # 4. AUDITORIA DE LORE
-        box_aud = QGroupBox(pu.tr("worldbuilder.audit_box"))
+        box_aud = QGroupBox(pu.tr("actions.audit_title", " Auditoria de Lore "))
         l_aud = QVBoxLayout(box_aud)
-        btn_aud = QPushButton(pu.tr("worldbuilder.run_audit"))
+        btn_aud = QPushButton(pu.tr("actions.audit_btn", "▶ Auditar Lore do Mundo (Buscar Incoerências)"))
         btn_aud.clicked.connect(self.run_lore_audit_worker)
         l_aud.addWidget(btn_aud)
         layout.addWidget(box_aud)
 
-        # 5. FERRAMENTAS E BACKUP
-        box_tools = QGroupBox(pu.tr("worldbuilder.tools_box"))
+        # 5. EXPORTAÇÃO E BACKUP
+        box_tools = QGroupBox(pu.tr("actions.mgmt_title", " Exportação & Backup "))
         l_tools = QHBoxLayout(box_tools)
-        btn_comp = QPushButton(pu.tr("worldbuilder.compile_book")); btn_comp.clicked.connect(self.export_sourcebook)
-        btn_back = QPushButton(pu.tr("worldbuilder.backup_zip")); btn_back.clicked.connect(self.create_backup)
-        btn_del_mem = QPushButton(pu.tr("worldbuilder.delete_memories")); btn_del_mem.clicked.connect(self.delete_memories)
-        l_tools.addWidget(btn_comp); l_tools.addWidget(btn_back); l_tools.addWidget(btn_del_mem)
+        btn_comp = QPushButton(pu.tr("actions.export_btn", "📄 Compilar Livro (HTML)"))
+        btn_comp.clicked.connect(self.export_sourcebook)
+        btn_back = QPushButton(pu.tr("actions.backup_btn", "💾 Backup ZIP"))
+        btn_back.clicked.connect(self.create_backup)
+        btn_del_mem = QPushButton(pu.tr("actions.del_memories_btn", "🗑️ Excluir Memórias"))
+        btn_del_mem.clicked.connect(self.delete_memories)
+        l_tools.addWidget(btn_comp)
+        l_tools.addWidget(btn_back)
+        l_tools.addWidget(btn_del_mem)
         layout.addWidget(box_tools)
 
-        # 6. LOGS WORLDBUILDER
-        box_wb_log = QGroupBox(pu.tr("worldbuilder.log_box"))
+        # 6. CAIXA DE LOGS DO WORLDBUILDER
+        box_wb_log = QGroupBox(pu.tr("wb.log_title", " 📜 Progresso & Logs de Atividades do WorldBuilder "))
         l_wb_log = QVBoxLayout(box_wb_log)
+
         log_header = QHBoxLayout()
-        log_header.addWidget(QLabel("Acompanhamento em tempo real:"))
-        btn_clear_log = QPushButton(pu.tr("worldbuilder.clear_log"))
-        btn_clear_log.setFixedWidth(120); btn_clear_log.clicked.connect(self.clear_wb_log)
+        log_header.addWidget(QLabel("Acompanhamento em tempo real dos processos:"))
+        btn_clear_log = QPushButton(pu.tr("wb.clear_log", "Limpar Log Local"))
+        btn_clear_log.setFixedWidth(120)
+        btn_clear_log.clicked.connect(self.clear_wb_log)
         log_header.addWidget(btn_clear_log)
         l_wb_log.addLayout(log_header)
 
-        self.txt_wb_log = QTextEdit(); self.txt_wb_log.setReadOnly(True); self.txt_wb_log.setMinimumHeight(180)
+        self.txt_wb_log = QTextEdit()
+        self.txt_wb_log.setReadOnly(True)
+        self.txt_wb_log.setMinimumHeight(180)
+        self.txt_wb_log.setPlaceholderText("Aguardando início de tarefas...")
         l_wb_log.addWidget(self.txt_wb_log)
+
         layout.addWidget(box_wb_log)
 
-    def clear_wb_log(self): self.txt_wb_log.clear()
+    def clear_wb_log(self):
+        self.txt_wb_log.clear()
 
     def stop_all(self):
         pu.request_cancellation()
@@ -252,25 +278,33 @@ class WorldBuilderWidget(QWidget):
     def run_lore_audit_worker(self):
         pu.reset_cancellation()
         worker = LoreAuditWorker()
+
         def _on_finished(status, report):
             self.signal_toast.emit(f"Auditoria: {status}")
             QMessageBox.information(self, "Relatório de Auditoria de Lore", report)
+
         self._start_worker_thread(worker, _on_finished)
 
     def export_sourcebook(self):
         worker = CompileBookWorker()
+
         def _on_finished(status, path):
-            if path: pu.abrir_no_explorador_nativo(str(path))
+            if path:
+                pu.abrir_no_explorador_nativo(str(path))
+
         self._start_worker_thread(worker, _on_finished)
 
     def create_backup(self):
         worker = BackupWorker()
+
         def _on_finished(status, path, total):
-            if path: QMessageBox.information(self, "Backup Concluído", f"Backup com {total} arquivos em:\n{path}")
+            if path:
+                QMessageBox.information(self, "Backup Concluído", f"Backup com {total} arquivos salvo em:\n{path}")
+
         self._start_worker_thread(worker, _on_finished)
 
     def delete_memories(self):
         if QMessageBox.question(self, "Excluir Memórias", "Deseja excluir todas as memórias salvas?") == QMessageBox.Yes:
             me.delete_all_memories()
-            self.append_wb_log("🗑️ Todas as memórias foram excluídas.")
+            self.append_wb_log("🗑️ Todas as memórias do projeto foram excluídas.")
             self.signal_toast.emit("🗑️ Memórias apagadas!")

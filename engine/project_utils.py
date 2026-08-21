@@ -15,6 +15,7 @@ PASTA_TEMPLATES = (BASE_DIR / "Templates").resolve()
 PASTA_LOCALE = (BASE_DIR / "Locale").resolve()
 PASTA_ESTILO = os.getenv("PASTA_ESTILO", "Style")
 CAMINHO_ESTILO = (BASE_DIR / PASTA_ESTILO).resolve()
+PASTA_DISCORD_KNOWLEDGE = (BASE_DIR / "discord_knowledge").resolve()
 PROJECT_ROOT = BASE_DIR
 
 CAMINHO_PROJETO = None
@@ -147,23 +148,23 @@ def obter_projetos_recentes():
     return []
 
 def definir_projeto_ativo(caminho_bruto):
+    """
+    Define e ativa o projeto informado preservando todas as configurações existentes no settings.json.
+    """
     global CAMINHO_PROJETO, PASTA_PROJETO
+    
     caminho_obj = Path(caminho_bruto).resolve()
     caminho_obj.mkdir(parents=True, exist_ok=True)
     
     CAMINHO_PROJETO = caminho_obj
     PASTA_PROJETO = caminho_obj.name
 
+    # 🟢 LÊ O SETTINGS.JSON DE FORMA SEGUIRA SEM DEPENDÊNCIA CIRCULAR
     arquivo_settings = PASTA_LOGS / "settings.json"
-    dados = {}
-    if arquivo_settings.exists():
-        try:
-            with open(arquivo_settings, "r", encoding="utf-8") as f:
-                dados = json.load(f)
-        except Exception:
-            pass
+    dados = ler_json_seguro(arquivo_settings, LOCK_MODELS, padrao={})
 
     dados["caminho_projeto_ativo"] = str(caminho_obj)
+    
     recentes = dados.get("projetos_recentes", [])
     str_caminho = str(caminho_obj)
     if str_caminho in recentes:
@@ -171,30 +172,11 @@ def definir_projeto_ativo(caminho_bruto):
     recentes.insert(0, str_caminho)
     dados["projetos_recentes"] = recentes[:10]
 
-    try:
-        with open(arquivo_settings, "w", encoding="utf-8") as f:
-            json.dump(dados, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        print(f"Erro ao salvar projeto ativo: {e}")
+    # 🟢 SALVA ATOMICAMENTE MANTENDO TODAS AS DEMAIS CHAVES
+    salvar_json_seguro(arquivo_settings, dados, LOCK_MODELS)
 
     print(f"🌍 Projeto Ativo configurado para: {CAMINHO_PROJETO}")
     return CAMINHO_PROJETO
-
-arquivo_settings = PASTA_LOGS / "settings.json"
-caminho_inicial = None
-if arquivo_settings.exists():
-    try:
-        with open(arquivo_settings, "r", encoding="utf-8") as f:
-            caminho_inicial = json.load(f).get("caminho_projeto_ativo")
-    except Exception:
-        pass
-
-if not caminho_inicial:
-    caminho_inicial = os.getenv("PASTA_PROJETO", "Projeto")
-    if not os.path.isabs(caminho_inicial):
-        caminho_inicial = BASE_DIR / caminho_inicial
-
-definir_projeto_ativo(caminho_inicial)
 
 
 
@@ -318,43 +300,42 @@ def carregar_estrutura_projeto():
 
 def carregar_projeto(is_dm: bool = True):
     caminho = Path(CAMINHO_PROJETO)
-    if not caminho.exists(): return ""
+    if not caminho.exists():
+        return ""
     
+    # Lê todos os arquivos Markdown ativos do cofre/projeto
     all_files = list(caminho.rglob("*.md"))
-    groups = {}
-    for f in all_files:
-        base_name = re.sub(r'_v\d+$', '', f.stem)
-        key = (f.parent, base_name)
-        if key not in groups: groups[key] = []
-        groups[key].append(f)
-        
-    latest_files = []
-    for key, files in groups.items():
-        def get_version(path):
-            match = re.search(r'_v(\d+)$', path.stem)
-            return int(match.group(1)) if match else 0
-        files.sort(key=get_version, reverse=True)
-        latest_files.append(files[0])
 
     conteudo_total = []
-    for f_path in latest_files:
+    for f_path in all_files:
+        if any(part in IGNORELIST for part in f_path.parts):
+            continue
+
         try:
-            with open(f_path, "r", encoding="utf-8") as file_obj: content = file_obj.read()
+            with open(f_path, "r", encoding="utf-8") as file_obj:
+                content = file_obj.read()
         except UnicodeDecodeError:
             try:
-                with open(f_path, "r", encoding="latin1") as file_obj: content = file_obj.read()
-            except Exception: continue
+                with open(f_path, "r", encoding="latin1") as file_obj:
+                    content = file_obj.read()
+            except Exception:
+                continue
         
         if (any(tag in content for tag in TAG_ALVO) or any(ignore in content for ignore in IGNORELIST)):
             continue
+
         content_filtrado = sf.filtrar_conteudo_por_permissao(content, is_dm=is_dm)
-        if not content_filtrado: continue            
+        if not content_filtrado:
+            continue            
+
         conteudo_total.append(f"\n==== {f_path.name} ====\n{content_filtrado}\n")
         
     return "\n\n".join(conteudo_total)
 
 def request_cancellation(): _CANCEL_EVENT.set()
+
 def reset_cancellation(): _CANCEL_EVENT.clear()
+
 def is_cancelled() -> bool: return _CANCEL_EVENT.is_set()
 
 def carregar_mapa_ordens(): return ler_json_seguro(ARQUIVO_ORDEM_GLOBAL, LOCK_FOLDER_ORDERS, padrao={})
@@ -611,3 +592,29 @@ def formatar_markdown_para_chat_html(texto: str) -> str:
     html = re.sub(r'\[\[([^\|\]]+)(?:\|([^\]]+))?\]\]', r'<span style="color:#38bdf8; font-weight:bold; text-decoration:underline;">[[\1]]</span>', html)
     html = html.replace("\n", "<br>")
     return html
+
+def carregar_conhecimento_discord(guild_id: str = None) -> str:
+    """Carrega os registros da pasta Discord_Knowledge ocultando extensoes de arquivos .md."""
+    if not PASTA_DISCORD_KNOWLEDGE.exists():
+        return ""
+
+    conteudo_total = []
+    
+    if guild_id:
+        pasta_servidor = PASTA_DISCORD_KNOWLEDGE / f"server_{guild_id}"
+        arquivos_servidor = list(pasta_servidor.rglob("*.md")) if pasta_servidor.exists() else []
+    else:
+        arquivos_servidor = list(PASTA_DISCORD_KNOWLEDGE.rglob("*.md"))
+
+    for f_path in arquivos_servidor:
+        try:
+            with open(f_path, "r", encoding="utf-8") as f:
+                txt = f.read().strip()
+                if txt:
+                    # 🟢 REMOVE A EXTENSÃO .md E FORMATADO COMO CANAL (#nome-do-canal)
+                    nome_canal = f_path.stem.replace("_", "-")
+                    conteudo_total.append(f"=== CANAL DO DISCORD: #{nome_canal} ===\n{txt}\n")
+        except Exception:
+            continue
+
+    return "\n\n".join(conteudo_total)

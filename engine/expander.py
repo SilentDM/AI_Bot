@@ -16,36 +16,46 @@ def marcar_processamento(caminho, ativo: bool):
     else:
         ARQUIVOS_EM_PROCESSAMENTO.discard(caminho_abs)
 
-def arquivar_versao_antiga(caminho_original):
+def salvar_snapshot_historico(caminho_original) -> Path | None:
     """
-    Move a versão antiga/original de um arquivo para a pasta logs/history/,
-    preservando a estrutura de subpastas.
+    Salva uma cópia de backup da versão atual na pasta logs/history/
+    com sufixo de versão antes de sobrescrever o arquivo original do projeto.
+     Preserva o nome do arquivo original para não quebrar Wikilinks do Obsidian!
     """
     try:
-        caminho_original = Path(caminho_original)
-        if not caminho_original.exists():
-            return
+        caminho_obj = Path(caminho_original)
+        if not caminho_obj.exists():
+            return None
 
         pasta_historico = pu.PASTA_LOGS / "history"
         try:
-            relativo = caminho_original.relative_to(pu.CAMINHO_PROJETO)
+            relativo = caminho_obj.relative_to(pu.CAMINHO_PROJETO)
             destino_dir = pasta_historico / relativo.parent
         except ValueError:
             destino_dir = pasta_historico
 
         destino_dir.mkdir(parents=True, exist_ok=True)
-        destino_arquivo = destino_dir / caminho_original.name
 
-        # 🛡️ Se o arquivo já existir no histórico, remove antes para o shutil.move não falhar no Windows
-        if destino_arquivo.exists():
-            try:
-                destino_arquivo.unlink()
-            except Exception:
-                pass
+        nome_base = caminho_obj.stem
+        ext = caminho_obj.suffix or ".md"
 
-        shutil.move(str(caminho_original), str(destino_arquivo))
+        # Calcula o número da versão para salvar na pasta de histórico
+        maior_v = 0
+        for arq in destino_dir.glob(f"{nome_base}_v*{ext}"):
+            match = re.search(r'_v(\d+)$', arq.stem)
+            if match:
+                maior_v = max(maior_v, int(match.group(1)))
+
+        nova_v = maior_v + 1
+        nome_backup = f"{nome_base}_v{nova_v:02d}{ext}"
+        caminho_backup = destino_dir / nome_backup
+
+        shutil.copy2(str(caminho_obj), str(caminho_backup))
+        print(f"📦 Backup de histórico salvo em: logs/history/{caminho_backup.name}")
+        return caminho_backup
     except Exception as e:
-        print(f"Erro ao arquivar versão antiga ({caminho_original.name}): {e}")
+        print(f"Erro ao salvar snapshot de histórico ({caminho_original}): {e}")
+        return None
 
 def obter_arquivos_relacionados(titulo):
     relacionados = []
@@ -63,45 +73,17 @@ def obter_arquivos_relacionados(titulo):
             or any(ignore in conteudo for ignore in pu.IGNORELIST)
         ):
             continue
-        titulo = re.sub(r'_v\d+$', '', titulo.lower())
-        titulo = re.sub(r'_',' ', titulo)
-        score = conteudo.lower().count(titulo)
+        titulo_limpo = re.sub(r'_',' ', titulo.lower())
+        score = conteudo.lower().count(titulo_limpo)
         if score > 0:
             relacionados.append((arquivo.name, conteudo, score))
 
-    relacionados.sort(
-        key=lambda x: x[2],
-        reverse=True
-    )
-    
+    relacionados.sort(key=lambda x: x[2], reverse=True)
     relacionados = relacionados[:10]
-    if relacionados:
-        print("\n==== Arquivos relacionados encontrados:====")
-        for name, _, score in relacionados:
-            print(f"{name}: {score} ocorrências")
     
-    return "\n\n".join(
-        conteudo for _, conteudo, _ in relacionados
-    )
+    return "\n\n".join(conteudo for _, conteudo, _ in relacionados)
 
-def obter_proximo_nome_versao(caminho_original):
-    caminho_obj = Path(caminho_original)
-    diretorio = caminho_obj.parent
-    nome_base = re.sub(r'_v\d+$', '', caminho_obj.stem)
-    extensao = caminho_obj.suffix or ".md"
-    maior_versao = 0
-    
-    if diretorio.exists():
-        for arquivo in diretorio.glob(f"{nome_base}_v*{extensao}"):
-            match = re.search(r'_v(\d+)$', arquivo.stem)
-            if match:
-                maior_versao = max(maior_versao, int(match.group(1)))
-                
-    nova_versao = maior_versao + 1
-    return (diretorio / f"{nome_base}_v{nova_versao:02d}{extensao}")
-    
 def carregar_diretrizes_estilo():
-    """Carrega e unifica as diretrizes de estilo contidas na pasta designada."""
     pasta_estilo = pu.CAMINHO_ESTILO
     conteudo_estilo = []
     if pasta_estilo.exists() and pasta_estilo.is_dir():
@@ -114,82 +96,43 @@ def carregar_diretrizes_estilo():
                 print(f"Erro ao carregar diretriz {arquivo.name}: {e}")
     return "".join(conteudo_estilo)
 
-def nome_base(path):
-    return re.sub(r'_v\d+$', '', path.stem.lower())
-
 def remover_markdown_fences(texto: str) -> str:
     linhas = texto.strip().splitlines()
     if not linhas:
         return texto
-
-    # Se a primeira linha começar com as crases, nós a removemos
     if linhas[0].strip().startswith("```"):
         linhas.pop(0)
-        
-    # Se a última linha terminar com as crases, nós a removemos
     if linhas and linhas[-1].strip().startswith("```"):
         linhas.pop()
-        
     return "\n".join(linhas).strip()
 
 def processar_arquivo_unico(path):
     caminho_abs = str(Path(path).resolve())
     
-    # 🛡️ Trava de Segurança contra execução em duplicidade / loop
-    if caminho_abs in ARQUIVOS_EM_PROCESSAMENTO:
+    if esta_em_processamento(path):
         print(f"⚠️ Arquivo {Path(path).name} já está sendo processado pelo Expander. Pulando...")
         return
 
-    ARQUIVOS_EM_PROCESSAMENTO.add(caminho_abs)
+    marcar_processamento(path, True)
 
     try:
         estilo_contexto = carregar_diretrizes_estilo()
         instrucoes_globais = f"""
-    Você é um Mestre de Mesa (DM) de D&D experiente e escritor de fantasia sombria (Dark Fantasy).
-    Seu objetivo é preencher lacunas de desenvolvimento do cenário de {pu.PASTA_PROJETO}.
-    # Diretrizes e Regras Adicionais do Projeto:
-    {estilo_contexto}
-    """
+Você é um Mestre de Mesa (DM) de D&D experiente e escritor de fantasia sombria (Dark Fantasy).
+Seu objetivo é preencher lacunas de desenvolvimento do cenário de {pu.PASTA_PROJETO}.
+# Diretrizes e Regras Adicionais do Projeto:
+{estilo_contexto}
+"""
         arquivo = Path(path)
         with open(arquivo, 'r', encoding='utf-8') as f:
-            linhas = f.readlines()
-            conteudo = "".join(linhas)
-            titulo = arquivo.stem
-            titulo = re.sub(r'_v\d+$', '', titulo.lower())
+            conteudo = f.read()
 
         tag_encontrada = next((tag for tag in pu.TAG_ALVO if tag in conteudo), None)
         if tag_encontrada:
-            print(f"\n=====\nTag encontrada no arquivo:\n{arquivo.name}\n=====")
-            info_locais = ""
-            grupos_locais = {}
-            for arq_p in arquivo.parent.glob("*.md"):
-                base = nome_base(arq_p)
-                if base != nome_base(arquivo):
-                    if base not in grupos_locais:
-                        grupos_locais[base] = []
-                    grupos_locais[base].append(arq_p)
-
-            for base, lista_vers in grupos_locais.items():
-                def _ver(p):
-                    m = re.search(r'_v(\d+)$', p.stem, flags=re.IGNORECASE)
-                    return int(m.group(1)) if m else 0
-                lista_vers.sort(key=_ver, reverse=True)
-                arq_mais_recente = lista_vers[0]
-                
-                try:
-                    with open(arq_mais_recente, "r", encoding="utf-8") as f:
-                        conteudo_local = f.read()
-                        if not any(tag in conteudo_local for tag in pu.TAG_ALVO) and "status: rascunho" not in conteudo_local.lower():
-                            info_locais += conteudo_local + "\n\n"
-                except Exception:
-                    pass
-
-            info_importante = obter_arquivos_relacionados(titulo)
+            print(f"\n=====\nTag encontrada no arquivo: {arquivo.name}\n=====")
+            
+            info_importante = obter_arquivos_relacionados(arquivo.stem.lower())
             prompt_conteudo = f"""
-<contexto_local>
-{info_locais}
-</contexto_local>
-
 <arquivos_relacionados>
 {info_importante}
 </arquivos_relacionados>
@@ -200,7 +143,7 @@ def processar_arquivo_unico(path):
 
 <instrucao_tarefa>
 Identifique a tag '{tag_encontrada}' dentro da tag <arquivo_alvo>.
-Substitua essa tag pelo conteúdo expandido, mantendo total coesão com <contexto_local> e <arquivos_relacionados>.
+Substitua essa tag pelo conteúdo expandido, mantendo total coesão com os arquivos do universo.
 </instrucao_tarefa>
 
 <regras_de_resposta>
@@ -214,10 +157,6 @@ Substitua essa tag pelo conteúdo expandido, mantendo total coesão com <context
 </regras_de_resposta>
 """
             try:
-                with open(pu.log_path("Prompts.txt"), 'w', encoding='utf-8') as f:
-                    f.write(f"Alterando Arquivo: {arquivo.name}\n")
-                    f.write(prompt_conteudo + '\n')
-                
                 texto_bruto = au.ask_ai(contents=prompt_conteudo, system_instruction=instrucoes_globais, temperature=0.7)
 
                 prompt_revisao = f"""
@@ -237,12 +176,15 @@ TEXTO GERADO:
                 
                 if texto_final:
                     texto_limpo = remover_markdown_fences(texto_final)
-                    novo_arquivo_path = obter_proximo_nome_versao(arquivo)
                     
-                    with open(novo_arquivo_path, 'w', encoding='utf-8') as f:
+                    # 1. Salva o backup da versão atual na pasta logs/history/
+                    salvar_snapshot_historico(arquivo)
+
+                    # 2. Atualiza o arquivo ORIGINAL diretamente no projeto (preservando o nome para o Obsidian!)
+                    with open(arquivo, 'w', encoding='utf-8') as f:
                         f.write(texto_limpo)
-                    arquivar_versao_antiga(arquivo)
-                    print(f"Nova versão gerada com sucesso: {novo_arquivo_path.name}")
+
+                    print(f"✅ Arquivo atualizado in-place com sucesso: {arquivo.name}")
                 else:
                     print(f"O retorno do modelo para {arquivo.name} foi vazio.")
                 
@@ -250,8 +192,7 @@ TEXTO GERADO:
                 print(f"❌ Erro ao processar {arquivo.name}: {e}")
 
     finally:
-        # Libera o arquivo do set ao finalizar
-        ARQUIVOS_EM_PROCESSAMENTO.discard(caminho_abs)
+        marcar_processamento(path, False)
 
 def processar_arquivos():
     caminho_projeto = Path(pu.PASTA_PROJETO)

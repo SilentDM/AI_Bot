@@ -1,5 +1,6 @@
 import os, threading, time, json, concurrent.futures
 import engine.project_utils as pu
+import ui.settings as st
 from typing import Any, Optional, Type
 from pydantic import BaseModel
 from google import genai
@@ -17,7 +18,6 @@ DEFAULT_CONTENTS = "Please repeat: I did not receive a correct prompt, your codi
 MAX_TOKENS = 20480
 
 def get_gemini_client(fast=False):
-    """Obtém o cliente Gemini atualizado dinamicamente com base nas variáveis de ambiente."""
     api_key = os.getenv("GOOGLE_API_KEY", "").strip()
     if not api_key:
         return None
@@ -37,39 +37,24 @@ def _is_rate_limit_error(e: Exception) -> bool:
 def _calcular_score_modelo(model_name: str, max_tokens: int) -> int:
     name = model_name.lower()
     score = 0
-    if max_tokens >= 1_000_000:
-        score += 5000
-    elif max_tokens >= 500_000:
-        score += 3000
-    elif max_tokens >= 128_000:
-        score += 1000
-    else:
-        score -= 2000
+    if max_tokens >= 1_000_000: score += 5000
+    elif max_tokens >= 500_000: score += 3000
+    elif max_tokens >= 128_000: score += 1000
+    else: score -= 2000
 
-    if "pro" in name:
-        score += 4000
-    elif "thinking" in name or "reasoning" in name:
-        score += 3500
-    elif "flash" in name and "8b" not in name:
-        score += 1500
-    elif "flash-8b" in name or "lite" in name:
-        score += 200
+    if "pro" in name: score += 4000
+    elif "thinking" in name or "reasoning" in name: score += 3500
+    elif "flash" in name and "8b" not in name: score += 1500
+    elif "flash-8b" in name or "lite" in name: score += 200
 
-    if "2.5" in name:
-        score += 1000
-    elif "2.0" in name:
-        score += 800
-    elif "1.5" in name:
-        score += 500
+    if "2.5" in name: score += 1000
+    elif "2.0" in name: score += 800
+    elif "1.5" in name: score += 500
 
-    if "latest" in name or "preview" in name:
-        score += 300
-    if "exp" in name:
-        score += 200
+    if "latest" in name or "preview" in name: score += 300
+    if "exp" in name: score += 200
 
-    if "vision" in name or "imagen" in name or "audio" in name:
-        score -= 5000
-
+    if "vision" in name or "imagen" in name or "audio" in name: score -= 5000
     return score
 
 def findmodel(file_path=pu.log_path("models.json")):
@@ -82,7 +67,6 @@ def findmodel(file_path=pu.log_path("models.json")):
 
     print("Verificando e ranqueando modelos disponíveis para Worldbuilding...")
     
-    # Leitura thread-safe
     data = pu.ler_json_seguro(file_path, pu.LOCK_MODELS, padrao=None)
     is_empty = not data
 
@@ -153,18 +137,14 @@ def findmodel(file_path=pu.log_path("models.json")):
         )
     )
 
-    # Escrita thread-safe
     pu.salvar_json_seguro(file_path, working_models, pu.LOCK_MODELS)
     print("Lista de modelos ranqueada com sucesso!")
 
 def improvemodel(model, success, response_time=None):
     file_path = pu.log_path("models.json")
-    if not file_path.exists():
-        return
-
+    if not file_path.exists(): return
     data = pu.ler_json_seguro(file_path, pu.LOCK_MODELS, padrao=[])
-    if not data:
-        return
+    if not data: return
 
     for m in data:
         if m.get("name") == model:
@@ -172,7 +152,6 @@ def improvemodel(model, success, response_time=None):
                 m["responsetime"] = round((m.get("responsetime", 1.0) + response_time) / 2, 4)
             m["attempts"] = m.get("attempts", 0) + 1
             m["success"] = m.get("success", 0) + (1 if success else 0)
-
             m["quality_score"] = _calcular_score_modelo(m["name"], m.get("maxinputtokens", 0))
             
             data.sort(
@@ -183,8 +162,6 @@ def improvemodel(model, success, response_time=None):
                     x.get("responsetime", 9999)
                 )
             )
-            
-            # Escrita thread-safe
             pu.salvar_json_seguro(file_path, data, pu.LOCK_MODELS)
             return
 
@@ -200,6 +177,18 @@ def generate_content_with_fallback(contents: Any, config: types.GenerateContentC
 
     if not data:
         raise ValueError("models.json está vazio ou indisponível")
+
+    # 🟢 SELEÇÃO DE MODO: AUTOMÁTICO VS MANUAL
+    config_sys = st.carregar_configuracoes()
+    selection_mode = config_sys.get("model_selection_mode", "auto")
+
+    if selection_mode == "manual":
+        manual_order = config_sys.get("manual_model_order", [])
+        if manual_order:
+            def get_manual_index(m):
+                name = m.get("name", "")
+                return manual_order.index(name) if name in manual_order else 999
+            data = sorted(data, key=get_manual_index)
 
     for model in data:
         model_name = model["name"]
@@ -228,10 +217,8 @@ def generate_content_with_fallback(contents: Any, config: types.GenerateContentC
         except Exception as e:
             response_time = round(time.time() - start_time, 4)
             improvemodel(model_name, False, response_time)
-            
-            err_msg = str(e).lower()
             if _is_rate_limit_error(e):
-                print(f"Rate Limit atingido no modelo {model_name}. Pulando...")
+                print(f"Rate Limit atingido no modelo {model_name}. Tentando próximo do fallback...")
             else:
                 print(f"Erro no modelo {model_name}: {e}")
 
@@ -245,15 +232,13 @@ def ask_ai(
     use_world_context: Optional[bool] = True,
     is_dm: Optional[bool] = True
 ) -> str:
+    print("Requisição de IA Gemini recebida... Aguardando resposta...")
     if not os.getenv("GOOGLE_API_KEY", "").strip():
-        return "❌ Nenhuma chave de API da IA (GOOGLE_API_KEY) foi configurada. Acesse a aba 'Opções' para cadastrar sua chave."
+        return "❌ Nenhuma chave GOOGLE_API_KEY configurada."
 
-    if not system_instruction:
-        system_instruction = DEFAULT_SYSTEM_INSTRUCTION
-    if temperature is None:
-        temperature = DEFAULT_TEMPERATURE
-    if contents is None:
-        contents = DEFAULT_CONTENTS
+    if not system_instruction: system_instruction = DEFAULT_SYSTEM_INSTRUCTION
+    if temperature is None: temperature = DEFAULT_TEMPERATURE
+    if contents is None: contents = DEFAULT_CONTENTS
     
     config_args = {
         "system_instruction": system_instruction,

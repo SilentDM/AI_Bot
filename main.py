@@ -50,20 +50,28 @@ def criar_pastas():
     """Cria todas as pastas necessárias para o funcionamento do app."""
     import engine.project_utils as pu
     import os
+
+    # Garantia de segurança caso a variável ainda não tenha sido definida
+    if pu.CAMINHO_PROJETO is None:
+        pu.definir_projeto_ativo(os.getenv("PASTA_PROJETO", "Projeto"))
+
     nome_estilo = os.getenv("PASTA_ESTILO", "Style").strip() or "Style"
     pu.CAMINHO_PROJETO.mkdir(parents=True, exist_ok=True)
+    
     pastas_obrigatorias = {
         "Logs": BASE_DIR / "logs",
         "Memories": BASE_DIR / "memories",
         "Exports": BASE_DIR / "exports",
         "Templates": BASE_DIR / "Templates",
         "Style": BASE_DIR / nome_estilo,
+        "discord_knowledge": BASE_DIR / "discord_knowledge",
         "Projeto Ativo": pu.CAMINHO_PROJETO
     }
 
     for nome, caminho in pastas_obrigatorias.items():
         caminho.mkdir(parents=True, exist_ok=True)
         print(f"  └─ ✅ {nome}: {caminho}")
+
     if getattr(sys, 'frozen', False):
         meipass_templates = Path(getattr(sys, '_MEIPASS', '')) / "Templates"
         target_templates = BASE_DIR / "Templates"

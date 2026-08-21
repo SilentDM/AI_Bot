@@ -1,23 +1,24 @@
-import sys, os, threading
+import sys, os, threading, asyncio
 from pathlib import Path
 
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QStackedWidget, QStatusBar, QFrame,
     QTextEdit, QLineEdit, QFileDialog, QSystemTrayIcon, QMenu,
-    QComboBox, QGroupBox, QGridLayout, QScrollArea, QMessageBox
+    QComboBox, QMessageBox
 )
 from PySide6.QtCore import Qt, Signal, Slot, QTimer, QThread, QObject
-from PySide6.QtGui import QFont, QIcon, QColor
+from PySide6.QtGui import QFont, QIcon, QColor, QCloseEvent
 
 import engine.project_utils as pu
 import core.ai_gemini as ag
 import core.ai_utils as au
-import core.memory as me
 import core.cache_gemini as cg
+import core.memory as me
 import ui.explorer as expl
 import ui.settings as st
 import ui.worldbuilder as wb_ui
+import ui.models as models_ui
 import ui.gui_logger as gl
 
 
@@ -34,16 +35,25 @@ class MainWindow(QMainWindow):
 
         self.user_name = "Silent Dungeon Master"
         self.current_font_size = 11
+        self.discord_loop = None
 
         self.signal_log.connect(self.log_activity)
         self.signal_toast.connect(self.show_toast)
         self.signal_stats.connect(self.update_editor_stats)
         self.signal_discord_status.connect(self.update_discord_status)
 
+        # CAPTURA DE LOGS GLOBAL
+        gl.setup_global_logger(self.log_activity)
+
         self.setup_qss_style()
         self.setup_ui()
         self.setup_tray()
         self.setup_status_bar()
+
+        # 🟢 INICIA O BOT DO DISCORD EM SEGUNDO PLANO
+        self.start_discord_bot_thread()
+
+        print("🚀 Silent Multiverse Nexus iniciado com sucesso. Captura de logs ativa.")
 
     def setup_qss_style(self):
         qss_file = Path(__file__).parent / "styles" / "dark.qss"
@@ -118,8 +128,8 @@ class MainWindow(QMainWindow):
         zoom_box.addWidget(btn_z_minus); zoom_box.addWidget(btn_z_plus)
         side_layout.addLayout(zoom_box)
 
-        self.lbl_discord = QLabel(pu.tr("sidebar.discord_online"))
-        self.lbl_discord.setStyleSheet("color: #10b981; font-weight: bold;")
+        self.lbl_discord = QLabel("Discord: Starting...")
+        self.lbl_discord.setStyleSheet("color: #888888; font-weight: bold;")
         side_layout.addWidget(self.lbl_discord)
 
         main_layout.addWidget(sidebar)
@@ -127,6 +137,7 @@ class MainWindow(QMainWindow):
         # INSTANCIAÇÃO DAS ABAS DEDICADAS
         self.options_widget = st.OptionsWidget(self, self.log_activity, self.show_toast)
         self.worldbuilder_widget = wb_ui.WorldBuilderWidget(self, self.log_activity, self.show_toast)
+        self.models_widget = models_ui.ModelsPerformanceWidget(self, self.log_activity, self.show_toast)
         self.explorer_widget = expl.ExplorerWidget(
             self, self.log_activity, self.show_toast,
             self.options_widget.is_auto_expander_enabled,
@@ -138,16 +149,56 @@ class MainWindow(QMainWindow):
         self.pages_stack.addWidget(self.worldbuilder_widget)        # 1
         self.pages_stack.addWidget(self.build_chat_page())           # 2
         self.pages_stack.addWidget(self.options_widget)              # 3
-        self.pages_stack.addWidget(self.build_models_page())        # 4
+        self.pages_stack.addWidget(self.models_widget)               # 4
         self.pages_stack.addWidget(self.build_log_page())           # 5
         self.pages_stack.addWidget(self.build_manual_page())        # 6
 
         main_layout.addWidget(self.pages_stack)
         self.switch_page("editor", 0)
 
+    # 🟢 GERENCIADOR DE INICIALIZAÇÃO DO BOT DO DISCORD EM THREAD
+    def start_discord_bot_thread(self):
+        threading.Thread(target=self.run_discord_bot, daemon=True).start()
+
+    def run_discord_bot(self):
+        try:
+            token = os.getenv("DISCORD_TOKEN", "").strip()
+            if not token:
+                self.signal_discord_status.emit("Desativado", "#888888")
+                self.signal_log.emit("DISCORD_TOKEN não configurado no .env — Bot do Discord desativado.")
+                return
+
+            self.signal_log.emit("Iniciando Bot do Discord em segundo plano...")
+            from bot.dbot import discordclient
+
+            if not discordclient:
+                self.signal_discord_status.emit("Desativado", "#888888")
+                return
+
+            # 🟢 VINCULA O CALLBACK PARA POPULAR O DROPDOWN NA ABA OPÇÕES
+            discordclient.callback_guilds = lambda guilds: QTimer.singleShot(
+                0, lambda: self.options_widget.atualizar_lista_servidores(guilds)
+            )
+
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            self.discord_loop = loop
+
+            self.signal_discord_status.emit("Online", "#10b981")
+            self.signal_log.emit("Bot do Discord online e pronto para responder!")
+
+            loop.run_until_complete(discordclient.start(token))
+
+        except Exception as e:
+            self.signal_log.emit(f"Exceção no Bot do Discord: {e}")
+            self.signal_discord_status.emit("Offline/Erro", "#ef4444")
+
     def switch_page(self, key, index):
-        if key == "models": self.refresh_models_cards()
-        elif key == "chat": self.reload_chat_history()
+        if key == "models":
+            self.models_widget.refresh_models_cards()
+        elif key == "chat":
+            self.reload_chat_history()
+            
         self.pages_stack.setCurrentIndex(index)
         for k, btn in self.nav_buttons.items():
             btn.setObjectName("NavBtnActive" if k == key else "NavBtn")
@@ -264,59 +315,6 @@ class MainWindow(QMainWindow):
 
         threading.Thread(target=_worker, daemon=True).start()
 
-    # --- DASHBOARD DE PERFORMANCE DO GEMINI ---
-    def build_models_page(self):
-        page = QWidget()
-        layout = QVBoxLayout(page)
-
-        header = QHBoxLayout()
-        header.addWidget(QLabel("<b>Performance dos Modelos Gemini</b>"))
-        btn_test = QPushButton("⚡ Testar Modelos Agora")
-        btn_test.clicked.connect(self.run_findmodel_worker)
-        header.addWidget(btn_test)
-        layout.addLayout(header)
-
-        self.scroll_models = QScrollArea()
-        self.scroll_models.setWidgetResizable(True)
-        self.models_container = QWidget()
-        self.models_grid = QGridLayout(self.models_container)
-        self.scroll_models.setWidget(self.models_container)
-
-        layout.addWidget(self.scroll_models)
-        return page
-
-    def run_findmodel_worker(self):
-        thread = QThread(self)
-        worker = wb_ui.FindModelWorker() if hasattr(wb_ui, "FindModelWorker") else None
-        if not worker:
-            self.log_activity("Executando findmodel...")
-            threading.Thread(target=ag.findmodel, daemon=True).start()
-            return
-
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.log.connect(self.log_activity)
-        worker.finished.connect(lambda status: self.refresh_models_cards())
-        worker.finished.connect(thread.quit)
-        worker.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-
-        thread.start()
-
-    def refresh_models_cards(self):
-        for i in reversed(range(self.models_grid.count())):
-            self.models_grid.itemAt(i).widget().setParent(None)
-
-        dados = pu.ler_json_seguro(pu.log_path("models.json"), pu.LOCK_MODELS, padrao=[])
-        for idx, m in enumerate(dados):
-            card = QGroupBox(f" #{idx+1} {m.get('display_name', m.get('name'))} ")
-            l = QVBoxLayout(card)
-            l.addWidget(QLabel(f"⚡ Tempo Médio: {m.get('responsetime', 0):.2f}s"))
-            l.addWidget(QLabel(f"Sucesso: {m.get('success', 0)}/{m.get('attempts', 1)}"))
-            l.addWidget(QLabel(f"Max Tokens: {m.get('maxinputtokens', 0):,}"))
-            l.addWidget(QLabel(f"Busca Online: {'Sim' if m.get('supports_tools') else 'Não'}"))
-            self.models_grid.addWidget(card, idx // 2, idx % 2)
-
     # --- MANUAL COMPLETO ---
     def build_manual_page(self):
         page = QWidget()
@@ -341,20 +339,52 @@ class MainWindow(QMainWindow):
         self.log_display = QTextEdit()
         self.log_display.setReadOnly(True)
         layout.addWidget(self.log_display)
-        sys.stdout = gl.GuiOutput()
-        sys.stdout.text_written.connect(self.log_activity)
         return page
 
     def setup_tray(self):
         self.tray = QSystemTrayIcon(self)
         icon_path = pu.BASE_DIR / "icon.ico"
         if icon_path.exists():
-            self.tray.setIcon(QIcon(str(icon_path)))
+            icon = QIcon(str(icon_path))
+            self.tray.setIcon(icon)
+        else:
+            self.tray.setIcon(self.windowIcon())
+
         menu = QMenu()
-        menu.addAction("Restaurar", self.show)
-        menu.addAction("Sair", QApplication.quit)
+        menu.addAction("Restaurar Console", self.show_and_restore)
+        menu.addSeparator()
+        menu.addAction("Encerrar Completamente", self.quit_app)
         self.tray.setContextMenu(menu)
         self.tray.show()
+
+    def show_and_restore(self):
+        self.show()
+        self.setWindowState(self.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
+        self.activateWindow()
+        self.raise_()
+
+    def quit_app(self):
+        pu.request_cancellation()
+        if hasattr(self, "discord_loop") and self.discord_loop and self.discord_loop.is_running():
+            try:
+                from bot.dbot import discordclient
+                future = asyncio.run_coroutine_threadsafe(discordclient.close(), self.discord_loop)
+                future.result(timeout=3)
+            except Exception as e:
+                print(f"Encerramento do Discord: {e}")
+
+        if hasattr(self, "tray"):
+            self.tray.hide()
+        QApplication.quit()
+
+    def closeEvent(self, event: QCloseEvent):
+        if hasattr(self, "tray") and self.tray.isVisible():
+            event.ignore()
+            self.hide()
+            self.show_toast("O aplicativo continua rodando na bandeja do sistema!")
+            pu.otimizar_memoria_ram()
+        else:
+            event.accept()
 
     def setup_status_bar(self):
         bar = QStatusBar()
@@ -367,9 +397,13 @@ class MainWindow(QMainWindow):
     def show_toast(self, msg):
         self.statusBar().showMessage(msg, 3500)
 
+    @Slot(str)
     def log_activity(self, msg):
-        if hasattr(self, "log_display"):
+        if hasattr(self, "log_display") and self.log_display is not None:
             self.log_display.append(f"[{pu.currentdate()}] {msg}")
+            self.log_display.verticalScrollBar().setValue(
+                self.log_display.verticalScrollBar().maximum()
+            )
 
     def update_editor_stats(self, w, c, l, t):
         self.lbl_status_stats.setText(
@@ -378,8 +412,26 @@ class MainWindow(QMainWindow):
 
 
 def main():
+    if sys.platform == 'win32':
+        try:
+            import ctypes
+            myappid = "silent.multiverse.nexus.v1"
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+        except Exception:
+            pass
+
     app = QApplication(sys.argv)
+    app.setQuitOnLastWindowClosed(False)
+
+    icon_path = pu.BASE_DIR / "icon.ico"
+    if icon_path.exists():
+        app_icon = QIcon(str(icon_path))
+        app.setWindowIcon(app_icon)
+
     win = MainWindow()
+    if icon_path.exists():
+        win.setWindowIcon(app_icon)
+
     win.show()
     sys.exit(app.exec())
 
