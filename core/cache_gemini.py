@@ -36,7 +36,7 @@ def prepare_world_context(is_dm: bool = True, ttl_hours=12):
             pass
 
     print("Criando o bundle!")
-    client = ag.get_gemini_client()
+    client = ag.get_gemini_client(timeout_seconds=120)
     if not client:
         print("⚠️ Nenhuma GOOGLE_API_KEY configurada para criar o Bundle do mundo.")
         return None

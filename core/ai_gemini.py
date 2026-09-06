@@ -16,13 +16,26 @@ DEFAULT_TEMPERATURE = 0.6
 DEFAULT_CONTENTS = "Please repeat: I did not receive a correct prompt, your coding has failed somewhere."
 MAX_TOKENS = 20480
 
-def get_gemini_client(fast=False):
-    """Obtém o cliente Gemini atualizado dinamicamente com base nas variáveis de ambiente."""
+# Em core/ai_gemini.py
+
+def get_gemini_client(timeout_seconds: Optional[int] = 90):
+    """
+    Obtém o cliente Gemini atualizado dinamicamente.
+    Se timeout_seconds for None, utiliza o tempo nativo da Google/HTTPX.
+    Caso contrário, converte segundos para milissegundos.
+    """
     api_key = os.getenv("GOOGLE_API_KEY", "").strip()
     if not api_key:
         return None
-    timeout = 30_000 if fast else 35_000
-    return genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=timeout))
+
+    if timeout_seconds is not None:
+        # 90 segundos = 90_000 milissegundos
+        http_opts = types.HttpOptions(timeout=timeout_seconds * 1000)
+    else:
+        # Padrão nativo do SDK / Google
+        http_opts = types.HttpOptions()
+
+    return genai.Client(api_key=api_key, http_options=http_opts)
 
 def _is_rate_limit_error(e: Exception) -> bool:
     err_str = str(e).lower()
@@ -33,6 +46,26 @@ def _is_rate_limit_error(e: Exception) -> bool:
         kw in err_str
         for kw in ["429", "resource_exhausted", "quota", "rate limit", "too many requests"]
     )
+
+def _criterio_ordenacao_eficiencia(m: dict):
+    """
+    Ordena os modelos priorizando a eficiência real observada:
+    1. Maior taxa de sucesso (menos falhas e timeouts)
+    2. Menor tempo médio de resposta (mais veloz)
+    3. Maior score de capacidade/contexto (inteligência do modelo)
+    """
+    tentativas = max(1, m.get("attempts", 1))
+    sucessos = m.get("success", 0)
+    taxa_sucesso = sucessos / tentativas
+
+    tempo_resposta = m.get("responsetime", 9999.0)
+    score_qualidade = m.get("quality_score", 0)
+
+    # Ordenamos por:
+    # -taxa_sucesso -> decrescente (ex: 1.0 antes de 0.8)
+    # tempo_resposta -> crescente (ex: 1.2s antes de 4.5s)
+    # -score_qualidade -> decrescente (desempate pela capacidade do modelo)
+    return (-taxa_sucesso, tempo_resposta, -score_qualidade)
 
 def _calcular_score_modelo(model_name: str, max_tokens: int) -> int:
     name = model_name.lower()
@@ -73,8 +106,8 @@ def _calcular_score_modelo(model_name: str, max_tokens: int) -> int:
     return score
 
 def findmodel(file_path=pu.log_path("models.json")):
-    client = get_gemini_client()
-    client_fast = get_gemini_client(fast=True)
+    client = get_gemini_client(timeout_seconds=90)
+    client_fast = get_gemini_client(timeout_seconds=15)
     
     if not client:
         print("Nenhuma GOOGLE_API_KEY configurada. Pulando ranqueamento de modelos.")
@@ -82,7 +115,6 @@ def findmodel(file_path=pu.log_path("models.json")):
 
     print("Verificando e ranqueando modelos disponíveis para Worldbuilding...")
     
-    # Leitura thread-safe
     data = pu.ler_json_seguro(file_path, pu.LOCK_MODELS, padrao=None)
     is_empty = not data
 
@@ -119,6 +151,8 @@ def findmodel(file_path=pu.log_path("models.json")):
         except Exception:
             continue
 
+        # Apenas registramos se suporta ferramentas como dado informativo,
+        # sem usar isso como critério de prioridade de fila
         supports_tools = False
         try:
             client_fast.models.generate_content(
@@ -144,18 +178,11 @@ def findmodel(file_path=pu.log_path("models.json")):
         })
         time.sleep(0.3)
 
-    working_models.sort(
-        key=lambda x: (
-            -x.get("quality_score", 0),
-            not x.get("supports_tools", False),
-            -(x.get("success", 1) / x.get("attempts", 1)),
-            x.get("responsetime", 9999)
-        )
-    )
+    # 🟢 Nova ordenação focada exclusivamente em Eficiência:
+    working_models.sort(key=_criterio_ordenacao_eficiencia)
 
-    # Escrita thread-safe
     pu.salvar_json_seguro(file_path, working_models, pu.LOCK_MODELS)
-    print("Lista de modelos ranqueada com sucesso!")
+    print("Lista de modelos ranqueada com foco em eficiência!")
 
 def improvemodel(model, success, response_time=None):
     file_path = pu.log_path("models.json")
@@ -168,28 +195,26 @@ def improvemodel(model, success, response_time=None):
 
     for m in data:
         if m.get("name") == model:
-            if response_time is not None:
-                m["responsetime"] = round((m.get("responsetime", 1.0) + response_time) / 2, 4)
+            if response_time is not None and success:
+                # Média móvel ponderada simples para amortecer oscilações de rede
+                tempo_anterior = m.get("responsetime", response_time)
+                m["responsetime"] = round((tempo_anterior * 0.7) + (response_time * 0.3), 4)
+                
             m["attempts"] = m.get("attempts", 0) + 1
             m["success"] = m.get("success", 0) + (1 if success else 0)
-
             m["quality_score"] = _calcular_score_modelo(m["name"], m.get("maxinputtokens", 0))
             
-            data.sort(
-                key=lambda x: (
-                    -x.get("quality_score", 0),
-                    not x.get("supports_tools", False),
-                    -(x.get("success", 1) / max(1, x.get("attempts", 1))),
-                    x.get("responsetime", 9999)
-                )
-            )
+            # 🟢 Reordena a fila inteira dinamicamente com base no desempenho real
+            data.sort(key=_criterio_ordenacao_eficiencia)
             
-            # Escrita thread-safe
             pu.salvar_json_seguro(file_path, data, pu.LOCK_MODELS)
             return
 
 def generate_content_with_fallback(contents: Any, config: types.GenerateContentConfig, cache_model: Optional[str] = None) -> Any:
-    client = get_gemini_client()
+    # 🟢 Timeout estendido para 90 segundos nas gerações reais
+    # Se preferir o tempo 100% nativo da Google, use: client = get_gemini_client(timeout_seconds=None)
+    client = get_gemini_client(timeout_seconds=90)
+    
     if not client:
         raise ValueError("Nenhuma GOOGLE_API_KEY configurada.")
 
@@ -231,7 +256,9 @@ def generate_content_with_fallback(contents: Any, config: types.GenerateContentC
             
             err_msg = str(e).lower()
             if _is_rate_limit_error(e):
-                print(f"Rate Limit atingido no modelo {model_name}. Pulando...")
+                print(f"Rate Limit atingido no modelo {model_name}. Pulando para o próximo...")
+            elif "timeout" in err_msg or "timed out" in err_msg or "deadline" in err_msg:
+                print(f"⏱️ Timeout no modelo {model_name} após {response_time}s. Pulando para o próximo...")
             else:
                 print(f"Erro no modelo {model_name}: {e}")
 
